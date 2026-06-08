@@ -45,6 +45,10 @@ cilium_release = k8s.helm.v3.Release(
             "hubble": {
                 "relay": {"enabled": True},
                 "ui": {"enabled": True}
+            },
+            "encryption": {
+                "enabled": True,
+                "type": "wireguard"
             }
         },
     ),
