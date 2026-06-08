@@ -1,0 +1,883 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright Authors of Tetragon
+
+//go:build !windows
+
+package btf
+
+import (
+	"errors"
+	"fmt"
+	"math"
+	"os"
+	"path"
+	"path/filepath"
+	"reflect"
+	"runtime"
+	"strings"
+	"testing"
+
+	"github.com/cilium/ebpf/btf"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
+
+	api "github.com/cilium/tetragon/pkg/api/tracingapi"
+	"github.com/cilium/tetragon/pkg/defaults"
+	"github.com/cilium/tetragon/pkg/kernels"
+	"github.com/cilium/tetragon/pkg/option"
+)
+
+var testBTFFiles = []struct {
+	btf     string
+	create  string
+	wantbtf string
+	err     error
+}{
+	{"", "", defaults.DefaultBTFFile, nil},
+	{defaults.DefaultBTFFile, "", defaults.DefaultBTFFile, nil},
+	{"invalid-btf-file", "", "", errors.New("BTF file 'invalid-btf-file' does not exist should fail")},
+	{"valid-btf-file", "valid-btf-file", "valid-btf-file", nil},
+}
+
+func setupfiles() func(*testing.T, string, ...string) {
+	return func(t *testing.T, param string, files ...string) {
+		for _, f := range files {
+			switch param {
+			case "create":
+				h, e := os.Create(f)
+				require.NoError(t, e)
+				h.Close()
+			case "remove":
+				os.Remove(f)
+			}
+		}
+	}
+}
+
+func listBTFFiles() ([]string, error) {
+	_, kernelVersion, err := kernels.GetKernelVersion(option.Config.KernelVersion, option.Config.ProcFS)
+	if err != nil {
+		return nil, err
+	}
+
+	_, testFname, _, _ := runtime.Caller(0)
+	testdataPath := filepath.Join(filepath.Dir(testFname), "..", "..", "testdata")
+
+	btfFiles := []string{
+		defaults.DefaultBTFFile,
+		path.Join(defaults.DefaultTetragonLib, "btf"),
+		path.Join(defaults.DefaultTetragonLib, "metadata", "vmlinux-"+kernelVersion),
+		filepath.Join(testdataPath, "btf", "vmlinux-5.4.104+"),
+	}
+
+	return btfFiles, nil
+}
+
+func TestObserverFindBTF(t *testing.T) {
+	tmpdir := t.TempDir()
+
+	old := os.Getenv("TETRAGON_BTF")
+	defer os.Setenv("TETRAGON_BTF", old)
+
+	handlefiles := setupfiles()
+	for _, test := range testBTFFiles {
+		if test.create != "" {
+			handlefiles(t, "create", test.create, filepath.Join(tmpdir, test.create))
+			defer handlefiles(t, "remove", test.create, filepath.Join(tmpdir, test.create))
+		}
+
+		_, err := os.Stat(defaults.DefaultBTFFile)
+		if err != nil && test.wantbtf == defaults.DefaultBTFFile {
+			continue
+		}
+
+		btf, err := observerFindBTF(tmpdir, test.btf)
+		if test.err != nil {
+			require.Errorf(t, err, "observerFindBTF() on '%s'  -  want:%v  -  got:no error", test.btf, test.err)
+			continue
+		}
+		require.NoErrorf(t, err, "observerFindBTF() on '%s'  - want:no error  -  got:%v", test.btf, err)
+		assert.Equalf(t, test.wantbtf, btf, "observerFindBTF() on '%s'  -  want:'%s'  -  got:'%s'", test.btf, test.wantbtf, btf)
+
+		// Test now without lib set
+		btf, err = observerFindBTF("", test.btf)
+		if test.err != nil {
+			require.Errorf(t, err, "observerFindBTF() on '%s'  -  want:%v  -  got:no error", test.btf, test.err)
+			continue
+		}
+		require.NoErrorf(t, err, "observerFindBTF() on '%s'  -   want:no error  -  got:%v", test.btf, err)
+		assert.Equalf(t, test.wantbtf, btf, "observerFindBTF() on '%s'  -  want:'%s'  -  got:'%s'", test.btf, test.wantbtf, btf)
+	}
+}
+
+func TestObserverFindBTFEnv(t *testing.T) {
+	old := os.Getenv("TETRAGON_BTF")
+	defer os.Setenv("TETRAGON_BTF", old)
+
+	lib := defaults.DefaultTetragonLib
+	btffile := defaults.DefaultBTFFile
+	_, err := os.Stat(btffile)
+	if err != nil {
+		/* No default vmlinux file */
+		btf, err := observerFindBTF("", "")
+		if old != "" {
+			require.NoError(t, err)
+			assert.NotEmpty(t, btf)
+		} else {
+			require.Error(t, err)
+			assert.Empty(t, btf)
+		}
+		/* Let's clear up environment vars */
+		os.Setenv("TETRAGON_BTF", "")
+		btf, err = observerFindBTF("", "")
+		require.Error(t, err)
+		assert.Empty(t, btf)
+
+		/* Let's try provided path to lib but tests put the btf inside /boot/ */
+		btf, err = observerFindBTF(lib, "")
+		require.Error(t, err)
+		assert.Empty(t, btf)
+
+		/* Let's try out the btf file that is inside /boot/ */
+		var uname unix.Utsname
+		err = unix.Uname(&uname)
+		require.NoError(t, err)
+		kernelVersion := unix.ByteSliceToString(uname.Release[:])
+		os.Setenv("TETRAGON_BTF", filepath.Join("/boot/", "btf-"+kernelVersion))
+		btf, err = observerFindBTF(lib, "")
+		require.NoError(t, err)
+		assert.NotEmpty(t, btf)
+
+		btffile = btf
+		err = os.Setenv("TETRAGON_BTF", btffile)
+		require.NoError(t, err)
+		btf, err = observerFindBTF(lib, "")
+		require.NoError(t, err)
+		assert.Equal(t, btffile, btf)
+	} else {
+		btf, err := observerFindBTF("", "")
+		require.NoError(t, err)
+		assert.Equal(t, btffile, btf)
+
+		err = os.Setenv("TETRAGON_BTF", btffile)
+		require.NoError(t, err)
+		btf, err = observerFindBTF(lib, "")
+		require.NoError(t, err)
+		assert.Equal(t, btffile, btf)
+	}
+
+	/* Following should fail */
+	err = os.Setenv("TETRAGON_BTF", "invalid-btf-file")
+	require.NoError(t, err)
+	btf, err := observerFindBTF(lib, "")
+	require.Error(t, err)
+	assert.Empty(t, btf)
+}
+
+func TestInitCachedBTF(t *testing.T) {
+	_, err := os.Stat(defaults.DefaultBTFFile)
+	if err != nil {
+		btffile := os.Getenv("TETRAGON_BTF")
+		err = InitCachedBTF(defaults.DefaultTetragonLib, "")
+		if btffile != "" {
+			require.NoError(t, err)
+			file := GetCachedBTFFile()
+			assert.Equal(t, btffile, file, "GetCachedBTFFile()  -  want:'%s'  - got:'%s'", btffile, file)
+		} else {
+			require.Error(t, err)
+		}
+	} else {
+		err = InitCachedBTF(defaults.DefaultTetragonLib, "")
+		require.NoError(t, err)
+
+		btffile := GetCachedBTFFile()
+		assert.Equal(t, defaults.DefaultBTFFile, btffile, "GetCachedBTFFile()  -  want:'%s'  - got:'%s'", defaults.DefaultBTFFile, btffile)
+	}
+}
+
+func genericTestFindBTFFuncParamFromHook(t *testing.T, spec *btf.Spec, hook string, argIndex int, expectedName string) error {
+	param, err := findBTFFuncParamFromHookWithSpec(spec, hook, argIndex)
+	if err != nil {
+		return err
+	}
+
+	assert.NotNil(t, param)
+	assert.Equal(t, expectedName, param.Name)
+
+	return nil
+}
+
+func testFindBTFFuncParamFromHook(btfFName string) func(*testing.T) {
+	return func(t *testing.T) {
+		spec, err := btf.LoadSpec(btfFName)
+		if err != nil {
+			t.Skipf("%q not found", btfFName)
+		}
+
+		// Assert no errors on Kprobe
+		hook := "wake_up_new_task"
+		argIndex := 0
+		expectedName := "p"
+		err = genericTestFindBTFFuncParamFromHook(t, spec, hook, argIndex, expectedName)
+		require.NoError(t, err)
+
+		// Assert error raises with invalid hook
+		hook = "fake_hook"
+		argIndex = 0
+		expectedName = "p"
+		err = genericTestFindBTFFuncParamFromHook(t, spec, hook, argIndex, expectedName)
+		require.ErrorContains(t, err, fmt.Sprintf("failed to find BTF type for hook %q", hook))
+
+		// Assert error raises when hook is a valid BTF type but not btf.Func
+		hook = "linux_binprm"
+		argIndex = 0
+		expectedName = "p"
+		err = genericTestFindBTFFuncParamFromHook(t, spec, hook, argIndex, expectedName)
+		require.ErrorContains(t, err, fmt.Sprintf("failed to find BTF type for hook %q", hook))
+
+		// Assert error raises when argIndex is out of scope
+		hook = "wake_up_new_task"
+		argIndex = 10
+		expectedName = "p"
+		err = genericTestFindBTFFuncParamFromHook(t, spec, hook, argIndex, expectedName)
+		require.ErrorContains(t, err, fmt.Sprintf("index %d is out of range", argIndex))
+	}
+}
+
+func TestFindBTFFuncParamFromHook(t *testing.T) {
+	btfFiles, err := listBTFFiles()
+	fatalOnError(t, err)
+
+	for _, btfFile := range btfFiles {
+		t.Run(btfFile, testFindBTFFuncParamFromHook(btfFile))
+	}
+
+	t.Run("ResolveModuleIsSupported", func(t *testing.T) {
+		module := "overlay"
+		hook := "ovl_create"
+
+		// Check if BTF is available for the module
+		if _, err := os.Stat("/sys/kernel/btf/" + module); err != nil {
+			t.Skipf("BTF for module %s not found", module)
+		}
+
+		_, err := FindBTFFuncParamFromHook(hook, 0)
+		require.NoError(t, err)
+	})
+}
+
+func fatalOnError(t *testing.T, err error) {
+	if err != nil {
+		require.Error(t, err)
+		t.Fatal(err.Error())
+	}
+}
+
+func getBTFStruct(ty btf.Type) (*btf.Struct, error) {
+	t, ok := ty.(*btf.Struct)
+	if ok {
+		return t, nil
+	}
+	return nil, fmt.Errorf("Invalid type for \"%v\", expected \"*btf.Struct\", got %q", t, reflect.TypeOf(ty).String())
+}
+
+func getBTFPointer(ty btf.Type) (*btf.Pointer, error) {
+	t, ok := ty.(*btf.Pointer)
+	if ok {
+		return t, nil
+	}
+	return nil, fmt.Errorf("Invalid type for \"%v\", expected \"*btf.Pointer\", got %q", t, reflect.TypeOf(ty).String())
+}
+
+func findMemberInBTFStruct(structTy *btf.Struct, memberName string) (*btf.Member, uint32, error) {
+	for _, member := range structTy.Members {
+		if member.Name == memberName {
+			return &member, 0, nil
+		}
+
+		if anonymousStructTy, ok := member.Type.(*btf.Struct); ok && len(member.Name) == 0 {
+			for _, m := range anonymousStructTy.Members {
+				if m.Name == memberName {
+					return &m, uint32(member.Offset.Bytes()), nil
+				}
+			}
+		}
+
+		if unionTy, ok := member.Type.(*btf.Union); ok && len(member.Name) == 0 {
+			for _, m := range unionTy.Members {
+				if m.Name == memberName {
+					return &m, uint32(member.Offset.Bytes()), nil
+				}
+			}
+		}
+	}
+	return nil, 0, fmt.Errorf("Member %q not found in struct %v", memberName, structTy)
+}
+
+func getBTFPointerAndSetConfig(ty btf.Type, btfConfig *api.ConfigBTFArg) (*btf.Pointer, error) {
+	ptr, err := getBTFPointer(ty)
+	if err != nil {
+		return nil, err
+	}
+	btfConfig.IsInitialized = uint16(1)
+	btfConfig.IsPointer = uint16(1)
+
+	return ptr, nil
+}
+
+func getConfigAndNextType(structTy *btf.Struct, memberName string) (*btf.Type, *api.ConfigBTFArg, error) {
+	btfConfig := api.ConfigBTFArg{}
+
+	member, parentOffset, err := findMemberInBTFStruct(structTy, memberName)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	btfConfig.Offset = uint32(member.Offset.Bytes()) + parentOffset
+	btfConfig.IsInitialized = uint16(1)
+
+	ty := ResolveNestedTypes(member.Type)
+
+	ptr, _ := getBTFPointerAndSetConfig(ty, &btfConfig)
+	if ptr != nil {
+		return &ptr.Target, &btfConfig, err
+	}
+	if _, ok := ty.(*btf.Int); ok {
+		btfConfig.IsPointer = uint16(1)
+	}
+	return &ty, &btfConfig, err
+}
+
+func getConfigAndNextStruct(structTy *btf.Struct, memberName string) (*btf.Struct, *api.ConfigBTFArg, error) {
+	btfConfig := api.ConfigBTFArg{}
+
+	member, parentOffset, err := findMemberInBTFStruct(structTy, memberName)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	btfConfig.Offset = uint32(member.Offset.Bytes()) + parentOffset
+	btfConfig.IsInitialized = uint16(1)
+
+	ty := ResolveNestedTypes(member.Type)
+
+	ptr, _ := getBTFPointerAndSetConfig(ty, &btfConfig)
+	if ptr != nil {
+		t, err := getBTFStruct(ptr.Target)
+		return t, &btfConfig, err
+	}
+	t, err := getBTFStruct(ty)
+	return t, &btfConfig, err
+}
+
+func addPaddingOnNestedPtr(ty btf.Type, path []string) []string {
+	if t, ok := ty.(*btf.Pointer); ok {
+		updatedPath := append([]string{"[0]"}, path...)
+		return addPaddingOnNestedPtr(t.Target, updatedPath)
+	}
+	return path
+}
+
+func resolveNestedPtr(rootType btf.Type, btfArgs *[api.MaxBTFArgDepth]api.ConfigBTFArg, i int) (btf.Type, int) {
+	if ptr, ok := rootType.(*btf.Pointer); ok {
+		btfArgs[i] = api.ConfigBTFArg{}
+		ty, err := getBTFPointerAndSetConfig(ptr, &btfArgs[i])
+		if err != nil {
+			return ty.Target, i
+		}
+		return resolveNestedPtr(ty.Target, btfArgs, i+1)
+	}
+	return rootType, i
+}
+
+func manuallyResolveBTFPath(t *testing.T, rootType btf.Type, p []string) [api.MaxBTFArgDepth]api.ConfigBTFArg {
+	var btfArgs [api.MaxBTFArgDepth]api.ConfigBTFArg
+	var i int
+
+	rootType, i = resolveNestedPtr(rootType, &btfArgs, 0)
+
+	currentStruct, err := getBTFStruct(rootType)
+	fatalOnError(t, err)
+
+	for ; i < len(p); i++ {
+		step := p[i]
+		if len(step) == 0 {
+			btfArgs[i] = api.ConfigBTFArg{}
+			ptr, err := getBTFPointerAndSetConfig(ResolveNestedTypes(rootType), &btfArgs[i])
+			fatalOnError(t, err)
+			currentStruct, err = getBTFStruct(ptr.Target)
+			fatalOnError(t, err)
+		} else if i < len(p)-1 {
+			ty, nextConfig, err := getConfigAndNextStruct(currentStruct, step)
+			fatalOnError(t, err)
+			currentStruct = ty
+			btfArgs[i] = *nextConfig
+		} else {
+			_, nextConfig, err := getConfigAndNextType(currentStruct, step)
+			fatalOnError(t, err)
+			btfArgs[i] = *nextConfig
+			return btfArgs
+		}
+	}
+	return btfArgs
+}
+
+func buildPathFromString(t *testing.T, rootType btf.Type, pathStr string) []string {
+	pathBase := strings.Split(pathStr, ".")
+	path := addPaddingOnNestedPtr(rootType, pathBase)
+	if len(path) > api.MaxBTFArgDepth {
+		t.Errorf("Unable to resolve %q. The maximum depth allowed is %d", pathStr, api.MaxBTFArgDepth)
+	}
+	return path
+}
+
+func buildResolveBTFConfig(t *testing.T, rootType btf.Type, pathStr string) [api.MaxBTFArgDepth]api.ConfigBTFArg {
+	var btfArgs [api.MaxBTFArgDepth]api.ConfigBTFArg
+
+	path := buildPathFromString(t, rootType, pathStr)
+	_, err := ResolveBTFPath(&btfArgs, rootType, path, 0)
+	fatalOnError(t, err)
+
+	return btfArgs
+}
+
+func buildExpectedBTFConfig(t *testing.T, rootType btf.Type, pathStr string) [api.MaxBTFArgDepth]api.ConfigBTFArg {
+	path := buildPathFromString(t, rootType, pathStr)
+	return manuallyResolveBTFPath(t, rootType, path)
+}
+
+func testPathIsAccessible(rootType btf.Type, strPath string) (*[api.MaxBTFArgDepth]api.ConfigBTFArg, *btf.Type, error) {
+	var btfArgs [api.MaxBTFArgDepth]api.ConfigBTFArg
+	path := strings.Split(strPath, ".")
+
+	lastBTFType, err := ResolveBTFPath(&btfArgs, ResolveNestedTypes(rootType), path, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &btfArgs, lastBTFType, nil
+}
+
+func testAssertEqualPath(spec *btf.Spec) func(*testing.T) {
+	return func(t *testing.T) {
+		hook := "security_bprm_check"
+		argIndex := 0 // struct linux_binprm *bprm
+		funcParamTy, err := findBTFFuncParamFromHookWithSpec(spec, hook, argIndex)
+		fatalOnError(t, err)
+
+		bprmTy := funcParamTy.Type
+		if ty, ok := bprmTy.(*btf.Pointer); ok {
+			bprmTy = ty.Target
+		}
+
+		// Test default behaviour
+		path := "file.f_path.dentry.d_name.name"
+		assert.Equal(t,
+			buildExpectedBTFConfig(t, bprmTy, path),
+			buildResolveBTFConfig(t, bprmTy, path),
+		)
+
+		// Test anonymous struct
+		path = "mm.arg_start"
+		assert.Equal(t,
+			buildExpectedBTFConfig(t, bprmTy, path),
+			buildResolveBTFConfig(t, bprmTy, path),
+		)
+
+		// Test Union
+		path = "file.f_inode.i_dir_seq"
+		assert.Equal(t,
+			buildExpectedBTFConfig(t, bprmTy, path),
+			buildResolveBTFConfig(t, bprmTy, path),
+		)
+
+		// Test if param is double ptr
+		hook = "security_inode_copy_up"
+		argIndex = 1 // struct cred **new
+		funcParamTy, err = findBTFFuncParamFromHookWithSpec(spec, hook, argIndex)
+		fatalOnError(t, err)
+
+		newTy := funcParamTy.Type
+		if ty, ok := newTy.(*btf.Pointer); ok {
+			newTy = ty.Target
+		}
+		path = "uid.val"
+		assert.Equal(t,
+			buildExpectedBTFConfig(t, newTy, path),
+			buildResolveBTFConfig(t, newTy, path),
+		)
+	}
+}
+
+func testAssertPathIsAccessible(spec *btf.Spec) func(*testing.T) {
+	return func(t *testing.T) {
+		hook := "wake_up_new_task"
+		argIndex := 0 //struct task_struct *p
+		funcParamTy, err := findBTFFuncParamFromHookWithSpec(spec, hook, argIndex)
+		fatalOnError(t, err)
+
+		taskStructTy := funcParamTy.Type
+		if ty, ok := taskStructTy.(*btf.Pointer); ok {
+			taskStructTy = ty.Target
+		}
+
+		_, _, err = testPathIsAccessible(taskStructTy, "sched_task_group.css.id")
+		require.NoError(t, err)
+
+		hook = "security_bprm_check"
+		argIndex = 0 // struct linux_binprm *bprm
+		funcParamTy, err = findBTFFuncParamFromHookWithSpec(spec, hook, argIndex)
+		fatalOnError(t, err)
+
+		bprmTy := funcParamTy.Type
+		if ty, ok := bprmTy.(*btf.Pointer); ok {
+			bprmTy = ty.Target
+		}
+
+		_, _, err = testPathIsAccessible(bprmTy, "mm.pgd.pgd")
+		require.NoError(t, err)
+	}
+}
+
+func testAssertErrorOnInvalidPath(spec *btf.Spec) func(*testing.T) {
+	return func(t *testing.T) {
+		hook := "security_bprm_check"
+		argIndex := 0 // struct linux_binprm *bprm
+		funcParamTy, err := findBTFFuncParamFromHookWithSpec(spec, hook, argIndex)
+		fatalOnError(t, err)
+
+		rootType := funcParamTy.Type
+		if rootTy, ok := rootType.(*btf.Pointer); ok {
+			rootType = rootTy.Target
+		}
+
+		// Assert an error is raised when attribute does not exists
+		_, _, err = testPathIsAccessible(rootType, "fail")
+		require.ErrorContains(t, err, "attribute \"fail\" not found in structure")
+
+		_, _, err = testPathIsAccessible(rootType, "mm.fail")
+		require.ErrorContains(t, err, "attribute \"fail\" not found in structure")
+
+		_, _, err = testPathIsAccessible(rootType, "mm.pgd.fail")
+		require.ErrorContains(t, err, "attribute \"fail\" not found in structure")
+
+		hook = "do_sys_open"
+		argIndex = 0 // int dfd
+		funcParamTy, err = findBTFFuncParamFromHookWithSpec(spec, hook, argIndex)
+		fatalOnError(t, err)
+
+		rootType = funcParamTy.Type
+
+		// Assert an error is raised when attribute has invalid type
+		_, _, err = testPathIsAccessible(rootType, "fail")
+		require.ErrorContains(t, err, fmt.Sprintf("unexpected type : \"fail\" has type %q", rootType.TypeName()))
+	}
+}
+
+func testResolveBTFPath(btfFName string) func(t *testing.T) {
+	return func(t *testing.T) {
+		spec, err := btf.LoadSpec(btfFName)
+		if err != nil {
+			t.Skipf("%q not found", btfFName)
+		}
+		t.Run("PathIsAccessible", testAssertPathIsAccessible(spec))
+		t.Run("AssertErrorOnInvalidPath", testAssertErrorOnInvalidPath(spec))
+		t.Run("AssertEqualPath", testAssertEqualPath(spec))
+	}
+}
+
+func TestResolveBTFPath(t *testing.T) {
+	btfFiles, err := listBTFFiles()
+	fatalOnError(t, err)
+
+	for _, btfFile := range btfFiles {
+		t.Run(btfFile, testResolveBTFPath(btfFile))
+	}
+}
+
+func TestParseArrayIdxStr(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    uint32
+		wantErr bool
+	}{
+		{
+			name:    "Valid input - small number",
+			input:   "[123]",
+			want:    123,
+			wantErr: false,
+		},
+		{
+			name:    "Valid input - zero",
+			input:   "[0]",
+			want:    0,
+			wantErr: false,
+		},
+		{
+			name:    "Valid input - max uint32",
+			input:   fmt.Sprintf("[%d]", math.MaxUint32),
+			want:    math.MaxUint32,
+			wantErr: false,
+		},
+		{
+			name:    "Invalid input - value too large (MaxUint32 + 1)",
+			input:   fmt.Sprintf("[%d]", uint64(math.MaxUint32)+1),
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "Invalid format - no brackets",
+			input:   "123",
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "Invalid format - empty brackets",
+			input:   "[]",
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "Invalid format - non-numeric inside brackets",
+			input:   "[abc]",
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "Invalid format - empty string",
+			input:   "",
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "Invalid format - brackets with space",
+			input:   "[ 123 ]",
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "Invalid format - negative number (regex prevents, but good to test)",
+			input:   "[-1]",
+			want:    0,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseArrayIdxStr(tt.input)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseArrayIdxStr() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && got != tt.want {
+				t.Errorf("parseArrayIdxStr() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestResolveBTFPathZeroLengthArray(t *testing.T) {
+	u8Ty := &btf.Int{Name: "unsigned char", Size: 1}
+	root := &btf.Struct{
+		Name: "sockaddr",
+		Size: 2,
+		Members: []btf.Member{
+			{
+				Name: "sa_data",
+				Type: &btf.Array{
+					Type:   u8Ty,
+					Index:  &btf.Int{Name: "int", Size: 4},
+					Nelems: 0,
+				},
+				Offset: btf.Bits(16),
+			},
+		},
+	}
+
+	for _, tt := range []struct {
+		path   string
+		offset uint32
+	}{
+		{path: "[0]", offset: 0},
+		{path: "[13]", offset: 13},
+	} {
+		t.Run(tt.path, func(t *testing.T) {
+			var btfArgs [api.MaxBTFArgDepth]api.ConfigBTFArg
+
+			ty, err := ResolveBTFPath(&btfArgs, root, []string{"sa_data", tt.path}, 0)
+			require.NoError(t, err)
+			require.NotNil(t, ty)
+
+			assert.Equal(t, btf.Type(u8Ty), *ty)
+
+			// sa_data
+			assert.Equal(t, uint16(1), btfArgs[0].IsInitialized)
+			assert.Equal(t, uint32(2), btfArgs[0].Offset)
+			// [X]
+			assert.Equal(t, uint16(1), btfArgs[1].IsInitialized)
+			assert.Equal(t, uint16(1), btfArgs[1].IsPointer)
+			assert.Equal(t, tt.offset, btfArgs[1].Offset)
+		})
+	}
+}
+
+func TestProcessMembersErrorPrecedence(t *testing.T) {
+	intTy := &btf.Int{Name: "int", Size: 4}
+
+	// deeper resolveError beats shallower resolveError
+	t.Run("deepest_resolve_error_wins", func(t *testing.T) {
+		// struct outer {
+		//   struct { int a; };                     // anon1: "x" not found → resolveError{depth=0}
+		//   struct { struct inner { int b; } x; }; // anon2: "x" found, "y" not found → resolveError{depth=1}
+		// };
+		inner := &btf.Struct{
+			Name: "inner",
+			Size: 4,
+			Members: []btf.Member{
+				{Name: "b", Type: intTy, Offset: 0},
+			},
+		}
+		anon1 := &btf.Struct{
+			Size: 4,
+			Members: []btf.Member{
+				{Name: "a", Type: intTy, Offset: 0},
+			},
+		}
+		anon2 := &btf.Struct{
+			Size: 4,
+			Members: []btf.Member{
+				{Name: "x", Type: inner, Offset: 0},
+			},
+		}
+		outer := &btf.Struct{
+			Name: "outer",
+			Size: 8,
+			Members: []btf.Member{
+				{Name: "", Type: anon1, Offset: 0},
+				{Name: "", Type: anon2, Offset: btf.Bits(32)},
+			},
+		}
+
+		var btfArgs [api.MaxBTFArgDepth]api.ConfigBTFArg
+		_, err := ResolveBTFPath(&btfArgs, outer, []string{"x", "y"}, 0)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, `attribute "y" not found in structure "inner"`)
+	})
+
+	// non-resolveError (attribute found, wrong type) beats resolveError at the same depth
+	t.Run("non_resolve_error_beats_resolve_error_at_same_depth", func(t *testing.T) {
+		// struct outer {
+		//   struct { int q; };  // anon1: "x" not found → resolveError{depth=0}
+		//   struct { int x; };  // anon2: "x" found, int has no subfields → "unexpected type" (non-resolveError at depth=0)
+		// };
+		//
+		// anon2 got further (found "x"), so its error should win
+		anon1 := &btf.Struct{
+			Size: 4,
+			Members: []btf.Member{
+				{Name: "q", Type: intTy, Offset: 0},
+			},
+		}
+		anon2 := &btf.Struct{
+			Size: 4,
+			Members: []btf.Member{
+				{Name: "x", Type: intTy, Offset: 0},
+			},
+		}
+		outer := &btf.Struct{
+			Name: "outer",
+			Size: 8,
+			Members: []btf.Member{
+				{Name: "", Type: anon1, Offset: 0},
+				{Name: "", Type: anon2, Offset: btf.Bits(32)},
+			},
+		}
+
+		var btfArgs [api.MaxBTFArgDepth]api.ConfigBTFArg
+		// Two-element path: "x" is not the last child, so finding it in anon2 triggers
+		// ResolveBTFPath(int, path, 1) which returns a non-resolveError.
+		_, err := ResolveBTFPath(&btfArgs, outer, []string{"x", "y"}, 0)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, `unexpected type : "x" has type "int"`)
+	})
+
+	// deeper resolveError from a later branch beats a non-resolveError from an earlier branch
+	t.Run("deep_resolve_error_beats_non_resolve_error", func(t *testing.T) {
+		// struct outer {
+		//   struct { int x; };                     // anon1: "x" found, int type → non-resolveError stored at depth=0
+		//   struct { struct inner { int b; } x; }; // anon2: "x" found, "y" not in inner → resolveError{depth=1}
+		// };
+		//
+		// anon2's resolveError at depth 1 is deeper than anon1's non-resolveError at depth 0.
+		inner := &btf.Struct{
+			Name: "inner",
+			Size: 4,
+			Members: []btf.Member{
+				{Name: "b", Type: intTy, Offset: 0},
+			},
+		}
+		anon1 := &btf.Struct{
+			Size: 4,
+			Members: []btf.Member{
+				{Name: "x", Type: intTy, Offset: 0},
+			},
+		}
+		anon2 := &btf.Struct{
+			Size: 4,
+			Members: []btf.Member{
+				{Name: "x", Type: inner, Offset: 0},
+			},
+		}
+		outer := &btf.Struct{
+			Name: "outer",
+			Size: 8,
+			Members: []btf.Member{
+				{Name: "", Type: anon1, Offset: 0},
+				{Name: "", Type: anon2, Offset: btf.Bits(32)},
+			},
+		}
+
+		var btfArgs [api.MaxBTFArgDepth]api.ConfigBTFArg
+		_, err := ResolveBTFPath(&btfArgs, outer, []string{"x", "y"}, 0)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, `attribute "y" not found in structure "inner"`)
+	})
+
+	// success through one anonymous branch when another fails
+	t.Run("success_through_anonymous_branch", func(t *testing.T) {
+		// struct outer {
+		//   struct { int q; }; // anon1: "x" not found, int type
+		//   struct { int x; }; // anon2: "x" found
+		// };
+		anon1 := &btf.Struct{
+			Size: 4,
+			Members: []btf.Member{
+				{Name: "q", Type: intTy, Offset: 0},
+			},
+		}
+		anon2 := &btf.Struct{
+			Size: 4,
+			Members: []btf.Member{
+				{Name: "x", Type: intTy, Offset: 0},
+			},
+		}
+		outer := &btf.Struct{
+			Name: "outer",
+			Size: 8,
+			Members: []btf.Member{
+				{Name: "", Type: anon1, Offset: 0},
+				{Name: "", Type: anon2, Offset: btf.Bits(32)},
+			},
+		}
+
+		var btfArgs [api.MaxBTFArgDepth]api.ConfigBTFArg
+		ty, err := ResolveBTFPath(&btfArgs, outer, []string{"x"}, 0)
+		require.NoError(t, err)
+		require.NotNil(t, ty)
+	})
+}

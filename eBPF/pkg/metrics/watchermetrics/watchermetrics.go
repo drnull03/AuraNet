@@ -1,0 +1,91 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright Authors of Tetragon
+
+package watchermetrics
+
+import (
+	"maps"
+	"slices"
+
+	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/cilium/tetragon/pkg/metrics"
+	"github.com/cilium/tetragon/pkg/metrics/consts"
+)
+
+type Watcher int
+
+// TODO: Having only one watcher type, "k8s", makes it not a useful label.
+// Maybe "pod" would be more informative.
+const (
+	K8sWatcher Watcher = iota
+)
+
+var watcherTypeLabelValues = map[Watcher]string{
+	K8sWatcher: "k8s",
+}
+
+func (w Watcher) String() string {
+	return watcherTypeLabelValues[w]
+}
+
+type ErrorType string
+
+const (
+	FailedToGetPodError ErrorType = "failed_to_get_pod"
+)
+
+var (
+	WatcherErrors = metrics.MustNewCounter(
+		metrics.NewOpts(
+			consts.MetricsNamespace, "", "watcher_errors_total",
+			"The total number of errors for a given watcher type.",
+			nil, []metrics.ConstrainedLabel{
+				{Name: "watcher", Values: slices.Collect(maps.Values(watcherTypeLabelValues))},
+				{Name: "error", Values: []string{string(FailedToGetPodError)}},
+			}, nil,
+		),
+		nil,
+	)
+	WatcherEvents = metrics.MustNewCounter(
+		metrics.NewOpts(
+			consts.MetricsNamespace, "", "watcher_events_total",
+			"The total number of events for a given watcher type.",
+			nil, []metrics.ConstrainedLabel{{Name: "watcher", Values: slices.Collect(maps.Values(watcherTypeLabelValues))}}, nil,
+		),
+		nil,
+	)
+
+	WatcherDeletedPodCacheHits = metrics.MustNewCounter(metrics.NewOpts(
+		consts.MetricsNamespace, "", "watcher_delete_pod_cache_hits",
+		"The total hits for pod information in the deleted pod cache.",
+		nil, nil, nil,
+	), nil)
+)
+
+func RegisterMetrics(group metrics.Group) {
+	group.MustRegister(WatcherErrors)
+	group.MustRegister(WatcherEvents)
+	group.MustRegister(WatcherDeletedPodCacheHits)
+}
+
+func InitMetrics() {
+	// Initialize metrics with labels
+	GetWatcherEvents(K8sWatcher).Add(0)
+	GetWatcherErrors(K8sWatcher, FailedToGetPodError).Add(0)
+	GetWatcherDeletedPodCacheHits().Add(0)
+}
+
+// Get a new handle on an WatcherEvents metric for a watcher type
+func GetWatcherEvents(watcherType Watcher) prometheus.Counter {
+	return WatcherEvents.WithLabelValues(watcherType.String())
+}
+
+// Get a new handle on an WatcherEvents metric for a watcher type
+func GetWatcherErrors(watcherType Watcher, watcherError ErrorType) prometheus.Counter {
+	return WatcherErrors.WithLabelValues(watcherType.String(), string(watcherError))
+}
+
+func GetWatcherDeletedPodCacheHits() prometheus.Counter {
+	return WatcherDeletedPodCacheHits.WithLabelValues()
+}

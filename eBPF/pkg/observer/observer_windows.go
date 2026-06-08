@@ -1,0 +1,105 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright Authors of Tetragon
+
+package observer
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"runtime"
+	"sync"
+
+	"github.com/cilium/ebpf/ringbuf"
+
+	"github.com/cilium/tetragon/pkg/api/readyapi"
+	"github.com/cilium/tetragon/pkg/bpf"
+	"github.com/cilium/tetragon/pkg/logger/logfields"
+)
+
+func (observer *Observer) RunEvents(stopCtx context.Context, ready func()) error {
+	coll, _ := bpf.GetCollection("ProcessMonitor")
+	if coll == nil {
+		return errors.New("exec Preloaded collection is nil")
+	}
+	ringBufMap := coll.Maps["process_ringbuf"]
+	defer ringBufMap.Close()
+	var ringBufReader *ringbuf.Reader
+	ringBufReader, err := ringbuf.NewReader(ringBufMap)
+
+	if err != nil {
+		return fmt.Errorf("creating ring buffer reader failed: %w", err)
+	}
+
+	// Inform caller that we're about to start processing events.
+	observer.observerListeners(&readyapi.MsgTetragonReady{})
+	ready()
+
+	// We spawn go routine to read and process perf events,
+	// connected with main app through winEventsQueue channel.
+	eventsQueue := make(chan *[]byte, observer.getRBQueueSize())
+
+	// Listeners are ready and about to start reading from perf reader, tell
+	// user everything is ready.
+	observer.log.Info("Listening for events...")
+
+	// Start reading records from the perf array. Reads until the reader is closed.
+	var wg sync.WaitGroup
+	wg.Add(1)
+	defer wg.Wait()
+
+	go func() {
+		defer wg.Done()
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		for stopCtx.Err() == nil {
+			record, err := ringBufReader.Read()
+			if err != nil {
+				// NOTE(JM and Djalal): count and log errors while excluding the stopping context
+				if stopCtx.Err() == nil {
+					RingbufErrors.Inc()
+					errorCnt := getCounterValue(RingbufErrors)
+					observer.log.Warn("Reading bpf events from BPF ring buffer failed", "errors", errorCnt, logfields.Error, err)
+				}
+			} else {
+				if len(record.RawSample) > 0 {
+					select {
+					case eventsQueue <- &record.RawSample:
+					default:
+						// drop the event, since channel is full
+						queueLost.Inc()
+					}
+					RingbufReceived.Inc()
+				}
+			}
+		}
+	}()
+
+	// Start processing records from ringbuffer
+	wg.Go(func() {
+		for {
+			select {
+			case winEvent := <-eventsQueue:
+				observer.receiveEvent(*winEvent)
+				queueReceived.Inc()
+			case <-stopCtx.Done():
+				observer.log.Info("Listening for events completed.", logfields.Error, stopCtx.Err())
+				observer.log.Debug(fmt.Sprintf("Unprocessed events in RB queue: %d", len(eventsQueue)))
+				return
+			}
+		}
+	})
+
+	// Loading default program consumes some memory lets kick GC to give
+	// this back to the OS (K8s).
+	go func() {
+		runtime.GC()
+	}()
+
+	// Wait for context to be cancelled and then stop.
+	<-stopCtx.Done()
+	return nil
+}

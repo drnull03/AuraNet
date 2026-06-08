@@ -1,0 +1,231 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright Authors of Tetragon
+
+package config
+
+import (
+	"math"
+	"os"
+
+	"github.com/cilium/tetragon/pkg/bpf"
+	"github.com/cilium/tetragon/pkg/kernels"
+	"github.com/cilium/tetragon/pkg/option"
+)
+
+const (
+	perCPUBufferBytes = 64 * 1024
+)
+
+// ExecObj returns the exec object based on the kernel version
+func ExecObj() string {
+	if EnableRhel7Progs() {
+		return "bpf_execve_event_v310.o"
+	} else if EnableV61Progs() {
+		return "bpf_execve_event_v61.o"
+	} else if EnableV511Progs() {
+		return "bpf_execve_event_v511.o"
+	} else if EnableLargeProgs() {
+		return "bpf_execve_event_v53.o"
+	}
+	return "bpf_execve_event.o"
+}
+
+func ExecUpdateObj() string {
+	if EnableV511Progs() {
+		return "bpf_execve_map_update_v511.o"
+	} else if EnableLargeProgs() {
+		return "bpf_execve_map_update_v53.o"
+	}
+	return "bpf_execve_map_update.o"
+}
+
+func ExitObj() string {
+	if EnableRhel7Progs() {
+		return "bpf_exit_v310.o"
+	} else if EnableV511Progs() {
+		return "bpf_exit_v511.o"
+	}
+	return "bpf_exit.o"
+}
+
+func ForkObj() string {
+	if EnableRhel7Progs() {
+		return "bpf_fork_v310.o"
+	} else if EnableV511Progs() {
+		return "bpf_fork_v511.o"
+	}
+	return "bpf_fork.o"
+}
+
+// GenericKprobeObjs returns the generic kprobe and generic kretprobe objects
+func GenericKprobeObjs(multi bool) (string, string) {
+	if multi {
+		if EnableV61Progs() {
+			return "bpf_multi_kprobe_v61.o", "bpf_multi_retkprobe_v61.o"
+		} else if EnableV511Progs() {
+			return "bpf_multi_kprobe_v511.o", "bpf_multi_retkprobe_v511.o"
+		}
+		return "bpf_multi_kprobe_v53.o", "bpf_multi_retkprobe_v53.o"
+	}
+	if EnableV61Progs() {
+		return "bpf_generic_kprobe_v61.o", "bpf_generic_retkprobe_v61.o"
+	} else if EnableV511Progs() {
+		return "bpf_generic_kprobe_v511.o", "bpf_generic_retkprobe_v511.o"
+	} else if EnableLargeProgs() {
+		return "bpf_generic_kprobe_v53.o", "bpf_generic_retkprobe_v53.o"
+	}
+	return "bpf_generic_kprobe.o", "bpf_generic_retkprobe.o"
+}
+
+func GenericTracingObjs() (string, string) {
+	if EnableV61Progs() {
+		return "bpf_generic_fentry_v61.o", "bpf_generic_fexit_v61.o"
+	} else if kernels.MinKernelVersion("5.11") {
+		return "bpf_generic_fentry_v511.o", "bpf_generic_fexit_v511.o"
+	} else if EnableLargeProgs() {
+		return "bpf_generic_fentry_v53.o", "bpf_generic_fexit_v53.o"
+	}
+	return "bpf_generic_fentry.o", "bpf_generic_fexit.o"
+}
+
+// GenericUprobeObjs returns the generic uprobe and generic uretprobe objects
+func GenericUprobeObjs(multi bool) (string, string) {
+	if multi {
+		if EnableV61Progs() {
+			return "bpf_multi_uprobe_v61.o", "bpf_multi_retuprobe_v61.o"
+		}
+		return "bpf_multi_uprobe_v511.o", "bpf_multi_retuprobe_v511.o"
+	}
+	if EnableV61Progs() {
+		return "bpf_generic_uprobe_v61.o", "bpf_generic_retuprobe_v61.o"
+	} else if EnableV511Progs() {
+		return "bpf_generic_uprobe_v511.o", "bpf_generic_retuprobe_v511.o"
+	} else if EnableLargeProgs() {
+		return "bpf_generic_uprobe_v53.o", "bpf_generic_retuprobe_v53.o"
+	}
+	return "bpf_generic_uprobe.o", "bpf_generic_retuprobe.o"
+}
+
+func GenericUsdtObjs(multi bool) string {
+	if multi {
+		if EnableV61Progs() {
+			return "bpf_multi_usdt_v61.o"
+		}
+		return "bpf_multi_usdt_v511.o"
+	}
+	if EnableV61Progs() {
+		return "bpf_generic_usdt_v61.o"
+	} else if EnableV511Progs() {
+		return "bpf_generic_usdt_v511.o"
+	}
+	return "bpf_generic_usdt_v53.o"
+}
+
+func GenericTracepointObjs(raw bool) string {
+	if raw {
+		if EnableV61Progs() {
+			return "bpf_generic_rawtp_v61.o"
+		} else if EnableV511Progs() {
+			return "bpf_generic_rawtp_v511.o"
+		} else if EnableLargeProgs() {
+			return "bpf_generic_rawtp_v53.o"
+		}
+		return "bpf_generic_rawtp.o"
+	}
+	if EnableV61Progs() {
+		return "bpf_generic_tracepoint_v61.o"
+	} else if EnableV511Progs() {
+		return "bpf_generic_tracepoint_v511.o"
+	} else if EnableLargeProgs() {
+		return "bpf_generic_tracepoint_v53.o"
+	}
+	return "bpf_generic_tracepoint.o"
+}
+
+func GenericLsmObjs() (string, string) {
+	if EnableV61Progs() {
+		return "bpf_generic_lsm_core_v61.o", "bpf_generic_lsm_output_v61.o"
+	} else if EnableV511Progs() {
+		return "bpf_generic_lsm_core_v511.o", "bpf_generic_lsm_output_v511.o"
+	}
+	return "bpf_generic_lsm_core.o", "bpf_generic_lsm_output.o"
+}
+
+func CGroupMkdirObj() string {
+	if EnableV511Progs() {
+		return "bpf_cgroup_mkdir_v511.o"
+	}
+	return "bpf_cgroup_mkdir.o"
+}
+
+func CGroupReleaseObj() string {
+	if EnableV511Progs() {
+		return "bpf_cgroup_release_v511.o"
+	}
+	return "bpf_cgroup_release.o"
+}
+
+func CGroupRmdirObj() string {
+	if EnableV511Progs() {
+		return "bpf_cgroup_rmdir_v511.o"
+	}
+	return "bpf_cgroup_rmdir.o"
+}
+
+func LoaderObj() string {
+	if EnableV511Progs() {
+		return "bpf_loader_v511.o"
+	}
+	return "bpf_loader.o"
+}
+
+func EnableRhel7Progs() bool {
+	kernelVer, _, _ := kernels.GetKernelVersion(option.Config.KernelVersion, option.Config.ProcFS)
+	return (int64(kernelVer) < kernels.KernelStringToNumeric("3.11.0"))
+}
+
+func EnableV511Progs() bool {
+	if option.Config.ForceSmallProgs {
+		return false
+	}
+	kernelVer, _, _ := kernels.GetKernelVersion(option.Config.KernelVersion, option.Config.ProcFS)
+	return (int64(kernelVer) >= kernels.KernelStringToNumeric("5.11.0"))
+}
+
+func EnableV61Progs() bool {
+	if option.Config.ForceSmallProgs {
+		return false
+	}
+	kernelVer, _, _ := kernels.GetKernelVersion(option.Config.KernelVersion, option.Config.ProcFS)
+	return (int64(kernelVer) >= kernels.KernelStringToNumeric("6.1.0"))
+}
+
+func EnableLargeProgs() bool {
+	if option.Config.ForceSmallProgs {
+		return false
+	}
+	if option.Config.ForceLargeProgs {
+		return true
+	}
+	return bpf.HasProgramLargeSize() && bpf.HasSignalHelper()
+}
+
+func GetRBSize() int {
+	var size int
+
+	if option.Config.RBSize == 0 && option.Config.RBSizeTotal == 0 {
+		size = perCPUBufferBytes * bpf.GetNumPossibleCPUs()
+	} else if option.Config.RBSize != 0 {
+		size = option.Config.RBSize * bpf.GetNumPossibleCPUs()
+	} else {
+		size = option.Config.RBSizeTotal
+	}
+
+	pageSize := os.Getpagesize()
+	nPages := size / pageSize
+
+	// Round up to nearest power of two number of pages
+	nPages = int(math.Pow(2, math.Ceil(math.Log2(float64(nPages)))))
+	size = nPages * pageSize
+	return size
+}
