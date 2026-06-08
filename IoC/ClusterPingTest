@@ -1,0 +1,1 @@
+kubectl run net-test --rm -it --image=alpine --restart=Never -- sh -c "for ip in $(kubectl get pods -n kube-system -l k8s-app=kube-dns -o jsonpath='{.items[*].status.podIP}'); do echo Pinging \$ip...; ping -c 2 \$ip; done"
