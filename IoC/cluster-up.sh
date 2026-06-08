@@ -25,5 +25,5 @@ kubectl get nodes
 sleep 2
 
 echo "🔭 Step 5: Starting Hubble UI Port Forward..."
-nohup cilium hubble ui </dev/null >/dev/null 2>&1 &
+nohup cilium hubble ui >> ../logs/hubble-port-forward.log 2>&1 &
 echo "✅ Hubble UI is listening on VPS localhost:12000"
