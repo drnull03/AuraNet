@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: netshoot-client
+  labels:
+    app.kubernetes.io/name: netshoot-client
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: my-cluster-worker
+  containers:
+  - name: netshoot
+    image: nicolaka/netshoot
+    command: ["sleep", "infinity"]

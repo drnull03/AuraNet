@@ -1,0 +1,17 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ch03-policy
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: nginx
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: netshoot-client
+    toPorts:
+    - ports:
+      - port: "80"
+        protocol: TCP
