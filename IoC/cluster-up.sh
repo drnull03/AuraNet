@@ -2,7 +2,7 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-CLUSTER_NAME="auranet"
+CLUSTER_NAME="my-cluster"
 
 echo "🧹 Step 1: Cleaning up old cluster..."
 # We use || true so the script doesn't crash if the cluster doesn't exist yet
