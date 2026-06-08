@@ -1,0 +1,6 @@
+name: auranet-infrastructure
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: AuraNet Infrastructure via Pulumi
