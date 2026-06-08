@@ -11,10 +11,19 @@ kind delete cluster --name $CLUSTER_NAME || true
 echo "📦 Step 2: Booting up new 3-node cluster..."
 kind create cluster --name $CLUSTER_NAME --config ./cluster/3Nodes.yaml
 
+echo "🐝 Step 3: Installing Cilium eBPF Datapath & Hubble UI..."
+# Passing these flags provisions Hubble during the initial install,
+# preventing unnecessary daemonset restarts.
+cilium install \
+  --set hubble.relay.enabled=true \
+  --set hubble.ui.enabled=true \
+  --wait
 
-echo "🐝 Step 4: Installing Cilium eBPF Datapath..."
-# We use --wait so the script pauses until the CNI is fully functional
-cilium install --wait
-
-echo "✅ Step 5: Cluster is ready!"
+echo "✅ Step 4: Cluster is ready!"
 kubectl get nodes
+
+sleep 2
+
+echo "🔭 Step 5: Starting Hubble UI Port Forward..."
+nohup cilium hubble ui </dev/null >/dev/null 2>&1 &
+echo "✅ Hubble UI is listening on VPS localhost:12000"

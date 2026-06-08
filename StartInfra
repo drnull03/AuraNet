@@ -1,1 +1,2 @@
-IoC/cluster-up.sh
+cd ./IoC
+./cluster-up.sh
