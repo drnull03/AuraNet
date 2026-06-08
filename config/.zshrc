@@ -1,0 +1,2 @@
+alias vps="kitten ssh -i /home/drnull/.ssh/id_ed_diaa_vps diaa@159.223.24.128"
+alias hubble="ssh -i /home/drnull/.ssh/id_ed_diaa_vps -L 12000:localhost:12000 diaa@159.223.24.128"
