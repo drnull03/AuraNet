@@ -1,0 +1,3 @@
+name: auranet-identity
+runtime: python
+description: AuraNet SPIFFE/SPIRE Identity Mesh

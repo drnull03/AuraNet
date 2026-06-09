@@ -15,7 +15,6 @@ kind_cluster = command.local.Command(
 )
 
 # 2. Extract the kubeconfig dynamically right after the cluster boots
-# We track this as a separate command so we can pass its stdout directly to the provider.
 kubeconfig = command.local.Command(
     "get-kubeconfig",
     create=f"kind get kubeconfig --name {CLUSTER_NAME}",
@@ -30,17 +29,15 @@ k8s_provider = k8s.Provider(
 )
 
 # 4. Install Cilium via Helm Release
-# This completely replaces 'cilium install --set hubble.relay.enabled=true...'
 cilium_release = k8s.helm.v3.Release(
     "cilium-ebpf-datapath",
     k8s.helm.v3.ReleaseArgs(
         chart="cilium",
-        version="1.15.5", # Standard stable version for local dev setups
+        # Standard stable version for local dev setups
         repository_opts=k8s.helm.v3.RepositoryOptsArgs(
             repo="https://helm.cilium.io/"
         ),
         namespace="kube-system",
-        # We pass your Hubble settings directly into the chart values
         values={
             "hubble": {
                 "relay": {"enabled": True},
@@ -52,13 +49,37 @@ cilium_release = k8s.helm.v3.Release(
             }
         },
     ),
-    # Crucial: We tell Pulumi to deploy this using our specific Kind provider instance
     opts=pulumi.ResourceOptions(provider=k8s_provider, depends_on=[kubeconfig])
+)
+
+# 5. Install Tetragon via Helm Release
+tetragon_release = k8s.helm.v3.Release(
+    "tetragon-security-observability",
+    k8s.helm.v3.ReleaseArgs(
+        chart="tetragon",
+       
+        repository_opts=k8s.helm.v3.RepositoryOptsArgs(
+            repo="https://helm.cilium.io/"
+        ),
+        namespace="kube-system",
+        
+       
+        
+        values={
+            "tetragon": {
+                "exportFilename": "tetragon.log",
+                "exportDirectory": "/var/log/tetragon/"
+            }
+        },
+    ),
+    opts=pulumi.ResourceOptions(
+        provider=k8s_provider, 
+        depends_on=[cilium_release]
+    )
 )
 
 # Export deployment metrics to your terminal output
 pulumi.export("deployed_cluster_name", CLUSTER_NAME)
 pulumi.export("cilium_status", cilium_release.status.name)
-
-
+pulumi.export("tetragon_status", tetragon_release.status.name)
 pulumi.export("raw_kubeconfig", kubeconfig.stdout)
