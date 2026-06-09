@@ -39,3 +39,9 @@ clean:
 down: clean
 	@echo "💥 Destroying infrastructure via Pulumi..."
 	pulumi destroy --yes
+
+
+# 6. Run the automated Python test suite
+test:
+	@echo "🧪 Running Pytest Network Validation Suite..."
+	@pytest tests/ -v --disable-warnings
