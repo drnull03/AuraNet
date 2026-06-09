@@ -1,0 +1,3 @@
+name: auranet-infrastructure
+runtime: python
+description: AuraNet Infrastructure via Pulumi

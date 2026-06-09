@@ -59,3 +59,6 @@ cilium_release = k8s.helm.v3.Release(
 # Export deployment metrics to your terminal output
 pulumi.export("deployed_cluster_name", CLUSTER_NAME)
 pulumi.export("cilium_status", cilium_release.status.name)
+
+
+pulumi.export("raw_kubeconfig", kubeconfig.stdout)
