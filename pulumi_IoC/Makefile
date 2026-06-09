@@ -5,12 +5,12 @@ PORT_UI = 12000
 
 .PHONY: up down connect status clean
 
-# 1. Spin up the infrastructure (Cluster + Cilium)
+# Spin up the infrastructure (Cluster + Cilium)
 up:
 	@echo "🚀 Provisioning infrastructure with Pulumi..."
 	pulumi up --yes
 
-# 2. Establish the background port-forward tunnels
+# Establish the background port-forward tunnels
 connect:
 	@echo "🧹 Clearing any stale port-forwards..."
 	@pkill -f "[p]ort-forward" || true
@@ -22,26 +22,26 @@ connect:
 	@echo "✅ Network tunnels established in the background."
 	@echo "🔗 Access Hubble UI here: http://localhost:$(PORT_UI) (or via VPS public IP)"
 
-# 3. Check the active status of tunnels and cluster
+# Check the active status of tunnels and cluster
 status:
 	@echo "📊 Checking background network tunnels..."
 	@ss -tulpn | grep -E "$(PORT_API)|$(PORT_UI)" || echo "❌ No active tunnels found on ports $(PORT_API) or $(PORT_UI)."
 	@echo "\n🤖 Active cluster nodes:"
 	@kubectl get nodes || echo "❌ Cluster not reachable."
 
-# 4. Tear down the network tunnels cleanly
+# Tear down the network tunnels cleanly
 clean:
 	@echo "🧹 Stopping all background port-forward tunnels..."
 	@pkill -f "[p]ort-forward" || true
 	@echo "✅ Tunnels stopped cleanly."
 
-# 5. Destroy everything (Tunnels + Infrastructure)
+# Destroy everything (Tunnels + Infrastructure)
 down: clean
 	@echo "💥 Destroying infrastructure via Pulumi..."
 	pulumi destroy --yes
 
 
-# 6. Run the automated Python test suite
+# Run the automated Python test suite
 test:
 	@echo "🧪 Running Pytest Network Validation Suite..."
 	@pytest tests/ -v --disable-warnings
