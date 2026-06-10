@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dummy-trigger-pod
+  namespace: default
+  labels:
+    auranet-id: "database-node"
+spec:
+  containers:
+  - name: sleeper
+    image: alpine:latest
+    command: ["sleep", "1h"]
