@@ -41,3 +41,8 @@ we divided the project into 4 layers
 2. layer 2: SPIRE and identity integration
 3. layer 3: Our own custom custom auranet agent (it is divided into multiple components the zero trust controller,inference engine,Ml agent,central aggregator, it will also read naive policy rules and apply them)
 4. layer 4: this is the plugable layer it should deploy some sample pods representing the company workload infrastructure  
+
+
+
+##  Notes For the AI
+1.don't specify versions in pulumi let helm download the latest version
