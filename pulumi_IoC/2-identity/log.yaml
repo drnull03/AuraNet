@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: auranet-db-tester
+  namespace: default
+  labels:
+    auranet-id: "database-node"
+spec:
+  restartPolicy: Never
+  containers:
+  - name: fetcher
+    image: ghcr.io/spiffe/spire-agent:1.15.1
+    command: ["/opt/spire/bin/spire-agent", "api", "fetch", "x509", "-socketPath", "/spiffe-workload-api/spire-agent.sock"]
+    volumeMounts:
+    - name: spiffe-workload-api
+      mountPath: "/spiffe-workload-api"
+      readOnly: true
+  volumes:
+  - name: spiffe-workload-api
+    csi:
+      driver: "csi.spiffe.io"
+      readOnly: true
