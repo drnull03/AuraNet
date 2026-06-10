@@ -46,6 +46,18 @@ cilium_release = k8s.helm.v3.Release(
             "encryption": {
                 "enabled": True,
                 "type": "wireguard"
+            },
+            "authentication": {
+                "enabled": True,
+                "mutual": {
+                    "spire": {
+                        "enabled": True,
+                        "install": {
+                            # CRITICAL: Set to False because our Layer 2 mesh already handles SPIRE!
+                            "enabled": True 
+                        }
+                    }
+                }
             }
         },
     ),
