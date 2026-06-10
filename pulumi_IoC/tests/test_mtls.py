@@ -102,23 +102,23 @@ def test_spiffe_mutual_authentication(k8s_crd_api, mtls_test_env, pod_exec):
     }
 
     try:
-        # 1. Inject the CRD
+        #  Inject the CRD
         k8s_crd_api.create_namespaced_custom_object(
             group="cilium.io", version="v2", namespace=env["namespace"],
             plural="ciliumnetworkpolicies", body=cilium_policy
         )
         time.sleep(4) # Wait for Cilium Agents to sync the policy and the embedded SPIRE to rotate identities
 
-        # 2. Execute the Attack (Negative Test)
+        #  Execute the Attack (Negative Test)
         # We use a strict 3-second timeout to catch the eBPF drop without hanging the test suite forever
-        rogue_cmd = f"curl -s -m 3 http://{env['target_ip']}"
+        rogue_cmd = f"curl -m 3 http://{env['target_ip']}"
         rogue_output = pod_exec(env["namespace"], env["rogue_client"], rogue_cmd)
         
         # Ensure the kernel dropped the packet (exit code 28 / timeout)
         assert "timed out" in rogue_output.lower() or "timeout" in rogue_output.lower(), \
             f"Zero Trust failure! Rogue attacker bypassed mTLS. Output: {rogue_output}"
 
-        # 3. Execute the Authorized Request (Positive Test)
+        #  Execute the Authorized Request (Positive Test)
         auth_cmd = f"curl -s -o /dev/null -w '%{{http_code}}' -m 5 http://{env['target_ip']}"
         auth_status = pod_exec(env["namespace"], env["auth_client"], auth_cmd)
         
