@@ -1,3 +1,1 @@
-We Moved Away from this approach to automated tests in each subfolder 
-
-this folder is left for legacy purposes only.
+This folder is for expirments and having fun not to be confused with software tests.
