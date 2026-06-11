@@ -1,0 +1,14 @@
+# auranet-test/templates/pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  # Dynamically name the pod based on the Helm release name
+  name: {{ .Release.Name }}-pod
+  labels:
+    # Dynamically assign the Zero Trust identity
+    auranet-id: {{ .Values.identity }}
+spec:
+  containers:
+  - name: client
+    image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+    command: ["sleep", "3600"]

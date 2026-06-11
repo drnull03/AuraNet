@@ -1,0 +1,5 @@
+# auranet-test/values.yaml
+identity: "ai-engine"
+image:
+  repository: "curlimages/curl"
+  tag: "latest"
