@@ -1,0 +1,8 @@
+The Author separated eBPF testing and expirmenting using a separate github repo
+
+	https://github.com/drnull03/Hello_eBPF
+
+In this repo we tried to use all the ways to load eBPF byte code into the linux-kernel
+
+
+
