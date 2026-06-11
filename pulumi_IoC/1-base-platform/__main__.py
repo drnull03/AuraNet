@@ -53,7 +53,7 @@ cilium_release = k8s.helm.v3.Release(
                     "spire": {
                         "enabled": True,
                         "install": {
-                            # CRITICAL: Set to False because our Layer 2 mesh already handles SPIRE!
+                            
                             "enabled": True 
                         }
                     }
@@ -90,8 +90,39 @@ tetragon_release = k8s.helm.v3.Release(
     )
 )
 
+
+# 6. Automate the 10-Minute Certificate Rotation Patch
+patch_spire_ttl = command.local.Command(
+    "patch-spire-ttl",
+    create="""
+        # 1. Extract the raw configuration text using the correct key
+        kubectl get configmap spire-server -n cilium-spire --template='{{index .data "server.conf"}}' > current.conf
+        
+        # 2. Idempotency check: strictly check if EXACTLY 10m is already set
+        if grep -q 'default_x509_svid_ttl = "10m"' current.conf; then 
+            echo "TTL already correctly patched. Skipping."
+            exit 0
+        fi
+        
+        # 3. Smart Injection: Insert the 10m rule and strip out any old/duplicate TTL lines
+        awk '/server \\{/ {print; print "    default_x509_svid_ttl = \\"10m\\""; next} /default_x509_svid_ttl/ {next} 1' current.conf > patched.conf
+        
+        # 4. Push the patched file back into the cluster
+        kubectl create configmap spire-server -n cilium-spire --from-file=server.conf=patched.conf -o yaml --dry-run=client | kubectl apply -f -
+        
+        # 5. Nuke the SPIRE server pod so it reloads
+        kubectl delete pod -n cilium-spire spire-server-0
+    """,
+    opts=pulumi.ResourceOptions(depends_on=[cilium_release])
+)
+
+
+
 # Export deployment metrics to your terminal output
 pulumi.export("deployed_cluster_name", CLUSTER_NAME)
 pulumi.export("cilium_status", cilium_release.status.name)
 pulumi.export("tetragon_status", tetragon_release.status.name)
 pulumi.export("raw_kubeconfig", kubeconfig.stdout)
+
+# Export the status of the patch script
+pulumi.export("spire_ttl_patched", patch_spire_ttl.id)

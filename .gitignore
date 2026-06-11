@@ -10,3 +10,5 @@ shadowAuraNet/
 **/lib64
 **/pyvenv.cfg
 **/__pycache__/
+**/current.conf
+**/patched.conf
