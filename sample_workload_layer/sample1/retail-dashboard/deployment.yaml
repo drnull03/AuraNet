@@ -19,7 +19,7 @@ spec:
       serviceAccountName: retail-dashboard-sa
       containers:
       - name: dashboard
-        image: auranet/retail-dashboard:v2
+        image: auranet/retail-dashboard:v3
         imagePullPolicy: Never
         ports:
         - containerPort: 8001
