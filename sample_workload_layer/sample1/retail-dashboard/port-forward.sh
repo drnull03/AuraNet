@@ -1,0 +1,1 @@
+kubectl port-forward --address 0.0.0.0 svc/retail-dashboard 8001:8001 

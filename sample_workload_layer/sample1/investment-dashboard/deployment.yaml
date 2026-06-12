@@ -1,0 +1,47 @@
+# investment-dashboard/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: investment-dashboard
+  namespace: default
+  labels:
+    app: investment-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: investment-dashboard
+  template:
+    metadata:
+      labels:
+        app: investment-dashboard
+    spec:
+      serviceAccountName: investment-dashboard-sa
+      containers:
+      - name: dashboard
+        image: auranet/investment-dashboard:v2
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8002
+          name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: investment-dashboard
+  namespace: default
+spec:
+  ports:
+  - port: 8002
+    targetPort: 8002
+    protocol: TCP
+    name: http
+  selector:
+    app: investment-dashboard
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: investment-dashboard-sa
+  namespace: default

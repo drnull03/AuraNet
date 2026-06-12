@@ -1,0 +1,1 @@
+kubectl port-forward --address 0.0.0.0 svc/investment-dashboard 8002:8002 
