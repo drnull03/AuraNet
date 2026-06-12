@@ -37,12 +37,14 @@ this design decision was made as trade of to preformance
 
 we are using pulumi as infra as code 
 we divided the project into 4 layers
-1. layer 1: kind cluster cilium ,tetragon and hubble 
-2. layer 2: SPIRE and identity integration
-3. layer 3: Our own custom custom auranet agent (it is divided into multiple components the zero trust controller,inference engine,Ml agent,central aggregator, it will also read naive policy rules and apply them)
-4. layer 4: this is the plugable layer it should deploy some sample pods representing the company workload infrastructure  
+1. layer 1: kind cluster cilium ,tetragon and hubble  And SPIRE
+2. layer 2: Our own custom custom auranet agent (it is divided into multiple components the zero trust controller,inference engine,Ml agent,central aggregator, it will also read naive policy rules and apply them)
+3. layer 3: this is the plugable layer it should deploy some sample pods representing the company workload infrastructure  
 
 
 
 ##  Notes For the AI
 1.don't specify versions in pulumi let helm download the latest version
+
+## What We are Building 
+okay this session if for building auranet 5th year graduation project """AuraNet"  Autonomous Self-Healing Zero Trust Architecture using eBPF and Federated Learning"" my current setup i have pulumi i already have a kind cluster running 3 nodes cilium setup with SPIFFE and SPIRE and tetragon this layer 1 the arch layer this is done now we should build together layer 2 and layer 3 layer 2  is auranet layer and layer three is sample workload layer (plugable layer) layer 2 should have the following 1.auranet controller (it plays as aggregator for the ml model ) 2. auranet-agent a deamon set running on every node the auranet-agent consist of the following 1.inference-engine : runing autoencoder model 2. learning-engine for learning and sending to the aggregator 3.zero-trust-controller for the contextual or scoring based algo 4.auranet runtime (this uses tetragon and some public of known bad behaviours to block the process using tracing policies 5-auranet bootstrap this read two file a configuration file for configuring auranet for example i can turn on inferenceOnly setting which stops the learning the second file is a file the define naive unallowed connection for example front end isn't allowed to talk to database directly  it convert this file to cilium policies 6.an autohealing component here are notes on the AI 1. we should  nurosymbolic AI for offering some controller env 2. the ai should not be blocking we should have a shadow stream which means we don't execute the inference engine on every request the inference engine run on logs and apply cilium network policy (thus achieving immuntisation and lateral movement isolation and maybe restart pod)
