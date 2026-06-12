@@ -646,7 +646,7 @@ perf_event_output_metric(void *ctx, u8 msg_op, void *map, u64 flags, void *data,
 FUNC_INLINE long
 event_output(void *ctx, void *data, u64 size)
 {
-	struct tetragon_conf *conf;
+	struct auragon_conf *conf;
 	int zero = 0;
 
 	conf = map_lookup_elem(&tg_conf_map, &zero);
@@ -658,7 +658,7 @@ event_output(void *ctx, void *data, u64 size)
 FUNC_INLINE void
 event_output_metric(void *ctx, u8 msg_op, void *data, u64 size)
 {
-	struct tetragon_conf *conf;
+	struct auragon_conf *conf;
 	int zero = 0;
 	long err;
 

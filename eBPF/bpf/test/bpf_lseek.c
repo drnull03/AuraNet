@@ -48,7 +48,7 @@ test_lseek(struct sys_enter_lseek_args *ctx)
 		struct msg_test msg = { 0 };
 		size_t size = sizeof(msg);
 #ifdef __V511_BPF_PROG
-		struct tetragon_conf *conf;
+		struct auragon_conf *conf;
 		int zero = 0;
 #endif
 

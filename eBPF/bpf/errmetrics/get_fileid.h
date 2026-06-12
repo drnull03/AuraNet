@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
-/* Copyright Authors of Tetragon */
+/* Copyright Authors of aura */
 
 #ifndef GET_FILEID_H__
 #define GET_FILEID_H__

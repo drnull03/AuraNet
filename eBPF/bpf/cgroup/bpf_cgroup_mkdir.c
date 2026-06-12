@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
-/* Copyright Authors of Tetragon */
+/* Copyright Authors of aura */
 
 #include "vmlinux.h"
 #include "api.h"
@@ -24,7 +24,7 @@ tg_tp_cgrp_mkdir(struct bpf_raw_tracepoint_args *ctx)
 	int level, hierarchy_id, zero = 0;
 	struct cgroup *cgrp;
 	struct cgroup_tracking_value *cgrp_heap;
-	struct tetragon_conf *config;
+	struct auragon_conf *config;
 
 	config = map_lookup_elem(&tg_conf_map, &zero);
 	if (!config || config->tg_cgrp_level == 0)
@@ -64,7 +64,7 @@ tg_tp_cgrp_mkdir(struct bpf_raw_tracepoint_args *ctx)
 		if (!cgrp_heap)
 			return 0;
 
-		/* We track only for now cgroups that are at same or above tetragon
+		/* We track only for now cgroups that are at same or above auragon
 		 * level (ancestors level)
 		 */
 		with_errmetrics(map_update_elem, &tg_cgrps_tracking_map, &cgrpid, cgrp_heap,

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
-/* Copyright Authors of Tetragon */
+/* Copyright Authors of aura */
 
 #ifndef __LINUX_MODULE_H__
 #define __LINUX_MODULE_H__

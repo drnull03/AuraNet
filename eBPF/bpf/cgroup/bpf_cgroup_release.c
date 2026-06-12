@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
-/* Copyright Authors of Tetragon */
+/* Copyright Authors of aura */
 
 #include "vmlinux.h"
 #include "api.h"
@@ -24,7 +24,7 @@ tg_tp_cgrp_release(struct bpf_raw_tracepoint_args *ctx)
 	int zero = 0;
 	uint64_t cgrpid;
 	struct cgroup *cgrp;
-	struct tetragon_conf *conf;
+	struct auragon_conf *conf;
 	struct cgroup_tracking_value *cgrp_track;
 
 	cgrp = (struct cgroup *)ctx->args[0];

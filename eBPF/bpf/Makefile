@@ -1,4 +1,3 @@
-# Copyright Authors of Tetragon
 # SPDX-License-Identifier: Apache-2.0
 
 # We build BPF objects in 2 stages:

@@ -299,7 +299,7 @@ __event_get_cgroup_info(struct task_struct *task, struct msg_k8s *kube)
 	__u64 cgrpfs_magic = 0;
 	int zero = 0, subsys_idx = 0;
 	struct cgroup *cgrp;
-	struct tetragon_conf *conf;
+	struct auragon_conf *conf;
 	__u32 flags = 0;
 
 	/* Clear cgroup info at the beginning, so if we return early we do not pass previous data */
@@ -400,7 +400,7 @@ event_find_curr_probe(struct msg_generic_kprobe *msg)
 
 	/* Populate bin from the task's exe path so matchBinaries selectors
 	 * can filter events for processes that are missing from execve_map
-	 * (e.g. processes started before Tetragon). Without this, bin->path
+	 * (e.g. processes started before aura). Without this, bin->path
 	 * is empty and NotIn selectors incorrectly pass.
 	 */
 	binary_reset(&curr->bin);

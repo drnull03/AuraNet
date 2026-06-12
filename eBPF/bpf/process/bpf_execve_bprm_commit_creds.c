@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
-/* Copyright Authors of Tetragon */
+/* Copyright Authors of aura */
 
 #include "vmlinux.h"
 #include "api.h"
@@ -101,7 +101,7 @@ BPF_KPROBE(tg_kp_bprm_committing_creds, struct linux_binprm *bprm)
 			 * Now it is possible that the root 0 does not have capabilities
 			 * meaning it is running with SECURE_NOROOT Sec bit set, but we still
 			 * handle it as privileged change since running with uid root allows
-			 * to access files, ptrace root binaries, etc. From Tetragon euid==0
+			 * to access files, ptrace root binaries, etc. From aura euid==0
 			 * is still raising privileges.
 			 *
 			 * Note: there is the case of a uid being in a user namespace

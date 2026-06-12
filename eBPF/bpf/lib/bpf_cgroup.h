@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
-/* Copyright Authors of Tetragon */
+/* Copyright Authors of aura */
 
 #ifndef __BPF_CGROUP_
 #define __BPF_CGROUP_
@@ -357,7 +357,7 @@ FUNC_INLINE __u64 tg_get_current_cgroup_id(void)
 	struct cgroup *cgrp;
 	__u64 cgrpfs_magic = 0;
 	struct task_struct *task;
-	struct tetragon_conf *conf;
+	struct auragon_conf *conf;
 	int zero = 0, subsys_idx = 0;
 
 	conf = map_lookup_elem(&tg_conf_map, &zero);
@@ -453,7 +453,7 @@ __init_cgrp_tracking_val_heap(struct cgroup *cgrp, cgroup_state state)
 FUNC_INLINE bool check_cgroup_tracking_miss(const struct cgroup *cgrp)
 {
 	int zero = 0;
-	struct tetragon_conf *conf;
+	struct auragon_conf *conf;
 	__u32 level = get_cgroup_level(cgrp);
 	__u32 hierarchy_id = get_cgroup_hierarchy_id(cgrp);
 

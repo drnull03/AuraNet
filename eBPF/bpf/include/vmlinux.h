@@ -12,7 +12,7 @@
 #endif
 
 /*
- * Local definitions that we use in tetragon and are no longer part
+ * Local definitions that we use in auragon and are no longer part
  * of vmlinux_generated.h.
  */
 

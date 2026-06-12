@@ -190,7 +190,7 @@ generic_kprobe_override(void *ctx)
 }
 
 /* Putting security_task_prctl in here to pass contrib/verify/verify.sh test,
- * in normal run the function is set by tetragon dynamically.
+ * in normal run the function is set by auragon dynamically.
  */
 __attribute__((section("fmod_ret/security_task_prctl"), used)) long
 generic_fmodret_override(void *ctx)

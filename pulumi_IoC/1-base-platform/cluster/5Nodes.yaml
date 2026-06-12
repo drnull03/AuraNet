@@ -1,0 +1,12 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: kind-5-nodes
+nodes:
+  - role: control-plane
+  - role: control-plane
+  - role: worker
+  - role: worker
+  - role: worker
+               # Second worker node
+networking:
+  disableDefaultCNI: true          # Disables kindnet prior to Cilium install

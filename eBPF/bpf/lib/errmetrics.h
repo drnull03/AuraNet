@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
-/* Copyright Authors of Tetragon */
+/* Copyright Authors of aura */
 #ifndef BPF_ERRMETRICS_H__
 #define BPF_ERRMETRICS_H__
 

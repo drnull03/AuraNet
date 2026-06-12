@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flower Distributed Architecture Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.03); }
+        }
+        .node-pulse { animation: pulse-slow 3s infinite ease-in-out; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans p-6">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        <header class="border-b border-slate-800 pb-4">
+            <h1 class="text-2xl font-bold text-emerald-400">Flower Distributed Infrastructure</h1>
+            <p class="text-sm text-slate-400 mt-1">Interactive architectural simulation sandbox for standalone or cluster-based federated learning execution.</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-800/50 p-4 rounded-xl border border-slate-700/60">
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Topology Mode</label>
+                <select id="env-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                    <option value="baremetal">Bare Metal (VPS + Physical Nodes)</option>
+                    <option value="k8s">Kubernetes Cluster (kind + eBPF Datapath)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Aggregation Strategy</label>
+                <select id="strategy-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                    <option value="FedAvg">FedAvg (Standard Averaging)</option>
+                    <option value="FedProx">FedProx (Handles Heterogeneous Nodes)</option>
+                    <option value="FedAdam">FedAdam (Adaptive Optimization)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Active SuperNodes: <span id="node-count-val">3</span></label>
+                <input id="node-slider" type="range" min="1" max="5" value="3" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500 mt-3">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div class="lg:col-span-3 bg-slate-950 rounded-xl border border-slate-800 p-6 relative overflow-hidden min-h-[500px] flex flex-col justify-between">
+                
+                <div id="env-banner" class="absolute top-4 left-4 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full text-xs font-mono">
+                    Mode: Bare Metal (gRPC Ports 9092/9093)
+                </div>
+
+                <div class="flex justify-center pt-8 z-10">
+                    <div class="bg-slate-800 border-2 border-emerald-500 p-4 rounded-xl shadow-lg w-64 text-center node-pulse relative">
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-slate-950 font-mono text-[10px] font-bold px-2 py-0.5 rounded">SUPERLINK</div>
+                        <h3 class="font-bold text-slate-100 text-sm">Central Orchestrator</h3>
+                        <p id="server-app-status" class="text-xs text-slate-400 mt-1 font-mono">Status: Idle (Awaiting ServerApp)</p>
+                        <div class="mt-2 text-[11px] bg-slate-900/60 font-mono p-1 rounded text-emerald-300 border border-slate-700" id="port-info-link">
+                            Binding on: 0.0.0.0:9092
+                        </div>
+                    </div>
+                </div>
+
+                <canvas id="network-canvas" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+
+                <div id="supernodes-container" class="flex justify-center gap-4 flex-wrap pb-6 z-10">
+                    </div>
+            </div>
+
+            <div class="bg-slate-900/40 rounded-xl border border-slate-800 p-4 flex flex-col justify-between h-[524px]">
+                <div>
+                    <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Orchestration Controller</h3>
+                    <button id="run-btn" class="w-full bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-slate-950 font-bold py-2.5 px-4 rounded-lg text-sm transition-colors shadow-lg shadow-emerald-500/10 cursor-pointer">
+                        Execute flwr run .
+                    </button>
+
+                    <div class="mt-4">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-2">Metrics Stream</span>
+                        <div class="bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-xs space-y-1.5 h-64 overflow-y-auto" id="metrics-panel">
+                            <div class="text-slate-500">&gt; Infrastructure daemon ready...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-800 pt-3 mt-3">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-1">Architecture Legend</span>
+                    <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-400 font-mono">
+                        <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> SuperLink</div>
+                        <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-cyan-400"></span> SuperNode</div>
+                        <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400"></span> ServerApp</div>
+                        <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-indigo-400"></span> ClientApp</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const nodeSlider = document.getElementById('node-slider');
+        const nodeCountVal = document.getElementById('node-count-val');
+        const supernodesContainer = document.getElementById('supernodes-container');
+        const envSelect = document.getElementById('env-select');
+        const strategySelect = document.getElementById('strategy-select');
+        const envBanner = document.getElementById('env-banner');
+        const portInfoLink = document.getElementById('port-info-link');
+        const runBtn = document.getElementById('run-btn');
+        const metricsPanel = document.getElementById('metrics-panel');
+        const serverAppStatus = document.getElementById('server-app-status');
+        const canvas = document.getElementById('network-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let particles = [];
+        let isRunning = false;
+        let animationFrameId = null;
+
+        // Sync and render client elements
+        function renderNodes() {
+            const count = parseInt(nodeSlider.value);
+            nodeCountVal.textContent = count;
+            supernodesContainer.innerHTML = '';
+
+            const isK8s = envSelect.value === 'k8s';
+
+            for (let i = 1; i <= count; i++) {
+                const node = document.createElement('div');
+                node.className = 'bg-slate-800 border border-slate-700 p-3 rounded-lg w-40 text-center shadow relative node-pulse';
+                node.id = `node-${i}`;
+                node.innerHTML = `
+                    <div class="absolute -top-2 left-1/2 -translate-x-1/2 bg-cyan-500 text-slate-950 font-mono text-[9px] font-bold px-1.5 py-0.2 rounded">SUPERNODE ${i}</div>
+                    <div class="text-xs font-bold text-slate-200 mt-1">${isK8s ? `pod/node-agent-${i}` : `Client Worker ${i}`}</div>
+                    <p class="text-[10px] text-slate-400 font-mono mt-1 node-state">State: Connected</p>
+                    <div class="mt-2 text-[10px] bg-slate-900/40 text-slate-400 py-0.5 rounded border border-slate-800 font-mono">
+                        ${isK8s ? `internal gRPC` : `127.0.0.1:9094`}
+                    </div>
+                `;
+                supernodesContainer.appendChild(node);
+            }
+            resizeCanvas();
+        }
+
+        // Adjust topology display configurations based on deployment choices
+        function handleEnvChange() {
+            const isK8s = envSelect.value === 'k8s';
+            if (isK8s) {
+                envBanner.textContent = "Mode: Kubernetes Cluster (kind)";
+                envBanner.className = "absolute top-4 left-4 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-3 py-1 rounded-full text-xs font-mono";
+                portInfoLink.innerHTML = "DNS: flower-superlink.default.svc.cluster.local:9092";
+            } else {
+                envBanner.textContent = "Mode: Bare Metal (gRPC Ports 9092/9093)";
+                envBanner.className = "absolute top-4 left-4 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full text-xs font-mono";
+                portInfoLink.innerHTML = "Binding on: 0.0.0.0:9092";
+            }
+            logConsole(`Switched deployment environment target to: ${envSelect.value.toUpperCase()}`, 'system');
+            renderNodes();
+        }
+
+        function logConsole(text, type = 'info') {
+            const el = document.createElement('div');
+            if (type === 'system') el.className = 'text-purple-400';
+            else if (type === 'success') el.className = 'text-emerald-400 font-bold';
+            else if (type === 'strategy') el.className = 'text-amber-400';
+            else el.className = 'text-slate-300';
+            
+            el.innerHTML = `&gt; ${text}`;
+            metricsPanel.appendChild(el);
+            metricsPanel.scrollTop = metricsPanel.scrollHeight;
+        }
+
+        // Handle canvas sizing adjustments dynamically
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+
+        // Global Packet Transit Animation engine
+        function spawnPackets(fromEl, toEl, color, direction = 'down', callback = null) {
+            if (!fromEl || !toEl) return;
+            const cRect = canvas.getBoundingClientRect();
+            const fRect = fromEl.getBoundingClientRect();
+            const tRect = toEl.getBoundingClientRect();
+
+            const startX = (fRect.left + fRect.width / 2) - cRect.left;
+            const startY = (direction === 'down' ? fRect.bottom : fRect.top) - cRect.top;
+            const endX = (tRect.left + tRect.width / 2) - cRect.left;
+            const endY = (direction === 'down' ? tRect.top : tRect.bottom) - cRect.top;
+
+            particles.push({
+                x: startX, y: startY,
+                targetX: endX, targetY: endY,
+                progress: 0,
+                speed: 0.02,
+                color: color,
+                callback: callback
+            });
+        }
+
+        function drawLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw baseline static connection links
+            const linkBox = portInfoLink.parentElement.getBoundingClientRect();
+            const cRect = canvas.getBoundingClientRect();
+            const startX = (linkBox.left + linkBox.width / 2) - cRect.left;
+            const startY = linkBox.bottom - cRect.top;
+
+            const count = parseInt(nodeSlider.value);
+            for (let i = 1; i <= count; i++) {
+                const nodeEl = document.getElementById(`node-${i}`);
+                if (nodeEl) {
+                    const nRect = nodeEl.getBoundingClientRect();
+                    const endX = (nRect.left + nRect.width / 2) - cRect.left;
+                    const endY = nRect.top - cRect.top;
+
+                    ctx.beginPath();
+                    ctx.moveTo(startX, startY);
+                    ctx.lineTo(endX, endY);
+                    ctx.strokeStyle = envSelect.value === 'k8s' ? 'rgba(34, 211, 238, 0.15)' : 'rgba(16, 185, 129, 0.15)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+
+            // Animate flying parameters/weights packets
+            particles = particles.filter(p => {
+                p.progress += p.speed;
+                const currentX = p.x + (p.targetX - p.x) * p.progress;
+                const currentY = p.y + (p.targetY - p.y) * p.progress;
+
+                ctx.beginPath();
+                ctx.arc(currentX, currentY, 5, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = p.color;
+                ctx.fill();
+                ctx.shadowBlur = 0; // Reset shadow
+
+                if (p.progress >= 1) {
+                    if (p.callback) p.callback();
+                    return false;
+                }
+                return true;
+            });
+
+            animationFrameId = requestAnimationFrame(drawLoop);
+        }
+
+        // Orchestrated simulation workflow run wrapper
+        async function runSimulation() {
+            if (isRunning) return;
+            isRunning = true;
+            runBtn.disabled = true;
+            runBtn.className = "w-full bg-slate-800 text-slate-500 font-bold py-2.5 px-4 rounded-lg text-sm border border-slate-700 cursor-not-allowed";
+            
+            const selectedStrat = strategySelect.value;
+            metricsPanel.innerHTML = ''; // Clear previous logs
+            
+            logConsole("Starting runtime execution engine...", "info");
+            await new Promise(r => setTimeout(r, 800));
+
+            logConsole(`Initial global ServerApp configuration loaded.`, "amber");
+            serverAppStatus.textContent = `Status: Building via ${selectedStrat}`;
+            serverAppStatus.className = "text-xs text-amber-400 font-mono mt-1";
+
+            const count = parseInt(nodeSlider.value);
+            const linkBox = portInfoLink.parentElement;
+
+            // Step 1: Distribute Global Parameters
+            logConsole(`[ROUND 1/1] Strategy (${selectedStrat}) sampling ${count} nodes...`, "info");
+            await new Promise(r => setTimeout(r, 600));
+            logConsole(`Streaming global model weights downstream via gRPC...`, "info");
+
+            let nodesReached = 0;
+            for (let i = 1; i <= count; i++) {
+                const nodeEl = document.getElementById(`node-${i}`);
+                spawnPackets(linkBox, nodeEl, '#f59e0b', 'down', () => {
+                    nodesReached++;
+                    nodeEl.querySelector('.node-state').textContent = "State: Local Compute (ClientApp)";
+                    nodeEl.querySelector('.node-state').className = "text-[10px] text-indigo-400 font-mono mt-1 node-state";
+                    logConsole(`SuperNode ${i} initialized local PyTorch training loop.`, "info");
+                });
+            }
+
+            // Wait for downstream packet arrival
+            while(nodesReached < count) { await new Promise(r => setTimeout(r, 100)); }
+
+            // Step 2: Simulate Edge Neural Execution Time
+            await new Promise(r => setTimeout(r, 2200));
+
+            // Step 3: Upstream Client Parameter Collection
+            logConsole(`Local client workloads complete. Ingesting fit updates...`, "info");
+            let serverIngested = 0;
+            for (let i = 1; i <= count; i++) {
+                const nodeEl = document.getElementById(`node-${i}`);
+                nodeEl.querySelector('.node-state').textContent = "State: Transmitting Updates";
+                nodeEl.querySelector('.node-state').className = "text-[10px] text-cyan-400 font-mono mt-1 node-state";
+                
+                spawnPackets(nodeEl, linkBox, '#22d3ee', 'up', () => {
+                    serverIngested++;
+                    nodeEl.querySelector('.node-state').textContent = "State: Connected (Idle)";
+                    nodeEl.querySelector('.node-state').className = "text-[10px] text-slate-400 font-mono mt-1 node-state";
+                });
+            }
+
+            while(serverIngested < count) { await new Promise(r => setTimeout(r, 100)); }
+
+            // Step 4: Central Mathematical Aggregation
+            serverAppStatus.textContent = `Status: Aggregating Updates...`;
+            serverAppStatus.className = "text-xs text-purple-400 font-mono mt-1";
+            logConsole(`ServerApp running mathematical aggregation matching ${selectedStrat}...`, "strategy");
+            
+            await new Promise(r => setTimeout(r, 1500));
+
+            // Run Complete Summary
+            logConsole(`Success: Round 1 integration finalized! Evaluation complete.`, "success");
+            serverAppStatus.textContent = `Status: Execution Run Finalized`;
+            serverAppStatus.className = "text-xs text-emerald-400 font-mono mt-1";
+
+            // Reset controller buttons
+            isRunning = false;
+            runBtn.disabled = false;
+            runBtn.className = "w-full bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-slate-950 font-bold py-2.5 px-4 rounded-lg text-sm transition-colors shadow-lg shadow-emerald-500/10 cursor-pointer";
+        }
+
+        // Initialize Listeners
+        nodeSlider.addEventListener('input', renderNodes);
+        envSelect.addEventListener('change', handleEnvChange);
+        runBtn.addEventListener('click', runSimulation);
+        window.addEventListener('resize', resizeCanvas);
+
+        // Initial Boot Setup
+        renderNodes();
+        drawLoop();
+    </script>
+</body>
+</html>

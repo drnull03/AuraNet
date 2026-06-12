@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright Authors of Tetragon
+// Copyright Authors of aura
 
 //go:build !windows
 
@@ -317,7 +317,7 @@ func Test_PrependName(t *testing.T) {
 		}
 
 		state.ResetStateWithBuflen(MAX_BUF_LEN)
-		walkPath("/home/user/.bin/tetragon")
+		walkPath("/home/user/.bin/auragon")
 
 		state.ResetStateWithBuflen(MAX_BUF_LEN)
 		walkPath("/usr/bin/cat")

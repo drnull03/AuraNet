@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright Authors of Tetragon
+// Copyright Authors of aura
 
 //go:build !windows
 
@@ -14,10 +14,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/cilium/tetragon/pkg/api/processapi"
-	"github.com/cilium/tetragon/pkg/k8s/apis/cilium.io/v1alpha1"
-	"github.com/cilium/tetragon/pkg/selectors"
-	"github.com/cilium/tetragon/pkg/sensors/exec/execvemap"
+	"github.com/cilium/auragon/pkg/api/processapi"
+	"github.com/cilium/auragon/pkg/k8s/apis/cilium.io/v1alpha1"
+	"github.com/cilium/auragon/pkg/selectors"
+	"github.com/cilium/auragon/pkg/sensors/exec/execvemap"
 )
 
 const programNamePidMatch = "test_pid_match"

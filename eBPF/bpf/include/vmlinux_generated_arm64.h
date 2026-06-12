@@ -64930,7 +64930,7 @@ struct class_datum {
 	struct common_datum *comdatum;
 	struct symtab permissions;
 	struct constraint_node *constraints;
-	struct constraint_node *validatetrans;
+	struct constraint_node *validaaurans;
 	char default_user;
 	char default_role;
 	char default_type;

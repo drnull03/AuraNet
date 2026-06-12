@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
-/* Copyright Authors of Tetragon */
+/* Copyright Authors of aura */
 
 #ifndef __ENVIRON_CONF_
 #define __ENVIRON_CONF_
@@ -15,21 +15,21 @@ enum {
 	LOG_TRACE_LEVEL = 6,
 };
 
-/* Tetragon runtime configuration */
-struct tetragon_conf {
-	__u32 loglevel; /* Tetragon log level */
-	__u32 pid; /* Tetragon pid for debugging purpose */
-	__u32 nspid; /* Tetragon pid in namespace for debugging purpose */
-	__u32 tg_cgrp_hierarchy; /* Tetragon tracked hierarchy ID */
-	__u32 tg_cgrpv1_subsys_idx; /* Tetragon tracked cgroupv1 subsystem state index at compile time */
-	__u32 tg_cgrp_level; /* Tetragon cgroup level */
-	__u64 tg_cgrpid; /* Tetragon current cgroup ID to avoid filtering blocking itself */
+/* aura runtime configuration */
+struct auragon_conf {
+	__u32 loglevel; /* aura log level */
+	__u32 pid; /* aura pid for debugging purpose */
+	__u32 nspid; /* aura pid in namespace for debugging purpose */
+	__u32 tg_cgrp_hierarchy; /* aura tracked hierarchy ID */
+	__u32 tg_cgrpv1_subsys_idx; /* aura tracked cgroupv1 subsystem state index at compile time */
+	__u32 tg_cgrp_level; /* aura cgroup level */
+	__u64 tg_cgrpid; /* aura current cgroup ID to avoid filtering blocking itself */
 	__u64 cgrp_fs_magic; /* Cgroupv1 or Cgroupv2 */
 	__u8 use_perf_ring_buf; /* Use perf ring buffer rather than the bpf ring buffer */
 	__u8 pad[7];
 }; // All fields aligned so no 'packed' attribute.
 
-/* Tetragon runtime configuration storage.
+/* aura runtime configuration storage.
  * Set from userspace during startup and environment discovery
  * only, bpf part is read-only.
  */
@@ -37,7 +37,7 @@ struct {
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__uint(max_entries, 1);
 	__type(key, __u32);
-	__type(value, struct tetragon_conf);
+	__type(value, struct auragon_conf);
 } tg_conf_map SEC(".maps");
 
 #endif // __ENVIRON_CONF_

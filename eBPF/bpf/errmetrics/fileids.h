@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
-// Copyright Authors of Tetragon
+// Copyright Authors of aura
 //
 // source code file to id mapping for metrics. See errmetrics.h
 // inspired by cilium's bpf metrics. See: https://github.com/cilium/cilium/pull/30972
