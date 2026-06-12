@@ -1,0 +1,94 @@
+# pqc-peers.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pqc-node-1
+  namespace: default
+  labels:
+    app: pqc-node-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pqc-node-1
+  template:
+    metadata:
+      labels:
+        app: pqc-node-1
+    spec:
+      containers:
+      - name: crypto-node
+        image: auranet/pqc-peer:v1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8001
+          name: http
+        env:
+        - name: NODE_NAME
+          value: "Quantum Node Alpha"
+        - name: PORT
+          value: "8001"
+        - name: TARGET_URL
+          value: "http://pqc-node-2:8002"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pqc-node-1
+  namespace: default
+spec:
+  ports:
+  - port: 8001
+    targetPort: 8001
+    protocol: TCP
+    name: http
+  selector:
+    app: pqc-node-1
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pqc-node-2
+  namespace: default
+  labels:
+    app: pqc-node-2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pqc-node-2
+  template:
+    metadata:
+      labels:
+        app: pqc-node-2
+    spec:
+      containers:
+      - name: crypto-node
+        image: auranet/pqc-peer:v1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8002
+          name: http
+        env:
+        - name: NODE_NAME
+          value: "Quantum Node Beta"
+        - name: PORT
+          value: "8002"
+        - name: TARGET_URL
+          value: "http://pqc-node-1:8001"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pqc-node-2
+  namespace: default
+spec:
+  ports:
+  - port: 8002
+    targetPort: 8002
+    protocol: TCP
+    name: http
+  selector:
+    app: pqc-node-2
+  type: ClusterIP
