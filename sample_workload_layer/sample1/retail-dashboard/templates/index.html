@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuraNet Security Management Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; overflow: hidden; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .cli-box::-webkit-scrollbar { width: 6px; }
+        .cli-box::-webkit-scrollbar-track { background: #0f172a; }
+        .cli-box::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        
+        /* Subtle ambient background grid */
+        .bg-grid-pattern {
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, rgba(203, 213, 225, 0.2) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(203, 213, 225, 0.2) 1px, transparent 1px);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen w-screen flex antialiased">
+
+    <aside class="w-80 bg-white border-r border-slate-200 flex flex-col z-20 shadow-sm relative">
+        <div class="p-6 border-b border-slate-100">
+            <div class="flex items-center space-x-4 mb-6">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/30 text-xl">
+                    Ω
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight text-slate-900">AuraNet Core</h1>
+                    <p class="text-xs text-blue-600 font-medium uppercase tracking-wider">Retail Gateway</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 flex justify-between">
+                    <span>Active SPIFFE Identity</span>
+                    <span class="flex items-center"><div class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse"></div> Verified</span>
+                </p>
+                <p class="text-[10px] font-mono text-slate-600 break-all leading-relaxed">
+                    spiffe://auranet/ns/default/sa/retail-dashboard
+                </p>
+            </div>
+        </div>
+
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <p class="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Workload Operations</p>
+            
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-all bg-blue-50 text-blue-700 shadow-sm border border-blue-100">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                <span>Customer Ledger</span>
+            </button>
+            
+            <button onclick="switchTab('terminal')" id="tab-terminal" class="w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <span>Kernel Telemetry Terminal</span>
+            </button>
+
+            <div class="pt-6 pb-2">
+                <p class="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Security Validation</p>
+            </div>
+            
+            <button onclick="switchTab('attacks')" id="tab-attacks" class="w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-all text-slate-600 hover:bg-rose-50 hover:text-rose-700 border border-transparent">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <span>Lateral Movement Simulator</span>
+            </button>
+        </nav>
+    </aside>
+
+    <div class="flex-1 flex flex-col relative bg-slate-50/50 bg-grid-pattern overflow-hidden">
+        
+        <div class="absolute top-0 right-0 -mr-32 -mt-32 w-[500px] h-[500px] rounded-full bg-blue-400/10 blur-[80px] pointer-events-none"></div>
+        <div class="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-indigo-400/5 blur-[80px] pointer-events-none"></div>
+
+        <header class="h-16 border-b border-slate-200/80 bg-white/60 backdrop-blur-md flex items-center px-10 z-10">
+            <h2 class="text-sm font-medium text-slate-500 flex items-center" id="viewTitle">
+                Workspace <span class="mx-2 text-slate-300">/</span> <span class="text-slate-900 font-semibold">Customer Ledger</span>
+            </h2>
+        </header>
+
+        <main class="flex-1 p-10 overflow-y-auto z-10 flex flex-col">
+            
+            <div id="view-dashboard" class="max-w-5xl mx-auto w-full space-y-8 animate-fade-in">
+                <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-bold text-slate-900 mb-1">Central Identity Lookup</h3>
+                    <p class="text-sm text-slate-500 mb-6">Execute a secure East-West query to the Customer API.</p>
+                    
+                    <div class="flex flex-col md:flex-row md:items-center gap-4">
+                        <div class="flex-grow relative">
+                            <input type="number" id="custId" min="1" max="25" placeholder="Enter Customer Index (e.g., 1)" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-5 pr-16 py-4 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium text-slate-900 text-lg">
+                            <div class="absolute right-4 top-4.5 text-slate-400 text-sm font-mono font-bold">ID</div>
+                        </div>
+                        <button onclick="fetchCustomer()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold transition-all shadow-md shadow-blue-500/20 hover:shadow-lg active:scale-[0.98]">
+                            Execute Query
+                        </button>
+                    </div>
+                </div>
+
+                <div id="customerResult" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="bg-slate-50 px-8 py-4 border-b border-slate-100 flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Decrypted Record</span>
+                        <span class="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100" id="resIdDisplay">#001</span>
+                    </div>
+                    <div class="p-8 grid grid-cols-2 gap-8">
+                        <div>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Account Name</p>
+                            <p id="resName" class="text-xl font-bold text-slate-900">-</p>
+                        </div>
+                        <div>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Registered Email</p>
+                            <p id="resEmail" class="text-lg font-mono text-slate-600">-</p>
+                        </div>
+                        <div>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Service Tier</p>
+                            <span id="resTier" class="px-3 py-1 bg-slate-100 text-slate-700 rounded-md text-sm font-semibold border border-slate-200">-</span>
+                        </div>
+                        <div>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">KYC Verification</p>
+                            <span id="resKyc" class="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-md text-sm font-semibold border border-emerald-200">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="errorBanner" class="hidden bg-rose-50 border border-rose-200 p-6 rounded-2xl shadow-sm flex items-start space-x-4">
+                    <div class="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 font-bold mt-0.5">!</div>
+                    <div>
+                        <h4 class="text-base font-bold text-rose-900">Datapath Transaction Dropped</h4>
+                        <p class="text-sm text-rose-700/90 font-mono mt-1" id="errorMsg">Kernel space rule dropped connection.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-terminal" class="hidden flex-1 max-w-6xl mx-auto w-full flex flex-col pb-4">
+                <div class="bg-slate-950 rounded-2xl shadow-2xl border border-slate-800 flex flex-col flex-1 overflow-hidden">
+                    <div class="bg-slate-900 px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                            <span class="ml-4 font-mono text-sm text-slate-400">root@retail-dashboard:~#</span>
+                        </div>
+                    </div>
+                    <div id="cliOutput" class="flex-1 p-6 font-mono text-sm leading-relaxed text-emerald-400 overflow-y-auto cli-box whitespace-pre-wrap bg-slate-950">AuraNet Micro-Verification Shell Context Active.
+Ready for container egress validation.
+</div>
+                    <div class="p-5 bg-slate-900/50 flex items-center border-t border-slate-800">
+                        <span class="text-blue-400 font-mono text-base font-bold mr-3 select-none">$</span>
+                        <input type="text" id="cliInput" class="flex-1 bg-transparent border-none outline-none text-slate-200 font-mono text-sm tracking-wide" placeholder="curl -v http://customer-api:8000/health" onkeypress="handleCliKey(event)">
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-attacks" class="hidden max-w-5xl mx-auto w-full space-y-6 animate-fade-in">
+                <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+                    <h2 class="text-xl font-bold text-slate-900 mb-2">Lateral Movement & Pivot Testing</h2>
+                    <p class="text-slate-500 mb-8">Execute malicious connections. Watch the eBPF layer instantly drop unauthorized SPIFFE boundaries.</p>
+                    
+                    <div class="grid grid-cols-1 gap-6">
+                        <div class="border border-slate-200 hover:border-rose-300 bg-white hover:bg-rose-50/30 p-6 rounded-xl flex items-center justify-between transition-all group shadow-sm">
+                            <div>
+                                <span class="text-[10px] uppercase font-bold tracking-wider text-rose-600 bg-rose-50 px-2 py-1 rounded border border-rose-100">State Bypass</span>
+                                <h4 class="font-bold text-slate-900 mt-2 text-lg">Direct Vault Access</h4>
+                                <p class="text-sm text-slate-400 font-mono mt-1">curl --max-time 3 http://vault-db:5432</p>
+                            </div>
+                            <button onclick="runAttack('curl -v --max-time 3 http://vault-db:5432')" class="bg-slate-900 hover:bg-rose-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md transition-all active:scale-[0.97]">
+                                Execute Pivot
+                            </button>
+                        </div>
+
+                        <div class="border border-slate-200 hover:border-amber-300 bg-white hover:bg-amber-50/30 p-6 rounded-xl flex items-center justify-between transition-all group shadow-sm">
+                            <div>
+                                <span class="text-[10px] uppercase font-bold tracking-wider text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-100">Lateral Scan</span>
+                                <h4 class="font-bold text-slate-900 mt-2 text-lg">Cross-Department Access</h4>
+                                <p class="text-sm text-slate-400 font-mono mt-1">curl --max-time 3 http://investment-dashboard:8001</p>
+                            </div>
+                            <button onclick="runAttack('curl -v --max-time 3 http://investment-dashboard:8001')" class="bg-slate-900 hover:bg-amber-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md transition-all active:scale-[0.97]">
+                                Execute Pivot
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <footer class="h-10 bg-slate-900 flex items-center justify-between px-6 z-20 shrink-0">
+            <div class="flex items-center space-x-6 text-[11px] font-mono text-slate-400">
+                <span class="flex items-center"><div class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></div> eBPF Enforcing</span>
+                <span class="flex items-center"><div class="w-2 h-2 rounded-full bg-blue-500 mr-2"></div> Cilium Mesh Active</span>
+            </div>
+            <div class="text-[11px] font-mono text-slate-500">
+                L7 Ingress: BLOCK_DEFAULT | Latency: 1.2ms
+            </div>
+        </footer>
+
+    </div>
+
+    <script>
+        function switchTab(tabName) {
+            // Update Title
+            const titles = {
+                'dashboard': 'Customer Ledger',
+                'terminal': 'Kernel Telemetry Terminal',
+                'attacks': 'Lateral Movement Simulator'
+            };
+            document.getElementById('viewTitle').innerHTML = `Workspace <span class="mx-2 text-slate-300">/</span> <span class="text-slate-900 font-semibold">${titles[tabName]}</span>`;
+
+            // Reset views
+            ['dashboard', 'terminal', 'attacks'].forEach(t => {
+                document.getElementById(`view-${t}`).classList.add('hidden');
+                let btn = document.getElementById(`tab-${t}`);
+                btn.className = "w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent";
+            });
+            
+            // Activate view
+            if(tabName === 'terminal') {
+                document.getElementById(`view-${tabName}`).classList.remove('hidden');
+                document.getElementById(`view-${tabName}`).classList.add('flex'); // Keep flex for stretching
+            } else {
+                document.getElementById(`view-${tabName}`).classList.remove('hidden');
+            }
+
+            // Style active button
+            let activeBtn = document.getElementById(`tab-${tabName}`);
+            if(tabName === 'attacks') {
+                activeBtn.className = "w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-all bg-rose-50 text-rose-700 shadow-sm border border-rose-100";
+            } else {
+                activeBtn.className = "w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-all bg-blue-50 text-blue-700 shadow-sm border border-blue-100";
+            }
+        }
+
+        async function fetchCustomer() {
+            const id = document.getElementById('custId').value;
+            if(!id) return;
+            document.getElementById('customerResult').classList.add('hidden');
+            document.getElementById('errorBanner').classList.add('hidden');
+
+            const res = await fetch(`/api/customer/${id}`);
+            const data = await res.json();
+
+            if(data.status === 'success') {
+                document.getElementById('resIdDisplay').innerText = `ID #${id}`;
+                document.getElementById('resName').innerText = data.data.full_name;
+                document.getElementById('resEmail').innerText = data.data.email_address;
+                document.getElementById('resTier').innerText = data.data.tier;
+                document.getElementById('resKyc').innerText = data.data.kyc_compliance;
+                document.getElementById('customerResult').classList.remove('hidden');
+            } else {
+                document.getElementById('errorMsg').innerText = data.message;
+                document.getElementById('errorBanner').classList.remove('hidden');
+            }
+        }
+
+        async function handleCliKey(e) {
+            if (e.key === 'Enter') {
+                const cmd = document.getElementById('cliInput').value;
+                if(!cmd) return;
+                
+                const outBox = document.getElementById('cliOutput');
+                outBox.innerText += `\nroot@retail-dashboard:~# ${cmd}\n`;
+                document.getElementById('cliInput').value = '';
+
+                const formData = new FormData();
+                formData.append('command', cmd);
+
+                const res = await fetch('/api/cli', { method: 'POST', body: formData });
+                const data = await res.json();
+                
+                outBox.innerText += `${data.output}\n`;
+                outBox.scrollTop = outBox.scrollHeight;
+            }
+        }
+
+        function runAttack(cmd) {
+            switchTab('terminal');
+            document.getElementById('cliInput').value = cmd;
+            handleCliKey({key: 'Enter'});
+        }
+    </script>
+</body>
+</html>

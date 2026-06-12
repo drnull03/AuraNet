@@ -1,0 +1,47 @@
+# retail-dashboard/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: retail-dashboard
+  namespace: default
+  labels:
+    app: retail-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: retail-dashboard
+  template:
+    metadata:
+      labels:
+        app: retail-dashboard
+    spec:
+      serviceAccountName: retail-dashboard-sa
+      containers:
+      - name: dashboard
+        image: auranet/retail-dashboard:v2
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8001
+          name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: retail-dashboard
+  namespace: default
+spec:
+  ports:
+  - port: 8001
+    targetPort: 8001
+    protocol: TCP
+    name: http
+  selector:
+    app: retail-dashboard
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: retail-dashboard-sa
+  namespace: default

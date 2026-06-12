@@ -1,0 +1,1 @@
+kind load docker-image auranet/retail-dashboard:v2 --name my-cluster
