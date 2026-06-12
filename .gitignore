@@ -12,3 +12,4 @@ shadowAuraNet/
 **/__pycache__/
 **/current.conf
 **/patched.conf
+**/*.db

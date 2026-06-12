@@ -1,0 +1,61 @@
+# ~/AuraNet/sample_workload_layer/sample1/customer-api/deployment.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customer-api
+  namespace: default
+  labels:
+    app: customer-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: customer-api
+  template:
+    metadata:
+      labels:
+        app: customer-api
+    spec:
+      # This registers the pod with a dedicated ServiceAccount for identity mapping later
+      serviceAccountName: customer-api-sa
+      containers:
+      - name: api
+        image: auranet/customer-api:v1
+        imagePullPolicy: Never # Forces Kubernetes to use the locally loaded image instead of trying to pull from Docker Hub
+        ports:
+        - containerPort: 8000
+          name: http
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: customer-api
+  namespace: default
+spec:
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: customer-api
+  type: ClusterIP # Keeps the service strictly internal to the cluster overlay network
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: customer-api-sa
+  namespace: default
