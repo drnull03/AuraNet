@@ -1,0 +1,54 @@
+# A simple plaintext Nginx server
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dumb-server
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dumb-server
+  template:
+    metadata:
+      labels:
+        app: dumb-server
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dumb-server
+  namespace: default
+spec:
+  ports:
+  - port: 80
+    name: http
+  selector:
+    app: dumb-server
+---
+# A simple Alpine pod to run curl commands from
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dumb-client
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dumb-client
+  template:
+    metadata:
+      labels:
+        app: dumb-client
+    spec:
+      containers:
+      - name: sleep
+        image: curlimages/curl
+        command: ["/bin/sleep", "3650d"]
