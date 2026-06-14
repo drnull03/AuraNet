@@ -1,0 +1,70 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicyNamespaced
+metadata:
+  name: "block-uvicorn-su-root"
+  namespace: "default"
+  annotations:
+    description: "Blocks 'su root' execution exclusively when originating from the Uvicorn/Python process tree."
+spec:
+  kprobes:
+  - call: "sys_execve"
+    syscall: true
+    args:
+    - index: 0
+      type: "string" # The executable path
+    - index: 1
+      type: "string" # The arguments passed to the command
+    selectors:
+    
+    # ---------------------------------------------------------
+    # MATCH 1: User explicitly requests root (e.g., 'su root' or 'su - root')
+    # ---------------------------------------------------------
+    - matchBinaries:
+      - operator: "In"
+        values:
+        # Depending on your exact base image, Uvicorn runs under one of these
+        - "/usr/local/bin/python3"
+        - "/usr/local/bin/python3.11"
+        - "/usr/local/bin/python"
+        - "/usr/local/bin/uvicorn"
+        followChildren: true # Catches if Python spawns /bin/sh which then spawns su
+      
+      matchArgs:
+      - index: 0
+        operator: "Equal"
+        values:
+        - "/usr/bin/su"
+        - "/bin/su"
+      - index: 1
+        operator: "Postfix"
+        values:
+        - "root" # Blocks 'su root', but allows 'su - diaa' to pass through safely!
+      
+      matchActions:
+      - action: Sigkill
+
+    # ---------------------------------------------------------
+    # MATCH 2: User types 'su' with no arguments (which defaults to root escalation)
+    # ---------------------------------------------------------
+    - matchBinaries:
+      - operator: "In"
+        values:
+        - "/usr/local/bin/python3"
+        - "/usr/local/bin/python3.11"
+        - "/usr/local/bin/python"
+        - "/usr/local/bin/uvicorn"
+        followChildren: true
+      
+      matchArgs:
+      - index: 0
+        operator: "Equal"
+        values:
+        - "/usr/bin/su"
+        - "/bin/su"
+      - index: 1
+        operator: "Equal"
+        values:
+        - "su" # Matches the raw execution of 'su' without arguments
+      
+      matchActions:
+      - action: Sigkill

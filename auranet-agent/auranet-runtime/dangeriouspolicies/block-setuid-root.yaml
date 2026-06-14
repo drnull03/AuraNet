@@ -1,0 +1,152 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicyNamespaced
+metadata:
+  name: "block-setuid-root"
+  namespace: default # Strictly limits the blast radius to your application pods
+  annotations:
+    description: "Instantly terminates any unprivileged process attempting to escalate to root (UID/GID 0)"
+spec:
+  kprobes:
+  # 1. Standard UID/GID Swaps
+  - call: "__sys_setuid"
+    syscall: false
+    args:
+    - index: 0
+      type: "int"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Equal"
+        values: ["0"]
+      matchActions:
+      - action: Sigkill
+
+  - call: "__sys_setgid"
+    syscall: false
+    args:
+    - index: 0
+      type: "int"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Equal"
+        values: ["0"]
+      matchActions:
+      - action: Sigkill
+
+  # 2. Real and Effective UID/GID Swaps
+  - call: "__sys_setreuid"
+    syscall: false
+    args:
+    - index: 0
+      type: "int"
+    - index: 1
+      type: "int"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Equal"
+        values: ["0"]
+      matchActions:
+      - action: Sigkill
+    - matchArgs:
+      - index: 1
+        operator: "Equal"
+        values: ["0"]
+      matchActions:
+      - action: Sigkill
+
+  - call: "__sys_setregid"
+    syscall: false
+    args:
+    - index: 0
+      type: "int"
+    - index: 1
+      type: "int"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Equal"
+        values: ["0"]
+      matchActions:
+      - action: Sigkill
+    - matchArgs:
+      - index: 1
+        operator: "Equal"
+        values: ["0"]
+      matchActions:
+      - action: Sigkill
+
+  # 3. Real, Effective, and Saved UID/GID Swaps
+  - call: "__sys_setresuid"
+    syscall: false
+    args:
+    - index: 0
+      type: "int"
+    - index: 1
+      type: "int"
+    - index: 2
+      type: "int"
+    selectors:
+    - matchArgs:
+      - index: 1 # Targets the Effective User ID (EUID)
+        operator: "Equal"
+        values: ["0"]
+      matchActions:
+      - action: Sigkill
+    - matchArgs:
+      - index: 2 # Targets the Saved Set-User-ID (SUID)
+        operator: "Equal"
+        values: ["0"]
+      matchActions:
+      - action: Sigkill
+
+  - call: "__sys_setresgid"
+    syscall: false
+    args:
+    - index: 0
+      type: "int"
+    - index: 1
+      type: "int"
+    - index: 2
+      type: "int"
+    selectors:
+    - matchArgs:
+      - index: 1
+        operator: "Equal"
+        values: ["0"]
+      matchActions:
+      - action: Sigkill
+    - matchArgs:
+      - index: 2
+        operator: "Equal"
+        values: ["0"]
+      matchActions:
+      - action: Sigkill
+
+  # 4. File System UID/GID Swaps
+  - call: "__sys_setfsuid"
+    syscall: false
+    args:
+    - index: 0
+      type: "int"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Equal"
+        values: ["0"]
+      matchActions:
+      - action: Sigkill
+
+  - call: "__sys_setfsgid"
+    syscall: false
+    args:
+    - index: 0
+      type: "int"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Equal"
+        values: ["0"]
+      matchActions:
+      - action: Sigkill
