@@ -1,10 +1,11 @@
 # retail-dashboard/main.py
-import subprocess
+import os
+import pty
+import asyncio
 import httpx
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="Retail Dashboard")
 templates = Jinja2Templates(directory="templates")
@@ -27,23 +28,50 @@ async def get_customer(customer_id: int):
     except httpx.RequestError as exc:
         return {"status": "blocked", "message": f"Datapath Error: {str(exc)}"}
 
-@app.post("/api/cli")
-async def execute_cli(command: str = Form(...)):
-    # Safely executes commands inside the pod for the demo terminal
+@app.websocket("/ws/terminal/{user_type}")
+async def terminal_ws(websocket: WebSocket, user_type: str):
+    await websocket.accept()
     
+    master_fd, slave_fd = pty.openpty()
     
-    try:
-        # Run command in the actual pod shell with a 5-second timeout
-        result = subprocess.run(
-            command, 
-            shell=True, 
-            capture_output=True, 
-            text=True, 
-            timeout=5.0
-        )
-        output = result.stdout if result.returncode == 0 else result.stderr
-        return {"output": output.strip() or "Command executed with no output."}
-    except subprocess.TimeoutExpired:
-        return {"output": "Connection Timeout: eBPF Datapath Drop. Packet did not reach destination."}
-    except Exception as e:
-        return {"output": f"Execution Error: {str(e)}"}
+    pid = os.fork()
+    if pid == 0:
+        os.setsid()
+        os.dup2(slave_fd, 0)
+        os.dup2(slave_fd, 1)
+        os.dup2(slave_fd, 2)
+        os.close(slave_fd)
+        os.close(master_fd)
+
+        env = os.environ.copy()
+        env["TERM"] = "xterm-256color"
+
+        if user_type == "diaa":
+            os.execvpe("su", ["su", "-", "diaa"], env)
+        else:
+            os.execvpe("bash", ["bash"], env)
+    
+    os.close(slave_fd)
+    
+    async def read_from_pty():
+        loop = asyncio.get_running_loop()
+        try:
+            while True:
+                data = await loop.run_in_executor(None, os.read, master_fd, 1024)
+                if not data:
+                    break
+                await websocket.send_text(data.decode('utf-8', errors='replace'))
+        except Exception:
+            pass
+
+    async def write_to_pty():
+        try:
+            while True:
+                data = await websocket.receive_text()
+                os.write(master_fd, data.encode('utf-8'))
+        except WebSocketDisconnect:
+            pass
+
+    task1 = asyncio.create_task(read_from_pty())
+    task2 = asyncio.create_task(write_to_pty())
+    await asyncio.gather(task1, task2)

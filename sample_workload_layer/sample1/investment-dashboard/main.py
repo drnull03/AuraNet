@@ -1,7 +1,9 @@
 # investment-dashboard/main.py
-import subprocess
+import os
+import pty
+import asyncio
 import httpx
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -16,7 +18,6 @@ async def serve_ui(request: Request):
 
 @app.get("/api/customer/{customer_id}")
 async def get_customer(customer_id: int):
-    # The Unauthorized Path: Investment attempting to call Retail API
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
             response = await client.get(f"{CUSTOMER_API_URL}/{customer_id}")
@@ -26,14 +27,58 @@ async def get_customer(customer_id: int):
     except httpx.RequestError as exc:
         return {"status": "blocked", "message": f"Datapath Error: {str(exc)}"}
 
-@app.post("/api/cli")
-async def execute_cli(command: str = Form(...)):
-    # The try block must be explicitly declared here
-    try:
-        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=5.0)
-        output = result.stdout if result.returncode == 0 else result.stderr
-        return {"output": output.strip() or "Command executed with no output."}
-    except subprocess.TimeoutExpired:
-        return {"output": "Connection Timeout: eBPF Datapath Drop. Packet did not reach destination."}
-    except Exception as e:
-        return {"output": f"Execution Error: {str(e)}"}
+@app.websocket("/ws/terminal/{user_type}")
+async def terminal_ws(websocket: WebSocket, user_type: str):
+    await websocket.accept()
+    
+    # Fork a new Linux Pseudo-Terminal (PTY)
+    master_fd, slave_fd = pty.openpty()
+    
+    pid = os.fork()
+    if pid == 0:
+        # Child Process: Attach to the slave terminal and launch the shell
+        os.setsid()
+        os.dup2(slave_fd, 0)
+        os.dup2(slave_fd, 1)
+        os.dup2(slave_fd, 2)
+        os.close(slave_fd)
+        os.close(master_fd)
+
+        # Set terminal environment variable
+        env = os.environ.copy()
+        env["TERM"] = "xterm-256color"
+
+        # Spawn as 'diaa' or default 'root'
+        if user_type == "diaa":
+            os.execvpe("su", ["su", "-", "diaa"], env)
+        else:
+            os.execvpe("bash", ["bash"], env)
+    
+    # Parent Process: Bridge the WebSocket and the PTY Master
+    os.close(slave_fd)
+    
+    async def read_from_pty():
+        loop = asyncio.get_running_loop()
+        try:
+            while True:
+                # Run the blocking PTY read in a thread executor
+                data = await loop.run_in_executor(None, os.read, master_fd, 1024)
+                if not data:
+                    break
+                await websocket.send_text(data.decode('utf-8', errors='replace'))
+        except Exception:
+            pass
+
+    async def write_to_pty():
+        try:
+            while True:
+                data = await websocket.receive_text()
+                os.write(master_fd, data.encode('utf-8'))
+        except WebSocketDisconnect:
+            pass
+
+    # Run the read and write bridges concurrently
+    task1 = asyncio.create_task(read_from_pty())
+    task2 = asyncio.create_task(write_to_pty())
+    
+    await asyncio.gather(task1, task2)

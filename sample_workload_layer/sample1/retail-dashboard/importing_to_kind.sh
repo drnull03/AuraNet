@@ -1,1 +1,1 @@
-kind load docker-image auranet/retail-dashboard:v2 --name my-cluster
+kind load docker-image auranet/retail-dashboard:v3 --name my-cluster

@@ -9,12 +9,16 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+    
     <style>
         body { font-family: 'Inter', sans-serif; overflow: hidden; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
-        .cli-box::-webkit-scrollbar { width: 6px; }
-        .cli-box::-webkit-scrollbar-track { background: #0f172a; }
-        .cli-box::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        .xterm-viewport::-webkit-scrollbar { width: 6px; }
+        .xterm-viewport::-webkit-scrollbar-track { background: #0f172a; }
+        .xterm-viewport::-webkit-scrollbar-thumb { background: #6366f1; border-radius: 3px; }
         
         .bg-grid-pattern {
             background-size: 40px 40px;
@@ -22,7 +26,6 @@
                               linear-gradient(to bottom, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
         }
 
-        /* Identity Handshake Animations */
         @keyframes pulseRing {
             0% { transform: scale(0.95); opacity: 0.5; }
             50% { transform: scale(1.1); opacity: 0.8; }
@@ -60,7 +63,6 @@
             pointer-events: none;
         }
 
-        /* NEW VISUALIZER ANIMATIONS */
         @keyframes packetFlowRight {
             0% { left: -10%; opacity: 0; }
             10% { opacity: 1; }
@@ -81,6 +83,13 @@
             background-size: 10px 10px;
             background-image: linear-gradient(to right, rgba(99, 102, 241, 0.05) 1px, transparent 1px),
                               linear-gradient(to bottom, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+        }
+
+        .terminal-container {
+            width: 100%;
+            height: 100%;
+            padding: 1.5rem;
+            background: rgba(10, 15, 24, 0.8);
         }
     </style>
 </head>
@@ -124,12 +133,21 @@
                 <span>Customer Ledger</span>
             </button>
             
-            <button onclick="switchTab('terminal')" id="tab-terminal" class="w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-800 hover:text-white border border-transparent">
+            <div class="pt-4 pb-1">
+                <p class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Telemetry Validation</p>
+            </div>
+            
+            <button onclick="switchTab('terminal-user')" id="tab-terminal-user" class="w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-800 hover:text-white border border-transparent">
                 <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                <span>Kernel Telemetry Terminal</span>
+                <span>Terminal (Unprivileged)</span>
             </button>
 
-            <div class="pt-6 pb-2">
+            <button onclick="switchTab('terminal-root')" id="tab-terminal-root" class="w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 border border-transparent">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <span>Terminal (Root)</span>
+            </button>
+
+            <div class="pt-4 pb-1">
                 <p class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Security Validation</p>
             </div>
             
@@ -280,22 +298,34 @@
                 </div>
             </div>
 
-            <div id="view-terminal" class="hidden flex-1 max-w-6xl mx-auto w-full flex flex-col pb-4 animate-slide-up">
+            <div id="view-terminal-user" class="hidden flex-1 max-w-6xl mx-auto w-full flex flex-col pb-4 h-full animate-slide-up">
                 <div class="bg-slate-950/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-800 flex flex-col flex-1 overflow-hidden transition-all duration-300 hover:border-slate-700 hover:shadow-[0_0_30px_rgba(79,70,229,0.15)] h-full">
                     <div class="bg-slate-900/90 px-5 py-3.5 border-b border-slate-800 flex justify-between items-center shadow-sm shrink-0">
                         <div class="flex items-center space-x-2 hover:opacity-80 transition-opacity">
                             <div class="w-3 h-3 rounded-full bg-rose-500 border border-rose-600"></div>
                             <div class="w-3 h-3 rounded-full bg-amber-500 border border-amber-600"></div>
                             <div class="w-3 h-3 rounded-full bg-emerald-500 border border-emerald-600"></div>
-                            <span class="ml-4 font-mono text-xs font-bold text-slate-400 bg-slate-800 px-3 py-1 rounded-md shadow-inner">root@retail-dashboard:~</span>
+                            <span class="ml-4 font-mono text-xs font-bold text-slate-400 bg-slate-800 px-3 py-1 rounded-md shadow-inner">diaa@retail-dashboard:~</span>
                         </div>
                     </div>
-                    <div id="cliOutput" class="flex-1 p-6 font-mono text-sm leading-relaxed text-indigo-300 overflow-y-auto cli-box whitespace-pre-wrap bg-[#0a0f18]/80 h-full">AuraNet Micro-Verification Shell Context Active.
-Ready for container egress validation.
-</div>
-                    <div class="p-5 bg-slate-900/90 flex items-center border-t border-slate-800 shrink-0">
-                        <span class="text-indigo-400 font-mono text-lg font-bold mr-3 select-none animate-pulse">➜</span>
-                        <input type="text" id="cliInput" class="flex-1 bg-transparent border-none outline-none text-slate-200 font-mono text-sm tracking-wide focus:ring-0" placeholder="curl -v http://customer-api:8000/health" autocomplete="off" onkeypress="handleCliKey(event)">
+                    <div class="flex-1 bg-[#0a0f18]/80 relative h-full">
+                        <div id="xterm-container-user" class="terminal-container absolute inset-0"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-terminal-root" class="hidden flex-1 max-w-6xl mx-auto w-full flex flex-col pb-4 h-full animate-slide-up">
+                <div class="bg-slate-950/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-rose-900/40 flex flex-col flex-1 overflow-hidden transition-all duration-300 hover:border-rose-700/60 hover:shadow-[0_0_30px_rgba(225,29,72,0.15)] h-full">
+                    <div class="bg-slate-900/90 px-5 py-3.5 border-b border-rose-900/50 flex justify-between items-center shadow-sm shrink-0">
+                        <div class="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+                            <div class="w-3 h-3 rounded-full bg-rose-500 border border-rose-600"></div>
+                            <div class="w-3 h-3 rounded-full bg-amber-500 border border-amber-600"></div>
+                            <div class="w-3 h-3 rounded-full bg-emerald-500 border border-emerald-600"></div>
+                            <span class="ml-4 font-mono text-xs font-bold text-rose-400 bg-rose-950 px-3 py-1 rounded-md border border-rose-800/50 shadow-inner">root@retail-dashboard:~</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 bg-[#0a0f18]/80 relative h-full">
+                        <div id="xterm-container-root" class="terminal-container absolute inset-0"></div>
                     </div>
                 </div>
             </div>
@@ -349,36 +379,77 @@ Ready for container egress validation.
     </div>
 
     <script>
+        // Terminal Instance Storage
+        let termUser, termRoot;
+        let wsUser, wsRoot;
+        const fitAddonUser = new FitAddon.FitAddon();
+        const fitAddonRoot = new FitAddon.FitAddon();
+
+        function initTerminals() {
+            const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+            
+            // Initialize User Terminal
+            termUser = new Terminal({ theme: { background: 'transparent', cursor: '#818cf8' }, cursorBlink: true, fontFamily: 'JetBrains Mono, monospace', fontSize: 14 });
+            termUser.loadAddon(fitAddonUser);
+            termUser.open(document.getElementById('xterm-container-user'));
+            wsUser = new WebSocket(`${proto}//${location.host}/ws/terminal/diaa`);
+            wsUser.onmessage = e => termUser.write(e.data);
+            termUser.onData(data => wsUser.send(data));
+
+            // Initialize Root Terminal
+            termRoot = new Terminal({ theme: { background: 'transparent', cursor: '#f43f5e' }, cursorBlink: true, fontFamily: 'JetBrains Mono, monospace', fontSize: 14 });
+            termRoot.loadAddon(fitAddonRoot);
+            termRoot.open(document.getElementById('xterm-container-root'));
+            wsRoot = new WebSocket(`${proto}//${location.host}/ws/terminal/root`);
+            wsRoot.onmessage = e => termRoot.write(e.data);
+            termRoot.onData(data => wsRoot.send(data));
+        }
+
+        window.onload = () => {
+            initTerminals();
+        };
+
+        window.onresize = () => {
+            if (termUser) fitAddonUser.fit();
+            if (termRoot) fitAddonRoot.fit();
+        };
+
         function switchTab(tabName) {
             const titles = {
                 'dashboard': 'Customer Ledger',
-                'terminal': 'Kernel Telemetry Terminal',
+                'terminal-user': 'Kernel Telemetry Terminal (User)',
+                'terminal-root': 'Kernel Telemetry Terminal (Root)',
                 'attacks': 'Lateral Movement Simulator'
             };
             
-            // Re-trigger the slide-up animation
             const viewElement = document.getElementById(`view-${tabName}`);
             viewElement.classList.remove('animate-slide-up');
-            void viewElement.offsetWidth; // Trigger reflow
+            void viewElement.offsetWidth; 
             viewElement.classList.add('animate-slide-up');
 
             document.getElementById('viewTitle').innerHTML = `Workspace <span class="mx-2 text-slate-300">/</span> <span class="text-slate-900 font-semibold">${titles[tabName]}</span>`;
 
-            ['dashboard', 'terminal', 'attacks'].forEach(t => {
+            ['dashboard', 'terminal-user', 'terminal-root', 'attacks'].forEach(t => {
                 document.getElementById(`view-${t}`).classList.add('hidden');
                 let btn = document.getElementById(`tab-${t}`);
                 btn.className = "w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-300 text-slate-400 hover:bg-slate-800 hover:text-white border border-transparent";
             });
             
-            if(tabName === 'terminal') {
+            if(tabName.startsWith('terminal')) {
                 document.getElementById(`view-${tabName}`).classList.remove('hidden');
                 document.getElementById(`view-${tabName}`).classList.add('flex');
+                
+                // Recalculate dimensions when the tab is visible
+                if(tabName === 'terminal-user') setTimeout(() => fitAddonUser.fit(), 10);
+                if(tabName === 'terminal-root') setTimeout(() => fitAddonRoot.fit(), 10);
             } else {
                 document.getElementById(`view-${tabName}`).classList.remove('hidden');
             }
 
             let activeBtn = document.getElementById(`tab-${tabName}`);
             if(tabName === 'attacks') {
+                activeBtn.className = "w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-300 bg-rose-500/10 text-rose-400 border border-rose-500/30 shadow-[0_0_15px_rgba(225,29,72,0.1)]";
+            } else if(tabName === 'terminal-root') {
                 activeBtn.className = "w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-300 bg-rose-500/10 text-rose-400 border border-rose-500/30 shadow-[0_0_15px_rgba(225,29,72,0.1)]";
             } else {
                 activeBtn.className = "w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-300 bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 shadow-[0_0_15px_rgba(79,70,229,0.1)]";
@@ -389,13 +460,11 @@ Ready for container egress validation.
             const id = document.getElementById('custId').value;
             if(!id) return;
             
-            // Re-trigger animation for results
             const resultBox = document.getElementById('customerResult');
             resultBox.classList.remove('animate-slide-up');
             void resultBox.offsetWidth;
             resultBox.classList.add('animate-slide-up');
             
-            // Hide visualizer so result card takes its place cleanly
             document.getElementById('visualizer-block').classList.add('hidden');
             document.getElementById('customerResult').classList.add('hidden');
             document.getElementById('errorBanner').classList.add('hidden');
@@ -421,30 +490,12 @@ Ready for container egress validation.
             }
         }
 
-        async function handleCliKey(e) {
-            if (e.key === 'Enter') {
-                const cmd = document.getElementById('cliInput').value;
-                if(!cmd) return;
-                
-                const outBox = document.getElementById('cliOutput');
-                outBox.innerText += `\nroot@retail-dashboard:~# ${cmd}\n`;
-                document.getElementById('cliInput').value = '';
-
-                const formData = new FormData();
-                formData.append('command', cmd);
-
-                const res = await fetch('/api/cli', { method: 'POST', body: formData });
-                const data = await res.json();
-                
-                outBox.innerText += `${data.output}\n`;
-                outBox.scrollTop = outBox.scrollHeight;
-            }
-        }
-
+        // Modified to inject directly into the Root terminal
         function runAttack(cmd) {
-            switchTab('terminal');
-            document.getElementById('cliInput').value = cmd;
-            handleCliKey({key: 'Enter'});
+            switchTab('terminal-root');
+            if (wsRoot && wsRoot.readyState === WebSocket.OPEN) {
+                wsRoot.send(cmd + '\r');
+            }
         }
     </script>
 </body>

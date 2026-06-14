@@ -6,14 +6,18 @@
     <title>AuraNet Wealth Management</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+
     <style>
         body { font-family: 'Inter', sans-serif; overflow: hidden; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
-        .cli-box::-webkit-scrollbar { width: 6px; }
-        .cli-box::-webkit-scrollbar-track { background: #0f172a; }
-        .cli-box::-webkit-scrollbar-thumb { background: #0d9488; border-radius: 3px; }
+        .xterm-viewport::-webkit-scrollbar { width: 6px; }
+        .xterm-viewport::-webkit-scrollbar-track { background: #0f172a; }
+        .xterm-viewport::-webkit-scrollbar-thumb { background: #0d9488; border-radius: 3px; }
         
-        /* Advanced Tech Background */
         .bg-grid-pattern {
             background-size: 40px 40px;
             background-image: 
@@ -32,6 +36,13 @@
         .bar-4 { animation: chartPulse 2s infinite ease-in-out 0.2s; transform-origin: bottom; }
         .bar-5 { animation: chartPulse 3.5s infinite ease-in-out 0.8s; transform-origin: bottom; }
         .bar-6 { animation: chartPulse 2.8s infinite ease-in-out 1.5s; transform-origin: bottom; }
+
+        .terminal-container {
+            width: 100%;
+            height: 100%;
+            padding: 1rem;
+            background: #0a0f18;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen w-screen flex antialiased">
@@ -41,9 +52,7 @@
         
         <div class="p-6 border-b border-slate-800/80 relative z-10">
             <div class="flex items-center space-x-4 mb-6 group cursor-default">
-                <div class="w-11 h-11 bg-gradient-to-br from-teal-400 to-emerald-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-teal-500/40 text-xl ring-2 ring-teal-500/20 group-hover:shadow-teal-400/50 transition-all duration-300">
-                    W
-                </div>
+                <div class="w-11 h-11 bg-gradient-to-br from-teal-400 to-emerald-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-teal-500/40 text-xl ring-2 ring-teal-500/20">W</div>
                 <div>
                     <h1 class="text-lg font-bold tracking-tight text-white drop-shadow-md">AuraNet Core</h1>
                     <p class="text-[11px] text-teal-400 font-bold uppercase tracking-widest">Wealth Management</p>
@@ -69,7 +78,7 @@
         <nav class="flex-1 px-4 py-6 space-y-2 relative z-10">
             <p class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Operations Desk</p>
             
-            <button onclick="switchTab('analytics')" id="tab-analytics" class="w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all bg-gradient-to-r from-teal-500/10 to-transparent text-teal-300 border border-teal-500/30 shadow-md shadow-teal-900/20">
+            <button onclick="switchTab('analytics')" id="tab-analytics" class="w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all bg-gradient-to-r from-teal-500/10 to-transparent text-teal-300 border border-teal-500/30 shadow-md">
                 <svg class="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
                 <span>Market Analytics</span>
             </button>
@@ -78,10 +87,17 @@
                 <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
                 <span>Retail Data Sync (Pivot)</span>
             </button>
+
+            <p class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mt-6 mb-2">Telemetry Validation</p>
             
-            <button onclick="switchTab('terminal')" id="tab-terminal" class="w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-800 hover:text-white border border-transparent">
+            <button onclick="switchTab('terminal-user')" id="tab-terminal-user" class="w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-800 hover:text-white border border-transparent">
                 <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                <span>Kernel Telemetry Terminal</span>
+                <span>Terminal (Unprivileged)</span>
+            </button>
+
+            <button onclick="switchTab('terminal-root')" id="tab-terminal-root" class="w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 border border-transparent">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <span>Terminal (Root)</span>
             </button>
         </nav>
         
@@ -92,18 +108,15 @@
     </aside>
 
     <div class="flex-1 flex flex-col relative bg-slate-50 bg-grid-pattern overflow-hidden">
-        <div class="absolute top-0 right-0 -mr-48 -mt-48 w-[600px] h-[600px] rounded-full bg-teal-400/15 blur-[100px] pointer-events-none mix-blend-multiply"></div>
-        <div class="absolute bottom-0 left-1/4 w-[500px] h-[500px] rounded-full bg-emerald-400/10 blur-[100px] pointer-events-none mix-blend-multiply"></div>
-
         <header class="h-16 border-b border-slate-200/60 bg-white/70 backdrop-blur-xl flex items-center px-10 z-10 shadow-sm">
             <h2 class="text-sm font-medium text-slate-500 flex items-center" id="viewTitle">
                 Workspace <span class="mx-2 text-slate-300">/</span> <span class="text-slate-900 font-semibold drop-shadow-sm">Market Analytics</span>
             </h2>
         </header>
 
-        <main class="flex-1 p-10 overflow-y-auto z-10 flex flex-col relative">
+        <main class="flex-1 p-10 overflow-hidden z-10 flex flex-col relative">
             
-            <div id="view-analytics" class="max-w-6xl mx-auto w-full space-y-6 animate-fade-in">
+            <div id="view-analytics" class="max-w-6xl mx-auto w-full space-y-6 animate-fade-in overflow-y-auto h-full pr-2">
                 <div class="grid grid-cols-3 gap-6">
                     <div class="bg-white/80 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 shadow-lg shadow-slate-200/50 hover:-translate-y-1 transition-transform duration-300">
                         <div class="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center mb-4 text-teal-600 border border-teal-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
@@ -152,7 +165,7 @@
                 </div>
             </div>
 
-            <div id="view-sync" class="hidden max-w-5xl mx-auto w-full space-y-8">
+            <div id="view-sync" class="hidden max-w-5xl mx-auto w-full space-y-8 overflow-y-auto h-full pr-2">
                 <div class="bg-white/90 backdrop-blur-md p-8 rounded-2xl border border-slate-200/80 shadow-xl shadow-slate-200/50 relative overflow-hidden">
                     <div class="absolute -right-20 -top-20 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
                     <div class="absolute top-0 right-0 bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wider px-4 py-1.5 rounded-bl-xl border-b border-l border-amber-200 shadow-sm">
@@ -200,21 +213,36 @@
                 </div>
             </div>
 
-            <div id="view-terminal" class="hidden flex-1 max-w-6xl mx-auto w-full flex flex-col pb-4">
-                <div class="bg-slate-950 rounded-2xl shadow-2xl border border-slate-700/60 flex flex-col flex-1 overflow-hidden">
+            <div id="view-terminal-user" class="hidden flex-1 max-w-6xl mx-auto w-full flex flex-col pb-4 h-full">
+                <div class="bg-slate-950 rounded-2xl shadow-2xl border border-slate-700/60 flex flex-col flex-1 overflow-hidden h-full">
                     <div class="bg-slate-900 px-5 py-3.5 border-b border-slate-800 flex items-center justify-between shadow-sm">
                         <div class="flex items-center space-x-2 mr-4">
                             <div class="w-3 h-3 rounded-full bg-rose-500 border border-rose-600"></div>
                             <div class="w-3 h-3 rounded-full bg-amber-500 border border-amber-600"></div>
                             <div class="w-3 h-3 rounded-full bg-emerald-500 border border-emerald-600"></div>
                         </div>
-                        <span class="font-mono text-xs font-bold text-slate-400 bg-slate-800 px-3 py-1 rounded-md">root@investment-dashboard:~</span>
-                        <div class="w-12"></div> </div>
-                    <div id="cliOutput" class="flex-1 p-6 font-mono text-sm text-teal-400 overflow-y-auto cli-box whitespace-pre-wrap bg-[#0a0f18]">AuraNet Investment Shell. Egress testing ready.
-</div>
-                    <div class="p-5 bg-slate-900/80 flex items-center border-t border-slate-800">
-                        <span class="text-teal-400 font-mono text-lg font-bold mr-3 select-none">➜</span>
-                        <input type="text" id="cliInput" class="flex-1 bg-transparent border-none outline-none text-slate-200 font-mono text-sm tracking-wide" placeholder="curl -v http://customer-api:8000/health" autocomplete="off" onkeypress="handleCliKey(event)">
+                        <span class="font-mono text-xs font-bold text-slate-400 bg-slate-800 px-3 py-1 rounded-md">diaa@investment-dashboard:~</span>
+                        <div class="w-12"></div>
+                    </div>
+                    <div class="flex-1 bg-[#0a0f18] relative">
+                        <div id="xterm-container-user" class="terminal-container absolute inset-0"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-terminal-root" class="hidden flex-1 max-w-6xl mx-auto w-full flex flex-col pb-4 h-full">
+                <div class="bg-slate-950 rounded-2xl shadow-2xl border border-rose-900/60 flex flex-col flex-1 overflow-hidden h-full">
+                    <div class="bg-slate-900 px-5 py-3.5 border-b border-rose-900/50 flex items-center justify-between shadow-sm">
+                        <div class="flex items-center space-x-2 mr-4">
+                            <div class="w-3 h-3 rounded-full bg-rose-500 border border-rose-600"></div>
+                            <div class="w-3 h-3 rounded-full bg-amber-500 border border-amber-600"></div>
+                            <div class="w-3 h-3 rounded-full bg-emerald-500 border border-emerald-600"></div>
+                        </div>
+                        <span class="font-mono text-xs font-bold text-rose-400 bg-rose-950 px-3 py-1 rounded-md border border-rose-800/50">root@investment-dashboard:~</span>
+                        <div class="w-12"></div>
+                    </div>
+                    <div class="flex-1 bg-[#0a0f18] relative">
+                        <div id="xterm-container-root" class="terminal-container absolute inset-0"></div>
                     </div>
                 </div>
             </div>
@@ -227,21 +255,61 @@
     </div>
 
     <script>
+        // Terminal Instance Storage
+        let termUser, termRoot;
+        let wsUser, wsRoot;
+        const fitAddonUser = new FitAddon.FitAddon();
+        const fitAddonRoot = new FitAddon.FitAddon();
+
+        function initTerminals() {
+            const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+            
+            // Initialize User Terminal
+            termUser = new Terminal({ theme: { background: '#0a0f18', cursor: '#0d9488' }, cursorBlink: true, fontFamily: 'JetBrains Mono, monospace', fontSize: 14 });
+            termUser.loadAddon(fitAddonUser);
+            termUser.open(document.getElementById('xterm-container-user'));
+            wsUser = new WebSocket(`${proto}//${location.host}/ws/terminal/diaa`);
+            wsUser.onmessage = e => termUser.write(e.data);
+            termUser.onData(data => wsUser.send(data));
+
+            // Initialize Root Terminal
+            termRoot = new Terminal({ theme: { background: '#0a0f18', cursor: '#f43f5e' }, cursorBlink: true, fontFamily: 'JetBrains Mono, monospace', fontSize: 14 });
+            termRoot.loadAddon(fitAddonRoot);
+            termRoot.open(document.getElementById('xterm-container-root'));
+            wsRoot = new WebSocket(`${proto}//${location.host}/ws/terminal/root`);
+            wsRoot.onmessage = e => termRoot.write(e.data);
+            termRoot.onData(data => wsRoot.send(data));
+        }
+
         function switchTab(tabName) {
-            const titles = {'analytics': 'Market Analytics', 'sync': 'Retail Data Sync', 'terminal': 'Kernel Telemetry Terminal'};
+            const titles = {
+                'analytics': 'Market Analytics', 
+                'sync': 'Retail Data Sync', 
+                'terminal-user': 'Kernel Telemetry Terminal (User)',
+                'terminal-root': 'Kernel Telemetry Terminal (Root)'
+            };
             document.getElementById('viewTitle').innerHTML = `Workspace <span class="mx-2 text-slate-300">/</span> <span class="text-slate-900 font-semibold drop-shadow-sm">${titles[tabName]}</span>`;
 
-            ['analytics', 'sync', 'terminal'].forEach(t => {
+            ['analytics', 'sync', 'terminal-user', 'terminal-root'].forEach(t => {
                 document.getElementById(`view-${t}`).classList.add('hidden');
                 document.getElementById(`tab-${t}`).className = "w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-800 hover:text-white border border-transparent";
             });
             
             document.getElementById(`view-${tabName}`).classList.remove('hidden');
-            if(tabName === 'terminal') document.getElementById(`view-${tabName}`).classList.add('flex');
+            if(tabName.startsWith('terminal')) document.getElementById(`view-${tabName}`).classList.add('flex');
             
-            document.getElementById(`tab-${tabName}`).className = "w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all bg-gradient-to-r from-teal-500/10 to-transparent text-teal-300 border border-teal-500/30 shadow-md shadow-teal-900/20";
+            let activeClass = "w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all bg-gradient-to-r from-teal-500/10 to-transparent text-teal-300 border border-teal-500/30 shadow-md shadow-teal-900/20";
+            if(tabName === 'terminal-root') {
+                activeClass = "w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all bg-gradient-to-r from-rose-500/10 to-transparent text-rose-300 border border-rose-500/30 shadow-md shadow-rose-900/20";
+            }
+            document.getElementById(`tab-${tabName}`).className = activeClass;
+
+            // Xterm.js requires recalculating layout bounds when the display block becomes visible
+            if(tabName === 'terminal-user') setTimeout(() => fitAddonUser.fit(), 10);
+            if(tabName === 'terminal-root') setTimeout(() => fitAddonRoot.fit(), 10);
         }
 
+        // Customer Fetch Logic for Data Sync Tab
         async function fetchCustomer() {
             const id = document.getElementById('custId').value;
             if(!id) return;
@@ -261,23 +329,14 @@
             }
         }
 
-        async function handleCliKey(e) {
-            if (e.key === 'Enter') {
-                const cmd = document.getElementById('cliInput').value;
-                if(!cmd) return;
-                const outBox = document.getElementById('cliOutput');
-                outBox.innerText += `\nroot@investment-dashboard:~# ${cmd}\n`;
-                document.getElementById('cliInput').value = '';
+        window.onload = () => {
+            initTerminals();
+        };
 
-                const formData = new FormData();
-                formData.append('command', cmd);
-                const res = await fetch('/api/cli', { method: 'POST', body: formData });
-                const data = await res.json();
-                
-                outBox.innerText += `${data.output}\n`;
-                outBox.scrollTop = outBox.scrollHeight;
-            }
-        }
+        window.onresize = () => {
+            fitAddonUser.fit();
+            fitAddonRoot.fit();
+        };
     </script>
 </body>
 </html>
