@@ -1,0 +1,24 @@
+# block-shadow.yaml
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: "block-etc-shadow"
+  annotations:
+    description: "Terminates any process attempting to read /etc/shadow"
+spec:
+  kprobes:
+  - call: "security_file_permission"
+    syscall: false
+    args:
+    - index: 0
+      type: "file"    # The file being accessed
+    - index: 1
+      type: "int"     # The permission mask
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Equal"
+        values:
+        - "/etc/shadow"
+      matchActions:
+      - action: Sigkill
