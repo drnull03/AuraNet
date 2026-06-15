@@ -1,3 +1,6 @@
+# ==========================================
+# 1. INSTALL PHASE PERMISSIONS
+# ==========================================
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -26,4 +29,38 @@ subjects:
 roleRef:
   kind: Role
   name: {{ include "auranet-bootstrap.fullname" . }}-role
+  apiGroup: rbac.authorization.k8s.io
+
+# ==========================================
+# 2. TEARDOWN PHASE PERMISSIONS (NO HOOKS)
+# ==========================================
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "auranet-bootstrap.fullname" . }}-cleanup-sa
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "auranet-bootstrap.fullname" . }}-cleanup-role
+  namespace: {{ .Release.Namespace }}
+rules:
+- apiGroups: ["cilium.io"]
+  resources: ["ciliumnetworkpolicies"]
+  verbs: ["list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "auranet-bootstrap.fullname" . }}-cleanup-rb
+  namespace: {{ .Release.Namespace }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "auranet-bootstrap.fullname" . }}-cleanup-sa
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: {{ include "auranet-bootstrap.fullname" . }}-cleanup-role
   apiGroup: rbac.authorization.k8s.io
