@@ -5,27 +5,39 @@ kc.loadFromCluster();
 const customObjectsApi = kc.makeApiClient(k8s.CustomObjectsApi);
 
 async function wipePolicies() {
-    console.log("Nuking all dynamic AuraNet policies for a clean slate...");
+    console.log("Starting AuraNet Teardown Sequence...");
+
+    // 1. Wipe Cilium Network Policies
     try {
-        // Fetch all current Cilium policies in the default namespace
-        const res = await customObjectsApi.listNamespacedCustomObject('cilium.io', 'v2', 'default', 'ciliumnetworkpolicies');
-        const policies = res.body.items;
-
-        if (policies.length === 0) {
-            console.log("No policies found. Clean slate confirmed.");
-            return;
+        const cnps = await customObjectsApi.listNamespacedCustomObject(
+            'cilium.io', 'v2', 'default', 'ciliumnetworkpolicies'
+        );
+        for (const item of cnps.body.items) {
+            await customObjectsApi.deleteNamespacedCustomObject(
+                'cilium.io', 'v2', 'default', 'ciliumnetworkpolicies', item.metadata.name
+            );
+            console.log(`[CLEANED] Deleted Network Policy: ${item.metadata.name}`);
         }
+    } catch (e) {
+        const trueError = e.body ? JSON.stringify(e.body) : (e.cause ? e.cause.message : e.message);
+        console.error("[ERROR] wiping network policies:", trueError);
+    }
 
-        // Loop through and delete each one
-        for (const p of policies) {
-            console.log(`Deleting policy: ${p.metadata.name}...`);
-            await customObjectsApi.deleteNamespacedCustomObject('cilium.io', 'v2', 'default', 'ciliumnetworkpolicies', p.metadata.name);
+    // 2. Wipe Tetragon Tracing Policies
+    try {
+        const tracingPolicies = await customObjectsApi.listNamespacedCustomObject(
+            'cilium.io', 'v1alpha1', 'default', 'tracingpoliciesnamespaced'
+        );
+        for (const item of tracingPolicies.body.items) {
+            await customObjectsApi.deleteNamespacedCustomObject(
+                'cilium.io', 'v1alpha1', 'default', 'tracingpoliciesnamespaced', item.metadata.name
+            );
+            console.log(`[CLEANED] Deleted Tracing Policy: ${item.metadata.name}`);
         }
-        
-        console.log("Cleanup complete! Environment is wiped.");
-    } catch (err) {
-        console.error("Failed to clean up policies:", err.body ? err.body.message : err);
-        process.exit(1);
+    } catch (e) {
+        // NEW: This forces the raw K8s API rejection to print to the terminal
+        const trueError = e.body ? JSON.stringify(e.body) : (e.cause ? e.cause.message : e.message);
+        console.error("[ERROR] wiping tracing policies:", trueError);
     }
 }
 

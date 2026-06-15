@@ -1,14 +1,14 @@
 
 image:
   repository: auranet/bootstrap
-  tag: v1
+  tag: v2
   pullPolicy: Never
 
 naiveConf: |
   1.retail-dashboard -> customer-api
 
 
-  # NEW: Global settings for the umbrella chart
+  
 settingsConf: |
   AI_Learning=true
   warm_start=false
