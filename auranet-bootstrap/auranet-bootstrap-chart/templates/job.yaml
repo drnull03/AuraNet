@@ -15,6 +15,7 @@ spec:
       - name: bootstrap
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["node", "/app/index.js"]
         args: ["/etc/auranet/naive.conf"]
         volumeMounts:
         - name: config-volume

@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --production
 
-COPY index.js .
+# Changed from COPY index.js . to copy all .js files
+COPY *.js ./
 
-# The application executes immediately upon container start
-ENTRYPOINT ["node", "index.js"]
+# We leave the ENTRYPOINT blank so we can override it in Helm depending on the Job!
