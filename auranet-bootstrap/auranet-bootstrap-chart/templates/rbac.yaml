@@ -14,7 +14,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 rules:
 - apiGroups: ["cilium.io"]
-  resources: ["ciliumnetworkpolicies"]
+  resources: ["ciliumnetworkpolicies", "tracingpoliciesnamespaced"]
   verbs: ["create", "get", "list", "patch", "update"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

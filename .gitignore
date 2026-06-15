@@ -13,3 +13,5 @@ shadowAuraNet/
 **/current.conf
 **/patched.conf
 **/*.db
+**/*.tgz
+**/node_modules/

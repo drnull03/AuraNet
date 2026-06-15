@@ -9,3 +9,6 @@ RUN npm install --production
 COPY *.js ./
 
 # We leave the ENTRYPOINT blank so we can override it in Helm depending on the Job!
+
+
+COPY policies/ ./policies/

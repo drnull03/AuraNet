@@ -1,4 +1,6 @@
 const fs = require('fs');
+const path = require('path');
+const yaml = require('js-yaml');
 const k8s = require('@kubernetes/client-node');
 
 // Accept file path from command line arguments or default to the mounted config path
@@ -17,19 +19,23 @@ const lines = content.split('\n');
 // Initialize the standard Kubernetes client using the pod's internal service account
 const kc = new k8s.KubeConfig();
 kc.loadFromCluster();
+
+// Declared ONCE here at the top level
 const customObjectsApi = kc.makeApiClient(k8s.CustomObjectsApi);
 
 async function applyCiliumPolicy(source, dest) {
     const policyName = `bootstrap-allow-${source}-to-${dest}`;
     
     // Define the CiliumNetworkPolicy payload
-    
     const policyManifest = {
         apiVersion: 'cilium.io/v2',
         kind: 'CiliumNetworkPolicy',
         metadata: { 
             name: policyName,
-            namespace: 'default' 
+            namespace: 'default',
+            labels: {
+                "app.kubernetes.io/managed-by": "auranet-bootstrap"
+            }
         },
         spec: {
             endpointSelector: { 
@@ -39,7 +45,7 @@ async function applyCiliumPolicy(source, dest) {
                 fromEndpoints: [{ 
                     matchLabels: { app: source } 
                 }],
-                // NEW: Force SPIRE mutual authentication for this network path
+                // Force SPIRE mutual authentication for this network path
                 authentication: {
                     mode: "required"
                 }
@@ -55,12 +61,56 @@ async function applyCiliumPolicy(source, dest) {
             'ciliumnetworkpolicies', 
             policyManifest
         );
-        console.log(`[SUCCESS] Applied policy: ${policyName}`);
+        console.log(`[SUCCESS] Applied network policy: ${policyName}`);
     } catch (err) {
         if (err.body && err.body.reason === 'AlreadyExists') {
-            console.log(`[SKIPPED] Policy ${policyName} already exists.`);
+            console.log(`[SKIPPED] Network policy ${policyName} already exists.`);
         } else {
-            console.error(`[ERROR] Failed to create policy ${policyName}:`, err.body ? err.body.message : err);
+            console.error(`[ERROR] Failed to create policy ${policyName}:`, err.cause ? err.cause.message : err);
+        }
+    }
+}
+
+async function applyRuntimePolicies() {
+    const policiesDir = path.join(__dirname, 'policies');
+    
+    if (!fs.existsSync(policiesDir)) {
+        console.log(`[INFO] No policies folder found at ${policiesDir}`);
+        return;
+    }
+
+    const files = fs.readdirSync(policiesDir);
+    for (const file of files) {
+        if (file.endsWith('.yaml') || file.endsWith('.yml')) {
+            const filePath = path.join(policiesDir, file);
+            const fileContent = fs.readFileSync(filePath, 'utf8');
+            
+            try {
+                const manifest = yaml.load(fileContent);
+                const name = manifest.metadata.name;
+                const namespace = manifest.metadata.namespace || 'default';
+                
+                try {
+                    await customObjectsApi.createNamespacedCustomObject(
+                        'cilium.io', 
+                        'v1alpha1', 
+                        namespace, 
+                        'tracingpoliciesnamespaced', 
+                        manifest
+                    );
+                    console.log(`[SUCCESS] Applied runtime policy: ${name}`);
+                } catch (err) {
+                    if (err.body && err.body.code === 409) {
+                        console.log(`[INFO] Runtime policy ${name} already exists. Skipping.`);
+                    } else {
+                        const errorMsg = err.cause ? err.cause.message : (err.body ? err.body.message : err.message);
+                        console.error(`[ERROR] API rejected runtime policy ${name}:`, errorMsg);
+                    }
+                }
+            } catch (err) {
+                 const errorMsg = err.cause ? err.cause.message : err.message;
+                 console.error(`[ERROR] Failed to parse YAML file ${file}:`, errorMsg);
+            }
         }
     }
 }
@@ -86,8 +136,11 @@ async function run() {
             console.log(`[WARNING] Ignoring invalid line format: ${trimmed}`);
         }
     }
+    
+    // Execute the directory parser for Tetragon policies
+    await applyRuntimePolicies();
 
-    console.log(`AuraNet Bootstrap complete. Processed ${appliedCount} policies.`);
+    console.log(`AuraNet Bootstrap complete. Processed ${appliedCount} network configurations.`);
 }
 
 run();
