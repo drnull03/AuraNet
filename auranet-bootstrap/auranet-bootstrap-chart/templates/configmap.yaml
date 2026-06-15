@@ -6,3 +6,5 @@ metadata:
 data:
   naive.conf: |
 {{ .Values.naiveConf | indent 4 }}
+  settings.conf: |
+    {{ .Values.settingsConf | nindent 4 }}

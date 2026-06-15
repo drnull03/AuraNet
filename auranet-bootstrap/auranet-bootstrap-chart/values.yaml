@@ -6,3 +6,10 @@ image:
 
 naiveConf: |
   1.retail-dashboard -> customer-api
+
+
+  # NEW: Global settings for the umbrella chart
+settingsConf: |
+  AI_Learning=true
+  warm_start=false
+  max_epochs=50
