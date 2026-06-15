@@ -1,0 +1,8 @@
+
+image:
+  repository: auranet/bootstrap
+  tag: v1
+  pullPolicy: Never
+
+naiveConf: |
+  1.retail-dashboard -> customer-api

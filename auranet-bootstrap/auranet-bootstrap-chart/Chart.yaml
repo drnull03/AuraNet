@@ -1,0 +1,6 @@
+apiVersion: v2
+name: auranet-bootstrap-chart
+description: AuraNet Zero Trust bootstrap job for naive network policies
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
