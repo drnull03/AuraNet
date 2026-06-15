@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: auranet-bootstrap-sa
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: auranet-bootstrap-role
+  namespace: default
+rules:
+- apiGroups: ["cilium.io"]
+  resources: ["ciliumnetworkpolicies"]
+  verbs: ["create", "get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: auranet-bootstrap-rolebinding
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: auranet-bootstrap-sa
+  namespace: default
+roleRef:
+  kind: Role
+  name: auranet-bootstrap-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: auranet-bootstrap-job
+  namespace: default
+spec:
+  template:
+    spec:
+      serviceAccountName: auranet-bootstrap-sa
+      restartPolicy: Never # Crucial for batch jobs; don't loop on exit
+      containers:
+      - name: bootstrap
+        image: auranet/bootstrap:v1
+        imagePullPolicy: Never # Forces Kubernetes to use the local KinD image cache
+        args: ["/etc/auranet/naive.conf"] # Passes the file option as an argument
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/auranet
+      volumes:
+      - name: config-volume
+        configMap:
+          name: bootstrap-config # Mounts your ConfigMap text data as a file array
