@@ -1,0 +1,3 @@
+name: auranet-core-services
+runtime: python
+description: AuraNet Layer 2 Core Platform Utilities 
