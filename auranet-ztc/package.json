@@ -1,0 +1,17 @@
+{
+  "name": "auranet-ztc",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@kubernetes/client-node": "^1.4.0",
+    "nats": "^2.29.3"
+  }
+}

@@ -35,7 +35,7 @@ nats_release = k8s.helm.v3.Release(
         namespace=nats_namespace.metadata.name,
         values={
             "nats": {
-                # JetStream enables persistence queues/buffers so your inference engine never drops data
+               
                 "jetstream": {
                     "enabled": True
                 }
