@@ -1,0 +1,10 @@
+
+
+
+
+1.SQL Injection
+
+2.root Privilage escalation
+
+3.Denial of service 
+
