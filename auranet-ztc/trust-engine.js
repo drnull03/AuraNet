@@ -19,11 +19,12 @@ const RUNTIME_PENALTIES = {
 const workloadHistory = new Map();
 
 function calculateDeduction(subject, data) {
-    //  If it's an AI Alert: Check if Symbolic or Neural won
+    //  If it's an AI Alert: Check if Symbolic (-1) or Neural won
     if (subject.includes('.ai.')) {
-        const probability = data.probability || 0;
+        // Read directly. If undefined, default to 0 so it safely gets ignored
+        const probability = data.probability !== undefined ? data.probability : 0;
         
-        if (probability === 0) {
+        if (probability === -1) {
             // Symbolic AI won: Treat it like a hard runtime alert
             const threatName = data.threat;
             return RUNTIME_PENALTIES[threatName] || RUNTIME_PENALTIES["unknown_anomaly"];
@@ -62,8 +63,7 @@ function evaluateBatch(batchedAlerts) {
         if (source === 'runtime') {
             threat = alert.data.threat || "unknown_anomaly";
         } else if (source === 'ai') {
-            const probability = alert.data.probability || 0;
-            if (probability === 0) {
+            if (alert.data.probability === -1) {
                 // Symbolic AI triggered explicitly
                 threat = alert.data.threat || "unknown_anomaly";
             } else {
@@ -75,13 +75,13 @@ function evaluateBatch(batchedAlerts) {
         // DECOUPLED SCORING: Calculate here, don't read from payload
         const deduction = calculateDeduction(alert.subject, alert.data);
 
-        if (deduction === 0) continue; // Ignore empty or invalid alerts
+        // If Neural AI gave 0 probability (or deduction is otherwise 0), ignore the packet completely
+        if (deduction === 0) continue; 
 
         if (!workloadHistory.has(workload)) {
             workloadHistory.set(workload, []);
         }
 
-        // Pod tracking removed. Workload-level quarantine only.
         workloadHistory.get(workload).push({
             timestamp: now,
             deduction: deduction,
