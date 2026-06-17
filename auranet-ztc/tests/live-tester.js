@@ -15,7 +15,7 @@ async function runLiveTests() {
         // We set up the listener first so it doesn't miss the command
         const sub = nc.subscribe("auranet.commands.autoheal.>");
         
-        console.log("[Tester] 🎧 Listening for ZTC Execution Commands...");
+        console.log("[Tester]  Listening for ZTC Execution Commands...");
         
         // Asynchronous loop to catch the command when the ZTC fires it
         (async () => {
