@@ -62,7 +62,7 @@ async function startZTC() {
                     const decodedData = JSON.parse(sc.decode(msg.data));
                     const subject = msg.subject; // e.g., auranet.events.runtime.payment-api
                     
-                    console.log(`[ZTC] Read Alert -> Subject: ${subject} | Data:`, decodedData);
+                    console.log(`[ZTC] Read Alert -> Subject: ${subject}`);
                     batchedAlerts.push({ subject, data: decodedData });
 
                     // Acknowledge the message so it gets removed from the queue
@@ -75,14 +75,32 @@ async function startZTC() {
                 } else {
                     console.log(`[ZTC] Successfully ACK'd ${processedCount} alerts.`);
                     
-                    // --> STEP 4: Pass `batchedAlerts` to trust-engine.js
+                    //  Pass `batchedAlerts` to trust-engine.js
                     const condemnedWorkloads = trustEngine.evaluateBatch(batchedAlerts);
                     
-                    // --> STEP 5 PREP: If the trust engine returns workloads to quarantine
+                    //  Fire execution commands to the AutoHeal microservice
                     if (condemnedWorkloads.length > 0) {
-                        console.log(`[ZTC] 🚨 PREPARING TO QUARANTINE ${condemnedWorkloads.length} WORKLOADS...`);
-                        console.log(JSON.stringify(condemnedWorkloads, null, 2));
-                        // --> STEP 5 WILL GO HERE: Send quarantine requests to auranet-autoheal via NATS
+                        console.log(`\n[ZTC] 🚨 INITIATING QUARANTINE FOR ${condemnedWorkloads.length} WORKLOAD(S)...`);
+                        
+                        for (const target of condemnedWorkloads) {
+                            const commandPayload = {
+                                action: "quarantine",
+                                target_workload: target.workload,
+                                final_score: target.finalScore,
+                                threat_signatures: target.reasons,
+                                timestamp: Date.now()
+                            };
+
+                            // Route the command via a dedicated action subject
+                            const commandSubject = `auranet.commands.autoheal.${target.workload}`;
+                            
+                            // Publish the payload directly to the network
+                            nc.publish(commandSubject, sc.encode(JSON.stringify(commandPayload)));
+                            
+                            console.log(`[ZTC] Fired AutoHeal Command -> Subject: ${commandSubject}`);
+                            console.log(`[ZTC] Payload:`, commandPayload);
+                        }
+                        console.log("\n");
                     }
                 }
 
