@@ -34,8 +34,7 @@ nats_release = k8s.helm.v3.Release(
         ),
         namespace=nats_namespace.metadata.name,
         values={
-            "nats": {
-               
+            "config": {             
                 "jetstream": {
                     "enabled": True
                 }

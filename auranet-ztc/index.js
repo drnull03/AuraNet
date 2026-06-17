@@ -51,6 +51,7 @@ async function startZTC() {
             
             try {
                 // Ask JetStream for up to 30 messages. If empty, wait max 2 seconds.
+                // this connected to the harddrive 
                 const messages = await consumer.fetch({ max_messages: 30, expires: 2000 });
                 
                 let processedCount = 0;
