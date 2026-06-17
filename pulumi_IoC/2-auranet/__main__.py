@@ -33,16 +33,17 @@ nats_namespace = k8s.core.v1.Namespace(
     opts=pulumi.ResourceOptions(provider=k8s_provider)
 )
 
-# Deploy highly available Central NATS Cluster via Helm
 nats_release = k8s.helm.v3.Release(
-    "auranet-nats-broker",
+    "auranet-nats-broker", # Pulumi logical name
     k8s.helm.v3.ReleaseArgs(
+        name="auranet-nats-broker", # 1. FORCE EXACT HELM RELEASE NAME
         chart="nats",
         repository_opts=k8s.helm.v3.RepositoryOptsArgs(
             repo="https://nats-io.github.io/k8s/helm/charts/"
         ),
         namespace=nats_namespace.metadata.name,
         values={
+            "fullnameOverride": "auranet-nats-broker", # 2. FORCE EXACT K8S SERVICE NAME
             "config": {             
                 "jetstream": {
                     "enabled": True
