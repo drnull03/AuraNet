@@ -13,7 +13,7 @@ async function startAutoHeal() {
 
         // Subscribe to the exact subject the ZTC publishes to
         const sub = nc.subscribe("auranet.commands.autoheal.>");
-        console.log("[AutoHeal] 🎧 Listening for ZTC Execution Commands...\n");
+        console.log("[AutoHeal]  Listening for ZTC Execution Commands...\n");
 
         for await (const msg of sub) {
             const command = JSON.parse(sc.decode(msg.data));
