@@ -7,39 +7,88 @@ const sc = StringCodec();
 async function startZTC() {
     try {
         console.log(`[ZTC] Connecting to NATS at ${NATS_URL}...`);
-        // Establish connection to the NATS broker
         const nc = await connect({ servers: NATS_URL });
         console.log("[ZTC] Connected to NATS broker successfully!");
 
-        // Initialize the JetStream context for durable storage and Pull mode capabilities
+        // Initialize JetStream and the JetStream Manager
         const js = nc.jetstream();
+        const jsm = await nc.jetstreamManager();
 
-        // Throttling configuration: Wake up every 10 seconds for the demo
-       
+        // Ensure the Stream exists to store our alerts durably
+        // This acts as the "Hard Drive" for the alerts. 
+        //jetstreams here read from harddrive not ram for durablity 
+        const streamName = "AURANET_EVENTS";
+        try {
+            await jsm.streams.add({
+                name: streamName,
+                subjects: ["auranet.events.>"], // Listen to all AI and Runtime events
+                retention: "workqueue" // Messages are deleted once ACK'd
+            });
+            console.log(`[ZTC] JetStream '${streamName}' initialized.`);
+        } catch (err) {
+            console.log(`[ZTC] Stream check: ${err.message}`);
+        }
+
+        //  Create the Durable Pull Consumer
+        // the consumer is attached to this process
+        const consumerName = "ztc_consumer";
+        await jsm.consumers.add(streamName, {
+            durable_name: consumerName,
+            ack_policy: "explicit", // We must manually ACK after processing
+        });
+        //attach the consumer to this process using the js communicator
+        const consumer = await js.consumers.get(streamName, consumerName);
+        console.log(`[ZTC] Durable Pull Consumer '${consumerName}' ready.`);
+
         const THROTTLE_INTERVAL_MS = 10 * 1000; 
-        
         console.log(`[ZTC] Initialization complete. Entering sleep state.`);
         console.log(`[ZTC] Throttled Worker Loop set to wake up every ${THROTTLE_INTERVAL_MS / 1000} seconds.\n`);
 
-        // The Throttled Pull Loop (Tumbling window for fetching, sliding window for scoring)
+        //  The Throttled Pull Loop 
+        // should remember to throttle the ai too this doesn't make any sense without throttling the ai
         setInterval(async () => {
             console.log(`[${new Date().toISOString()}] Waking up to process security alerts...`);
             
             try {
-                // --> STEP 3 WILL GO HERE: Fetch a batch of up to 30 messages from JetStream
-                // --> STEP 4 WILL GO HERE: Pass the batch to trust-engine.js sliding window
-                // --> STEP 5 WILL GO HERE: Send quarantine requests to auranet-autoheal via NATS
+                // Ask JetStream for up to 30 messages. If empty, wait max 2 seconds.
+                const messages = await consumer.fetch({ max_messages: 30, expires: 2000 });
+                
+                let processedCount = 0;
+                let batchedAlerts = [];
+
+                for await (const msg of messages) {
+                    const decodedData = JSON.parse(sc.decode(msg.data));
+                    const subject = msg.subject; // e.g., auranet.events.runtime.payment-api
+                    
+                    console.log(`[ZTC] Read Alert -> Subject: ${subject} | Data:`, decodedData);
+                    batchedAlerts.push({ subject, data: decodedData });
+
+                    // Acknowledge the message so it gets removed from the queue
+                    msg.ack(); 
+                    processedCount++;
+                }
+
+                if (processedCount === 0) {
+                    console.log(`[ZTC] Queue is empty. No threats detected.`);
+                } else {
+                    console.log(`[ZTC] Successfully ACK'd ${processedCount} alerts.`);
+                    // --> STEP 4 WILL GO HERE: Pass `batchedAlerts` to trust-engine.js
+                    // --> STEP 5 WILL GO HERE: Send quarantine requests to auranet-autoheal via NATS
+                }
+
             } catch (loopError) {
-                console.error("[ZTC] Error during processing tick:", loopError);
+                // JetStream fetch throws a harmless error if it expires with 0 messages. We ignore it.
+                if (loopError.code !== '404' && loopError.code !== 'TIMEOUT') {
+                    console.error("[ZTC] Error pulling messages:", loopError);
+                }
             }
 
-            console.log(`[${new Date().toISOString()}] Processing complete. Going back to sleep.\n`);
+            console.log(`[${new Date().toISOString()}] Going back to sleep.\n`);
         }, THROTTLE_INTERVAL_MS);
 
-        // Handle clean termination signals from Kubernetes (SIGTERM/SIGINT)
         const setupShutdown = (signal) => {
             process.on(signal, async () => {
-                console.log(`[ZTC] Received ${signal}. Closing NATS connection cleanly...`);
+                console.log(`\n[ZTC] Received ${signal}. Closing NATS connection cleanly...`);
                 await nc.close();
                 console.log("[ZTC] NATS connection closed. Exiting process.");
                 process.exit(0);
@@ -54,5 +103,4 @@ async function startZTC() {
     }
 }
 
-// Execute the controller shell
 startZTC();
