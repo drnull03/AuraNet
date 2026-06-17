@@ -1,4 +1,5 @@
 const { connect, StringCodec } = require("nats");
+const trustEngine = require("./trust-engine"); 
 
 // In production, we'll use the K8s DNS name. For local testing, defaults to localhost.
 const NATS_URL = process.env.NATS_URL || "nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222";
@@ -73,8 +74,16 @@ async function startZTC() {
                     console.log(`[ZTC] Queue is empty. No threats detected.`);
                 } else {
                     console.log(`[ZTC] Successfully ACK'd ${processedCount} alerts.`);
-                    // --> STEP 4 WILL GO HERE: Pass `batchedAlerts` to trust-engine.js
-                    // --> STEP 5 WILL GO HERE: Send quarantine requests to auranet-autoheal via NATS
+                    
+                    // --> STEP 4: Pass `batchedAlerts` to trust-engine.js
+                    const condemnedWorkloads = trustEngine.evaluateBatch(batchedAlerts);
+                    
+                    // --> STEP 5 PREP: If the trust engine returns workloads to quarantine
+                    if (condemnedWorkloads.length > 0) {
+                        console.log(`[ZTC] 🚨 PREPARING TO QUARANTINE ${condemnedWorkloads.length} WORKLOADS...`);
+                        console.log(JSON.stringify(condemnedWorkloads, null, 2));
+                        // --> STEP 5 WILL GO HERE: Send quarantine requests to auranet-autoheal via NATS
+                    }
                 }
 
             } catch (loopError) {

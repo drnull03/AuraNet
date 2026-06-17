@@ -19,12 +19,18 @@ const RUNTIME_PENALTIES = {
 const workloadHistory = new Map();
 
 function calculateDeduction(subject, data) {
-    //  If it's an AI Alert: Scale deduction based on the model's confidence/probability
+    //  If it's an AI Alert: Check if Symbolic or Neural won
     if (subject.includes('.ai.')) {
-      
         const probability = data.probability || 0;
         
-        return Math.round(probability * 100); 
+        if (probability === 0) {
+            // Symbolic AI won: Treat it like a hard runtime alert
+            const threatName = data.threat;
+            return RUNTIME_PENALTIES[threatName] || RUNTIME_PENALTIES["unknown_anomaly"];
+        } else {
+            // Neural AI won: Scale deduction based on the model's confidence/probability
+            return Math.round(probability * 100); 
+        }
     }
     
     //  If it is a Runtime Alert: Look up the hardcoded penalty in the matrix
@@ -40,9 +46,7 @@ function evaluateBatch(batchedAlerts) {
     const now = Date.now();
     const workloadsToQuarantine = new Map(); 
 
-    
     for (const alert of batchedAlerts) {
-        
         
         // Extract routing metadata directly from the NATS subject
         // Example: "auranet.events.runtime.payment-api" -> ["auranet", "events", "runtime", "payment-api"]
@@ -52,8 +56,21 @@ function evaluateBatch(batchedAlerts) {
         const source = subjectParts[2];   // 'ai' or 'runtime'
         const workload = subjectParts[3]; // e.g., 'payment-api'
         
-        // Threat name comes from data for runtime, or defaults for AI
-        const threat = (source === 'runtime') ? (alert.data.threat || "unknown_anomaly") : "ai_anomaly";
+        let threat = "unknown_anomaly";
+        
+        // Determine threat name based on source and Neurosymbolic logic
+        if (source === 'runtime') {
+            threat = alert.data.threat || "unknown_anomaly";
+        } else if (source === 'ai') {
+            const probability = alert.data.probability || 0;
+            if (probability === 0) {
+                // Symbolic AI triggered explicitly
+                threat = alert.data.threat || "unknown_anomaly";
+            } else {
+                // Neural AI triggered a probability-based anomaly
+                threat = "network_anomaly";
+            }
+        }
         
         // DECOUPLED SCORING: Calculate here, don't read from payload
         const deduction = calculateDeduction(alert.subject, alert.data);
@@ -64,6 +81,7 @@ function evaluateBatch(batchedAlerts) {
             workloadHistory.set(workload, []);
         }
 
+        // Pod tracking removed. Workload-level quarantine only.
         workloadHistory.get(workload).push({
             timestamp: now,
             deduction: deduction,
@@ -92,7 +110,7 @@ function evaluateBatch(batchedAlerts) {
         // Check against Quarantine Threshold
         if (currentScore < QUARANTINE_THRESHOLD) {
             console.log(`[Trust Engine] 🚨 THRESHOLD BREACHED: ${workload} dropped to ${currentScore}! Marking for auto-healing.`);
-            
+
             workloadsToQuarantine.set(workload, {
                 workload: workload,
                 finalScore: currentScore,
