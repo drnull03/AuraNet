@@ -1,0 +1,5 @@
+node_modules
+.git
+npm-debug.log
+live-tester.js
+trust-engine.test.js
