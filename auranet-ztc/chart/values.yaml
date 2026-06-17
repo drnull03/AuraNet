@@ -1,0 +1,9 @@
+# chart/values.yaml
+image:
+  repository: auranet/ztc
+  tag: v1
+  pullPolicy: Never 
+
+env:
+  # The NATS broker lives in the messaging namespace
+  natsUrl: "nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222"
