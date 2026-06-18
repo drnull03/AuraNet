@@ -1,0 +1,42 @@
+{{- range $name, $config := .Values.workloads }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: default
+  labels:
+    app: {{ $name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+    spec:
+      serviceAccountName: {{ $name }}-sa
+      containers:
+      - name: {{ $name }}
+        image: "{{ $config.image }}:{{ $config.tag }}"
+        imagePullPolicy: Never
+        ports:
+        - containerPort: {{ $config.port }}
+          name: http
+        {{- if $config.probes.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {{ $config.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ $config.port }}
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        {{- end }}
+---
+{{- end }}

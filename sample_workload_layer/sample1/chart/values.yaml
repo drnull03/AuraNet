@@ -1,0 +1,21 @@
+workloads:
+  customer-api:
+    image: auranet/customer-api
+    tag: v1
+    port: 8000
+    probes:
+      enabled: true
+      
+  investment-dashboard:
+    image: auranet/investment-dashboard
+    tag: v2
+    port: 8002
+    probes:
+      enabled: false
+      
+  retail-dashboard:
+    image: auranet/retail-dashboard
+    tag: v3
+    port: 8001
+    probes:
+      enabled: false

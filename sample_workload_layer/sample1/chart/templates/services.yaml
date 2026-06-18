@@ -1,0 +1,17 @@
+{{- range $name, $config := .Values.workloads }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: default
+spec:
+  ports:
+  - port: {{ $config.port }}
+    targetPort: {{ $config.port }}
+    protocol: TCP
+    name: http
+  selector:
+    app: {{ $name }}
+  type: ClusterIP
+---
+{{- end }}
