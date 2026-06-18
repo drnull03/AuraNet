@@ -3,25 +3,56 @@ import pulumi_command as command
 import pulumi_kubernetes as k8s
 
 CLUSTER_NAME = "my-cluster"
-CONFIG_PATH = "./cluster/3Nodes.yaml"
+CONFIG_PATH = "./cluster/3Nodes.yaml" # this should be injectable and changeable 
 
 print(f"🐝 Pulumi is configuring the AuraNet cluster and eBPF datapath...")
 
-# 1. Boot up the 3-node Kind cluster
+
+# this should be decoupled in the future 
+# TODO: decouple this 
+# frist step: Boot up the 3-node Kind cluster
 kind_cluster = command.local.Command(
     "kind-cluster",
     create=f"kind create cluster --name {CLUSTER_NAME} --config {CONFIG_PATH}",
     delete=f"kind delete cluster --name {CLUSTER_NAME}",
 )
 
-# 2. Extract the kubeconfig dynamically right after the cluster boots
+# second step: Extract the kubeconfig dynamically right after the cluster boots
 kubeconfig = command.local.Command(
     "get-kubeconfig",
     create=f"kind get kubeconfig --name {CLUSTER_NAME}",
     opts=pulumi.ResourceOptions(depends_on=[kind_cluster])
 )
 
-# 3. Create a dedicated Kubernetes provider tied directly to this local cluster instance
+
+# 2 and a half added later
+load_auranet_images = command.local.Command(
+    "load-auranet-images",
+    create=f"""
+        echo "Scanning local Docker registry for auranet/ images..."
+        
+        # Query Docker for images and tags, then grep for the 'auranet/' prefix
+        # Note: The {{{{ }}}} syntax is required to escape the brackets inside a Python f-string
+        IMAGES=$(docker images --format '{{{{.Repository}}}}:{{{{.Tag}}}}' | grep '^auranet/' || true)
+        
+        if [ -z "$IMAGES" ]; then
+            echo "No auranet/ images found locally. Skipping load."
+            exit 0
+        fi
+        
+        # Loop through the found images and load them into Kind
+        for IMAGE in $IMAGES; do
+            echo "🐝 Sideloading $IMAGE into {CLUSTER_NAME}..."
+            kind load docker-image "$IMAGE" --name {CLUSTER_NAME}
+        done
+        
+        echo "All AuraNet images loaded successfully!"
+    """,
+    # This must wait for the cluster to actually exist before attempting to load images
+    opts=pulumi.ResourceOptions(depends_on=[kind_cluster])
+)
+
+# third step: Create a dedicated Kubernetes provider tied directly to this local cluster instance
 k8s_provider = k8s.Provider(
     "kind-k8s-provider",
     kubeconfig=kubeconfig.stdout,
@@ -119,10 +150,11 @@ patch_spire_ttl = command.local.Command(
 
 
 # Export deployment metrics to your terminal output
+
 pulumi.export("deployed_cluster_name", CLUSTER_NAME)
 pulumi.export("cilium_status", cilium_release.status.name)
 pulumi.export("tetragon_status", tetragon_release.status.name)
 pulumi.export("raw_kubeconfig", kubeconfig.stdout)
-
+pulumi.export("images_loaded_status", load_auranet_images.id)
 # Export the status of the patch script
 pulumi.export("spire_ttl_patched", patch_spire_ttl.id)

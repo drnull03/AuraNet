@@ -1,7 +1,7 @@
 import pulumi
 import pulumi_kubernetes as k8s
 
-print(f"🐝 Pulumi is configuring AuraNet Layer 2 (NATS Messaging Engine)...")
+print(f"🐝 Pulumi is configuring AuraNet Layer 2")
 
 #  Pull the Kubeconfig from Layer 1 (StackReference)
 
