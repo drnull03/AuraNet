@@ -1,10 +1,11 @@
-
-
-
-
 1.SQL Injection
 
 2.root Privilage escalation
 
 3.Denial of service 
 
+4.hardware attestation error
+
+5. not allowed spire connection
+
+6.crypto stealing attack

@@ -16,3 +16,5 @@ shadowAuraNet/
 **/*.tgz
 **/node_modules/
 **/logs/
+**/share/
+**/etc/
