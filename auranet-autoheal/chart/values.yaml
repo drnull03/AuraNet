@@ -1,0 +1,11 @@
+replicaCount: 1
+
+image:
+  repository: auranet/autoheal
+  tag: v1
+  pullPolicy: Never
+
+nats:
+  url: "nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222"
+
+namespace: auranet-namespace

@@ -6,8 +6,8 @@ const {
     removeQuarantine 
 } = require("./index");
 
-// 1. MOCK THE EXTERNAL LIBRARIES
-jest.mock("fs"); // Stop it from actually trying to read files
+//mock fs lib
+jest.mock("fs"); 
 const fs = require("fs");
 
 jest.mock("@kubernetes/client-node", () => {
