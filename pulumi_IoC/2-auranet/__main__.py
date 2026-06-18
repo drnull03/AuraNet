@@ -61,4 +61,4 @@ nats_release = k8s.helm.v3.Release(
 pulumi.export("app_namespace", app_namespace.metadata.name)
 pulumi.export("nats_namespace", nats_namespace.metadata.name)
 pulumi.export("nats_status", nats_release.status.name)
-pulumi.export("nats_connection_string", "nats://my-nats.auranet-messaging.svc.cluster.local:4222")
+pulumi.export("nats_connection_string", "nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222")
