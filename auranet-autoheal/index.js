@@ -152,5 +152,13 @@ async function startAutoHeal() {
         process.exit(1);
     }
 }
+if (require.main === module) {
+    startAutoHeal();
+}
 
-startAutoHeal();
+module.exports = {
+    applyQuarantine,
+    applyVirtualPatch,
+    cycleWorkloadPods,
+    removeQuarantine
+};
