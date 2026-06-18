@@ -1,4 +1,3 @@
-// index.js
 const fs = require("fs");
 const path = require("path");
 const { connect, StringCodec } = require("nats");
@@ -10,99 +9,144 @@ const NATS_URL = process.env.NATS_URL || "nats://127.0.0.1:4222";
 const NAMESPACE = process.env.POD_NAMESPACE || "default";
 const sc = StringCodec();
 
-// Initialize Kubernetes API Clients
+// Initialize K8s Clients
 const kc = new k8s.KubeConfig();
-// Load from cluster context if running inside a pod, fallback to local kubeconfig
 if (process.env.KUBERNETES_SERVICE_HOST) {
     kc.loadFromCluster();
 } else {
     kc.loadFromDefault();
 }
-
 const k8sCoreApi = kc.makeApiClient(k8s.CoreV1Api);
 const k8sCustomApi = kc.makeApiClient(k8s.CustomObjectsApi);
 
-/**
- * Reads a local YAML patch file, parses it, and applies it to the cluster via the CustomObjectsApi.
- */
+// 1. DYNAMIC QUARANTINE
+async function applyQuarantine(workloadName) {
+    const policyName = `quarantine-${workloadName}`;
+    const quarantineManifest = {
+        apiVersion: "cilium.io/v2",
+        kind: "CiliumNetworkPolicy",
+        metadata: { name: policyName, namespace: NAMESPACE },
+        spec: {
+            endpointSelector: { matchLabels: { app: workloadName } },
+            ingress: [{}], // Default Deny
+            egress: [{}]   // Default Deny
+        }
+    };
+
+    try {
+        console.log(`[K8s] 🚨 Applying emergency network quarantine to [${workloadName}]...`);
+        // FIXED: Using Object syntax for the new kubernetes-client version
+        await k8sCustomApi.createNamespacedCustomObject({
+            group: "cilium.io",
+            version: "v2",
+            namespace: NAMESPACE,
+            plural: "ciliumnetworkpolicies",
+            body: quarantineManifest
+        });
+        console.log(`[K8s] 🔒 Quarantine active: ${policyName}`);
+    } catch (err) {
+        if (err.body && err.body.reason === "AlreadyExists") {
+            console.log(`[K8s] 🔒 Quarantine already active for: ${workloadName}`);
+        } else {
+            console.error(`[K8s] Quarantine failed:`, err.body ? err.body.message : err);
+        }
+    }
+}
+
+// 2. VIRTUAL PATCH
 async function applyVirtualPatch(patchFileName) {
     try {
         const patchPath = path.join(__dirname, "virtual-patches", patchFileName);
         if (!fs.existsSync(patchPath)) {
-            console.error(`[K8s] Patch file not found: ${patchFileName}. Skipping application.`);
+            console.error(`[K8s] Patch file not found: ${patchFileName}. Skipping.`);
             return;
         }
 
-        const fileContent = fs.readFileSync(patchPath, "utf8");
-        const patchObj = yaml.load(fileContent);
-
-        console.log(`[K8s] Applying custom security policy: ${patchObj.metadata.name}...`);
-
-        // CiliumNetworkPolicies are custom objects: group, version, plural
-        await k8sCustomApi.createNamespacedCustomObject(
-            "cilium.io",
-            "v2",
-            NAMESPACE,
-            "ciliumnetworkpolicies",
-            patchObj
-        );
-        console.log(`[K8s] Successfully applied patch: ${patchFileName}`);
+        const patchObj = yaml.load(fs.readFileSync(patchPath, "utf8"));
+        console.log(`[K8s] 🛡️ Applying virtual patch: ${patchObj.metadata.name}...`);
+        
+        // FIXED: Using Object syntax
+        await k8sCustomApi.createNamespacedCustomObject({
+            group: "cilium.io",
+            version: "v2",
+            namespace: NAMESPACE,
+            plural: "ciliumnetworkpolicies",
+            body: patchObj
+        });
+        console.log(`[K8s] 🛡️ Virtual patch applied successfully.`);
     } catch (err) {
-        // If the policy already exists, we log it and move forward
         if (err.body && err.body.reason === "AlreadyExists") {
-            console.log(`[K8s] Security policy already active in cluster.`);
+            console.log(`[K8s] 🛡️ Virtual patch is already active in the cluster.`);
         } else {
-            const errorMsg = err.cause?.message || err.message || err;
-            console.error(`[K8s] Failed to apply virtual patch:`, errorMsg);
+            console.error(`[K8s] Patch failed:`, err.body ? err.body.message : err);
         }
     }
 }
 
-/**
- * Issues a hard deletion of the target pod to force a replica cycle.
- */
-async function cyclePod(podName) {
+// 3. CYCLE WORKLOAD
+async function cycleWorkloadPods(workloadName) {
     try {
-        console.log(`[K8s] Eradicating compromised pod: ${podName}...`);
-        await k8sCoreApi.deleteNamespacedPod(podName, NAMESPACE);
-        console.log(`[K8s] Pod ${podName} successfully signaled for deletion.`);
+        console.log(`[K8s] ♻️ Cycling compromised pods for [${workloadName}]...`);
+        // FIXED: Using Object syntax
+        await k8sCoreApi.deleteCollectionNamespacedPod({
+            namespace: NAMESPACE,
+            labelSelector: `app=${workloadName}`
+        });
+        console.log(`[K8s] ♻️ Pods eradicated. Clean replicas are spinning up.`);
     } catch (err) {
-        const errorMsg = err.cause?.message || err.message || err;
-        console.error(`[K8s] Error deleting pod ${podName}:`, errorMsg);
+        console.error(`[K8s] Failed to cycle pods:`, err.body ? err.body.message : err);
     }
 }
 
+// 4. LIFT QUARANTINE
+async function removeQuarantine(workloadName) {
+    const policyName = `quarantine-${workloadName}`;
+    try {
+        console.log(`[K8s] 🔓 Lifting emergency quarantine for [${workloadName}]...`);
+        // FIXED: Using Object syntax
+        await k8sCustomApi.deleteNamespacedCustomObject({
+            group: "cilium.io",
+            version: "v2",
+            namespace: NAMESPACE,
+            plural: "ciliumnetworkpolicies",
+            name: policyName
+        });
+        console.log(`[K8s] 🔓 Quarantine lifted. System restored.`);
+    } catch (err) {
+        console.error(`[K8s] Failed to lift quarantine:`, err.body ? err.body.message : err);
+    }
+}
+
+// MAIN EXECUTION LOOP
 async function startAutoHeal() {
     try {
         console.log(`[AutoHeal] Connecting to NATS at ${NATS_URL}...`);
         const nc = await connect({ servers: NATS_URL });
         console.log("[AutoHeal] Connected to NATS broker successfully!");
 
-        const sub = nc.subscribe("auranet.commands.autoheal.>");
         console.log("[AutoHeal] 🎧 Listening for ZTC Quarantine Orders...\n");
+        const sub = nc.subscribe("auranet.commands.autoheal.>");
 
         for await (const msg of sub) {
             const command = JSON.parse(sc.decode(msg.data));
+            const workload = command.target_workload;
             
-            console.log(`\n🚨 [AutoHeal] RECEIVED QUARANTINE ORDER!`);
-            console.log(`Target Workload: ${command.target_workload}`);
-            console.log(`Threat Signatures:`, command.threat_signatures);
-
-            // 1. Determine the highest-severity patch file name
+            console.log(`\n🚨 [AutoHeal] INITIATING SOAR PIPELINE FOR: ${workload}`);
+            
+            await applyQuarantine(workload);
+            
             const targetPatch = determineVirtualPatch(command.threat_signatures);
-            console.log(`[AutoHeal] 🛡️ Selected Action Patch: ${targetPatch}`);
-
-            // 2. Execute K8s Pipeline
-            // Apply the virtual patch / quarantine network parameters
             await applyVirtualPatch(targetPatch);
-
-            // Cycle the pod (deletes it so a clean instance replaces it)
-            await cyclePod(command.target_workload);
             
-            console.log(`[AutoHeal] ✅ Mitigation pipeline executed for ${command.target_workload}.`);
-            console.log(`========================================================\n`);
+            await cycleWorkloadPods(workload);
+            
+            console.log(`[AutoHeal] ⏳ Waiting 5 seconds for propagation...`);
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            await removeQuarantine(workload);
+            
+            console.log(`[AutoHeal] ✅ Pipeline complete. Threat neutralized for ${workload}.\n`);
         }
-
     } catch (err) {
         console.error("[AutoHeal] Fatal Runtime Error:", err);
         process.exit(1);
