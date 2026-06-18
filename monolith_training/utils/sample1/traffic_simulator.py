@@ -25,21 +25,21 @@ def generate_traffic():
         print("❌ Error: Could not find pods. Are the sample workloads running?")
         return
 
-    print("\n--- PHASE 1: Generating Benign Baseline (Normal Traffic) ---")
+    print("\n Pstep1: Generating Benign Baseline (Normal Traffic)")
     print("Simulating authorized retail traffic for 30 seconds...")
     for _ in range(15):
         # Normal, expected behavior
         run_curl(retail_pod, "customer-api", 8000, "/health")
         time.sleep(random.uniform(0.5, 2.0))
 
-    print("\n--- PHASE 2: Generating Layer 3/4 Anomalies (Unauthorized Access) ---")
+    print("\n step2: Generating Layer 3/4 Anomalies (Unauthorized Access)")
     print("Simulating investment-dashboard attempting to breach the API (Will be DROPPED by Cilium/SPIRE)...")
     for _ in range(5):
         # This will fail the mTLS/Network Policy check, but Hubble will log the DROP
         run_curl(invest_pod, "customer-api", 8000, "/health")
         time.sleep(1)
 
-    print("\n--- PHASE 3: Generating Layer 7 Anomalies (Insider Threat/Compromise) ---")
+    print("\n step 3: Generating Layer 7 Anomalies (Insider Threat/Compromise) ")
     print("Simulating a compromised retail-dashboard sending malicious L7 payloads...")
     malicious_paths = [
         "/admin/delete",                  # Privilege Escalation attempt
