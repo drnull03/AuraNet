@@ -8,9 +8,9 @@ def get_pod_name(app_label, namespace="default"):
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     return result.stdout.strip()
 
-def run_curl(source_pod, target_svc, port, path, method="GET"):
+def run_curl(source_pod, target_svc, port, path, method="GET", timeout=1):
     """Executes a curl command from inside a specific pod."""
-    cmd = f"kubectl exec -n default {source_pod} -- curl -s -o /dev/null -w '%{{http_code}}' -X {method} --max-time 1 http://{target_svc}:{port}{path}"
+    cmd = f"kubectl exec -n default {source_pod} -- curl -s -o /dev/null -w '%{{http_code}}' -X {method} --max-time {timeout} http://{target_svc}:{port}{path}"
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     print(f"[{source_pod}] -> {method} http://{target_svc}:{port}{path} (HTTP {result.stdout})")
 
@@ -24,10 +24,14 @@ def generate_traffic():
         print("❌ Error: Could not find pods. Are the sample workloads running?")
         return
 
+    print("\n--- PHASE 0: SPIRE mTLS Tunnel Warm-up ---")
+    print("Sending an initial request with a 5-second timeout to allow the TLS handshake to complete...")
+    run_curl(retail_pod, "customer-api", 8000, "/health", timeout=5)
+    time.sleep(4) # Let the network settle
+
     print("\n--- PHASE 1: Benign Baseline (Retail fetching Customer Data) ---")
     print("Simulating authorized retail traffic to /customers/{id} (Will SUCCEED)...")
     for _ in range(25):
-        # Normal behavior: Retail dashboard requests valid customer IDs (1-25)
         customer_id = random.randint(1, 25)
         run_curl(retail_pod, "customer-api", 8000, f"/customers/{customer_id}")
         time.sleep(random.uniform(0.2, 1.0))
@@ -35,8 +39,6 @@ def generate_traffic():
     print("\n--- PHASE 2: Boundary Enforcement (Benign app, unauthorized path) ---")
     print("Simulating Investment Dashboard attempting to reach Customer API (Will DROP)...")
     for _ in range(10):
-        # Investment Dashboard is a normal app, but it lacks the SPIRE identity for this specific API.
-        # Blocked by the CiliumNetworkPolicy!
         customer_id = random.randint(1, 25)
         run_curl(invest_pod, "customer-api", 8000, f"/customers/{customer_id}")
         time.sleep(0.5)
@@ -45,10 +47,10 @@ def generate_traffic():
     print("Simulating a compromised Retail Dashboard manipulating HTTP verbs & endpoints...")
     
     l7_attacks = [
-        {"path": "/customers/1", "method": "POST"},    # API is read-only (GET). POST is suspicious.
-        {"path": "/customers/1", "method": "DELETE"},  # Attempting to delete a record
-        {"path": "/customers/admin_dump", "method": "GET"}, # Path enumeration
-        {"path": "/customers/1'%20OR%201=1", "method": "GET"}, # SQLi string
+        {"path": "/customers/1", "method": "POST"},
+        {"path": "/customers/1", "method": "DELETE"},
+        {"path": "/customers/admin_dump", "method": "GET"},
+        {"path": "/customers/1'%20OR%201=1", "method": "GET"},
     ]
     
     for _ in range(10):
