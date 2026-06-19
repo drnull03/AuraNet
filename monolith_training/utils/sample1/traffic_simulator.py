@@ -10,7 +10,7 @@ def get_pod_name(app_label, namespace="default"):
 
 def run_curl(source_pod, target_svc, port, path, method="GET"):
     """Executes a curl command from inside a specific pod."""
-    cmd = f"kubectl exec -n default {source_pod} -- curl -s -o /dev/null -w '%{{http_code}}' -X {method} --max-time 3 http://{target_svc}:{port}{path}"
+    cmd = f"kubectl exec -n default {source_pod} -- curl -s -o /dev/null -w '%{{http_code}}' -X {method} --max-time 1 http://{target_svc}:{port}{path}"
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     print(f"[{source_pod}] -> {method} http://{target_svc}:{port}{path} (HTTP {result.stdout})")
 
