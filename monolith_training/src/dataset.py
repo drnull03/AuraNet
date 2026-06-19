@@ -38,15 +38,13 @@ class HubbleDataProcessor:
                 verdict = flow.get("verdict", "")
                 source_labels = flow.get("source", {}).get("labels", [])
                 event_type = flow.get("event_type", {}).get("type", 0)
-                
-                # Extract the drop reason text (e.g., "AUTH_REQUIRED", "POLICY_DENIED")
                 drop_reason = flow.get("drop_reason_desc", "")
                 
                 # 1. Drop Kubelet health probes
                 if "reserved:host" in source_labels:
                     continue
                 
-                # 2. Prevent Double-Logging of Drops
+                # 2. Prevent Double-Logging, but CAPTURE ALL PHYSICAL DROPS
                 if verdict == "DROPPED" and event_type != 1:
                     continue
                     
@@ -56,13 +54,13 @@ class HubbleDataProcessor:
 
                 l7 = flow.get("l7", {})
                 
-                # 4. IGNORE L7 RESPONSES (We only care about the Requests)
+                # 4. IGNORE L7 RESPONSES
                 if l7 and l7.get("type") == "RESPONSE":
                     continue
 
                 is_http_l7 = verdict == "FORWARDED" and l7 and "http" in l7
                 
-                # 5. Keep unique POLICY_DENIED packets OR valid HTTP REQUESTS
+                # 5. Keep unique physical drops OR valid HTTP REQUESTS
                 if verdict == "DROPPED" or is_http_l7:
                     
                     self.raw_json_events.append(event)
@@ -90,7 +88,10 @@ class HubbleDataProcessor:
         
         df['is_dropped'] = (df['verdict'] == 'DROPPED').astype(float)
         
-        valid_path_regex = re.compile(r"^/customers/\d+$")
+        # --- FIXED REGEX ---
+        # .*: Matches the "http://customer-api:8000" part dynamically
+        # \d+$: Ensures it strictly ends with a number (no SQL injections allowed)
+        valid_path_regex = re.compile(r".*/customers/\d+$")
         df['is_valid_path'] = df['url'].apply(lambda x: 1.0 if valid_path_regex.match(x) else 0.0)
         
         df['is_get'] = (df['method'] == 'GET').astype(float)
@@ -145,9 +146,11 @@ if __name__ == "__main__":
         print(df.head())
         
         torch_dataset = HubbleDataset(df)
+        print(f"\n✅ PyTorch Dataset ready! Contains {len(torch_dataset)} exact samples.")
+        
         tensor_path = os.path.join(current_dir, "..", "data", "processed", "training_tensor.pt")
+        os.makedirs(os.path.dirname(tensor_path), exist_ok=True)
         torch.save(torch_dataset.data, tensor_path)
         print(f"💾 Saved PyTorch Tensor to {tensor_path}")
-        print(f"\n✅ PyTorch Dataset ready! Contains {len(torch_dataset)} exact samples.")
     else:
         print(f"❌ Could not find {json_file}. Did you run the extractor script?")
