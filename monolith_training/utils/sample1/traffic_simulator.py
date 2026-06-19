@@ -10,7 +10,8 @@ def get_pod_name(app_label, namespace="default"):
 
 def run_curl(source_pod, target_svc, port, path, method="GET", timeout=1):
     """Executes a curl command from inside a specific pod."""
-    cmd = f"kubectl exec -n default {source_pod} -- curl -s -o /dev/null -w '%{{http_code}}' -X {method} --max-time {timeout} http://{target_svc}:{port}{path}"
+    # ADDED DOUBLE QUOTES AROUND THE URL TO PREVENT BASH SHELL INJECTION ERRORS
+    cmd = f"kubectl exec -n default {source_pod} -- curl -s -o /dev/null -w '%{{http_code}}' -X {method} --max-time {timeout} \"http://{target_svc}:{port}{path}\""
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     print(f"[{source_pod}] -> {method} http://{target_svc}:{port}{path} (HTTP {result.stdout})")
 
@@ -27,7 +28,7 @@ def generate_traffic():
     print("\n--- PHASE 0: SPIRE mTLS Tunnel Warm-up ---")
     print("Sending an initial request with a 5-second timeout to allow the TLS handshake to complete...")
     run_curl(retail_pod, "customer-api", 8000, "/health", timeout=5)
-    time.sleep(4) # Let the network settle
+    time.sleep(1) # Let the network settle
 
     print("\n--- PHASE 1: Benign Baseline (Retail fetching Customer Data) ---")
     print("Simulating authorized retail traffic to /customers/{id} (Will SUCCEED)...")

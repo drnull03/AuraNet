@@ -47,7 +47,7 @@ class HubbleDataProcessor:
                     continue
                 
                 # 2. Prevent Double-Logging of Drops
-                if verdict == "DROPPED" and event_type != 5:
+                if verdict == "DROPPED" and event_type != 1:
                     continue
                     
                 # 3. IGNORE SPIRE mTLS HANDSHAKE DROPS
