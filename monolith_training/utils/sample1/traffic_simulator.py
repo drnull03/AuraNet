@@ -8,16 +8,15 @@ def get_pod_name(app_label, namespace="default"):
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     return result.stdout.strip()
 
-def run_curl(source_pod, target_svc, port, path, method="GET", namespace="default"):
+def run_curl(source_pod, target_svc, port, path, method="GET"):
     """Executes a curl command from inside a specific pod."""
-    cmd = f"kubectl exec -n {namespace} {source_pod} -- curl -s -X {method} http://{target_svc}:{port}{path}"
-    subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    print(f"[{source_pod}] -> {method} http://{target_svc}:{port}{path}")
+    cmd = f"kubectl exec -n default {source_pod} -- curl -s -o /dev/null -w '%{{http_code}}' -X {method} --max-time 3 http://{target_svc}:{port}{path}"
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    print(f"[{source_pod}] -> {method} http://{target_svc}:{port}{path} (HTTP {result.stdout})")
 
 def generate_traffic():
-    print("🐝 Initializing AuraNet Traffic Simulator...")
+    print("🐝 Initializing AuraNet Context-Aware Traffic Simulator...")
     
-    # Get dynamic pod names
     retail_pod = get_pod_name("retail-dashboard")
     invest_pod = get_pod_name("investment-dashboard")
     
@@ -25,36 +24,39 @@ def generate_traffic():
         print("❌ Error: Could not find pods. Are the sample workloads running?")
         return
 
-    print("\n Pstep1: Generating Benign Baseline (Normal Traffic)")
-    print("Simulating authorized retail traffic for 30 seconds...")
-    for _ in range(15):
-        # Normal, expected behavior
-        run_curl(retail_pod, "customer-api", 8000, "/health")
-        time.sleep(random.uniform(0.5, 2.0))
+    print("\n--- PHASE 1: Benign Baseline (Retail fetching Customer Data) ---")
+    print("Simulating authorized retail traffic to /customers/{id} (Will SUCCEED)...")
+    for _ in range(25):
+        # Normal behavior: Retail dashboard requests valid customer IDs (1-25)
+        customer_id = random.randint(1, 25)
+        run_curl(retail_pod, "customer-api", 8000, f"/customers/{customer_id}")
+        time.sleep(random.uniform(0.2, 1.0))
 
-    print("\n step2: Generating Layer 3/4 Anomalies (Unauthorized Access)")
-    print("Simulating investment-dashboard attempting to breach the API (Will be DROPPED by Cilium/SPIRE)...")
-    for _ in range(5):
-        # This will fail the mTLS/Network Policy check, but Hubble will log the DROP
-        run_curl(invest_pod, "customer-api", 8000, "/health")
-        time.sleep(1)
+    print("\n--- PHASE 2: Boundary Enforcement (Benign app, unauthorized path) ---")
+    print("Simulating Investment Dashboard attempting to reach Customer API (Will DROP)...")
+    for _ in range(10):
+        # Investment Dashboard is a normal app, but it lacks the SPIRE identity for this specific API.
+        # Blocked by the CiliumNetworkPolicy!
+        customer_id = random.randint(1, 25)
+        run_curl(invest_pod, "customer-api", 8000, f"/customers/{customer_id}")
+        time.sleep(0.5)
 
-    print("\n step 3: Generating Layer 7 Anomalies (Insider Threat/Compromise) ")
-    print("Simulating a compromised retail-dashboard sending malicious L7 payloads...")
-    malicious_paths = [
-        "/admin/delete",                  # Privilege Escalation attempt
-        "/health?user=1'%20OR%20'1'='1",  # SQL Injection attempt
-        "/etc/passwd",                    # Path Traversal attempt
+    print("\n--- PHASE 3: L7 Anomalies (Insider Threat / API Abuse) ---")
+    print("Simulating a compromised Retail Dashboard manipulating HTTP verbs & endpoints...")
+    
+    l7_attacks = [
+        {"path": "/customers/1", "method": "POST"},    # API is read-only (GET). POST is suspicious.
+        {"path": "/customers/1", "method": "DELETE"},  # Attempting to delete a record
+        {"path": "/customers/admin_dump", "method": "GET"}, # Path enumeration
+        {"path": "/customers/1'%20OR%201=1", "method": "GET"}, # SQLi string
     ]
     
     for _ in range(10):
-        path = random.choice(malicious_paths)
-        # Using a forbidden HTTP method (POST instead of GET)
-        method = random.choice(["GET", "POST", "DELETE"])
-        run_curl(retail_pod, "customer-api", 8000, path, method)
-        time.sleep(1)
+        attack = random.choice(l7_attacks)
+        run_curl(retail_pod, "customer-api", 8000, attack["path"], attack["method"])
+        time.sleep(0.5)
 
-    print("\n✅ Traffic generation complete! The network telemetry is now in Hubble.")
+    print("\n✅ Context-aware traffic generation complete! Data is ready in Hubble.")
 
 if __name__ == "__main__":
     generate_traffic()

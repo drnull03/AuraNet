@@ -1,6 +1,13 @@
 // virtual-patches/rules.js
 
 // The mapping now includes a 'severity' score (1-100)
+
+
+//now we are only picking the highest severity to apply a patch too 
+
+//we are gonna add more of these 
+//when using the LLM approach 
+//or cloud flare method we use the full context of the array
 const RULE_ENGINE = {
     "sql_injection": { patch: "block-sql-injection.yaml", severity: 100 },
     "privilege_escalation": { patch: "strict-rbac-jail.yaml", severity: 90 },
