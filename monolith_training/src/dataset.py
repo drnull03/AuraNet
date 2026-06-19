@@ -145,6 +145,9 @@ if __name__ == "__main__":
         print(df.head())
         
         torch_dataset = HubbleDataset(df)
+        tensor_path = os.path.join(current_dir, "..", "data", "processed", "training_tensor.pt")
+        torch.save(torch_dataset.data, tensor_path)
+        print(f"💾 Saved PyTorch Tensor to {tensor_path}")
         print(f"\n✅ PyTorch Dataset ready! Contains {len(torch_dataset)} exact samples.")
     else:
         print(f"❌ Could not find {json_file}. Did you run the extractor script?")
