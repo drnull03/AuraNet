@@ -1,0 +1,12 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: auranet-prevent-mount-escape
+  namespace: default
+spec:
+  kprobes:
+  - call: "sys_mount"
+    syscall: true
+    selectors:
+    - matchActions:
+      - action: Sigkill

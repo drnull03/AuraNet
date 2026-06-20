@@ -1,0 +1,22 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: auranet-protect-shadow-file
+  namespace: default
+spec:
+  kprobes:
+  - call: "security_file_open"
+    syscall: false
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Equal"
+        values:
+        - "/etc/shadow"
+      matchBinaries:
+      - operator: "In"
+        values:
+        - "/usr/local/bin/node"
+        - "/usr/sbin/nginx"
+      matchActions:
+      - action: Sigkill

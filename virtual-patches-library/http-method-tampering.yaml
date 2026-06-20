@@ -1,0 +1,20 @@
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: auranet-block-dangerous-methods
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      role: frontend-web
+  ingress:
+  - toPorts:
+    - ports:
+      - port: "80"
+        protocol: TCP
+      rules:
+        http:
+        - method: "TRACE"
+          path: ".*"
+        - method: "TRACK"
+          path: ".*"

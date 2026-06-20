@@ -1,0 +1,16 @@
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: auranet-block-internal-ssh
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels: {} # Matches all pods
+  egress:
+  - toPorts:
+    - ports:
+      - port: "22"
+        protocol: TCP
+    toEndpoints:
+    - matchLabels:
+        k8s:io.kubernetes.pod.namespace: default

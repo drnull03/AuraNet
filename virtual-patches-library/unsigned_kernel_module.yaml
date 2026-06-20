@@ -1,0 +1,12 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: auranet-prevent-kernel-modules
+  namespace: default
+spec:
+  kprobes:
+  - call: "sys_init_module"
+    syscall: true
+    selectors:
+    - matchActions:
+      - action: Sigkill

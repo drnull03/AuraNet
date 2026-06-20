@@ -1,0 +1,21 @@
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: auranet-block-sqli
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      role: backend-api
+  ingress:
+  - toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+      rules:
+        http:
+        # Theoretical regex matching common SQLi patterns in the URI
+        - method: "GET"
+          path: ".*(?i)(union.*select|select.*from|waitfor.*delay|1=1).*"
+        - method: "POST"
+          path: ".*(?i)(insert.*into|update.*set|drop.*table).*"

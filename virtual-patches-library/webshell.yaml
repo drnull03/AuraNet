@@ -1,0 +1,31 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: auranet-prevent-web-shells
+  namespace: default
+spec:
+  kprobes:
+  - call: "sys_execve"
+    syscall: true
+    selectors:
+    # Target specific binaries attempting to be executed
+    - matchArgs:
+      - index: 0
+        operator: "In"
+        values:
+        - "/bin/sh"
+        - "/bin/bash"
+        - "/bin/dash"
+        - "/usr/bin/wget"
+        - "/usr/bin/curl"
+        - "/usr/bin/nc"
+      # Only apply this to specific parent processes (e.g., your web server)
+      matchBinaries:
+      - operator: "In"
+        values:
+        - "/usr/sbin/nginx"
+        - "/usr/local/bin/node"
+        - "/usr/bin/java"
+      matchActions:
+      # Instantly kill the process attempting the execution
+      - action: Sigkill

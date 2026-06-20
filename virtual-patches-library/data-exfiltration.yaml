@@ -1,0 +1,17 @@
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: auranet-block-cleartext-egress
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels: {}
+  egress:
+  - toCIDRSet:
+    - cidr: 0.0.0.0/0
+  - toPorts:
+    - ports:
+      - port: "21"
+        protocol: TCP
+      - port: "23"
+        protocol: TCP

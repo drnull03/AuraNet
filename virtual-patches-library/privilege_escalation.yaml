@@ -1,0 +1,19 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: auranet-prevent-privesc
+  namespace: default
+spec:
+  kprobes:
+  - call: "sys_execve"
+    syscall: true
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "In"
+        values:
+        - "/usr/bin/sudo"
+        - "/usr/bin/su"
+        - "/bin/su"
+      matchActions:
+      - action: Sigkill

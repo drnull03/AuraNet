@@ -1,0 +1,19 @@
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: auranet-block-path-traversal
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      role: frontend-web
+  ingress:
+  - toPorts:
+    - ports:
+      - port: "80"
+        protocol: TCP
+      rules:
+        http:
+        # Theoretical regex matching raw or URL-encoded path traversal attempts
+        - method: "GET"
+          path: ".*(?i)(\\.\\.\\/|%2e%2e%2f|%2e%2e/).*"

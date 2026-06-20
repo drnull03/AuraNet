@@ -1,0 +1,23 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: auranet-prevent-cron-tampering
+  namespace: default
+spec:
+  kprobes:
+  - call: "security_file_open"
+    syscall: false
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Prefix"
+        values:
+        - "/etc/cron"
+        - "/var/spool/cron"
+      # O_WRONLY (01) or O_RDWR (02) flags
+      - index: 1
+        operator: "Mask"
+        values:
+        - "3" 
+      matchActions:
+      - action: Sigkill
