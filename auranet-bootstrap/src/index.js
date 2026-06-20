@@ -15,32 +15,12 @@ if (!fs.existsSync(configFile)) {
 const content = fs.readFileSync(configFile, 'utf-8');
 const lines = content.split('\n');
 
-// Initialize the standard Kubernetes clients
 const kc = new k8s.KubeConfig();
 kc.loadFromCluster();
-
 const customObjectsApi = kc.makeApiClient(k8s.CustomObjectsApi);
 
-const coreV1Api = kc.makeApiClient(k8s.CoreV1Api);
-
-// Helper function to dynamically find a service's port
-async function getServicePort(serviceName, namespace = 'default') {
-    try {
-        const res = await coreV1Api.readNamespacedService(serviceName, namespace);
-        // Grab the first port defined in the service
-        return res.body.spec.ports[0].port.toString();
-    } catch (err) {
-        console.log(`[WARNING] Could not find Kubernetes Service named '${serviceName}'. Defaulting to port 80.`);
-        return "80"; // Fallback if the service doesn't exist yet
-    }
-}
-
-async function applyCiliumPolicy(source, dest) {
+async function applyCiliumPolicy(source, dest, port) {
     const policyName = `bootstrap-allow-${source}-to-${dest}`;
-    
-    // Dynamically discover the port for the destination!
-    const discoveredPort = await getServicePort(dest);
-    console.log(`[INFO] Discovered port ${discoveredPort} for destination [${dest}]`);
     
     const policyManifest = {
         apiVersion: 'cilium.io/v2',
@@ -60,10 +40,10 @@ async function applyCiliumPolicy(source, dest) {
                 fromEndpoints: [{ 
                     matchLabels: { app: source } 
                 }],
-                // Inject the dynamically discovered port here
+                // Inject the port directly parsed from the naive.conf file
                 toPorts: [{
                     ports: [{
-                        port: discoveredPort,
+                        port: port,
                         protocol: "TCP"
                     }],
                     rules: {
@@ -85,7 +65,7 @@ async function applyCiliumPolicy(source, dest) {
             'ciliumnetworkpolicies', 
             policyManifest
         );
-        console.log(`[SUCCESS] Applied network policy: ${policyName}`);
+        console.log(`[SUCCESS] Applied L7 network policy: ${policyName} on port ${port}`);
     } catch (err) {
         if (err.body && err.body.reason === 'AlreadyExists') {
             console.log(`[SKIPPED] Network policy ${policyName} already exists.`);
@@ -146,13 +126,18 @@ async function run() {
         const trimmed = line.trim();
         if (!trimmed) continue;
 
-        const match = trimmed.match(/^\d+\.\s*([a-zA-Z0-9-]+)\s*->\s*([a-zA-Z0-9-]+)$/);
+        
+        // Captures Group 1: Source, Group 2: Destination, Group 3: Port
+        const match = trimmed.match(/^\d+\.\s*([a-zA-Z0-9-]+)\s*->\s*([a-zA-Z0-9-]+):(\d+)$/);
         
         if (match) {
             const source = match[1];
             const destination = match[2];
-            console.log(`Parsed rule: Allow traffic from [${source}] to [${destination}]`);
-            await applyCiliumPolicy(source, destination);
+            const port = match[3];
+            console.log(`Parsed rule: Allow traffic from [${source}] to [${destination}] on port ${port}`);
+            
+            // Pass the port into the Cilium policy function
+            await applyCiliumPolicy(source, destination, port);
             appliedCount++;
         } else {
             console.log(`[WARNING] Ignoring invalid line format: ${trimmed}`);
