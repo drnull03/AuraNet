@@ -15,8 +15,14 @@ if (!fs.existsSync(configFile)) {
 const content = fs.readFileSync(configFile, 'utf-8');
 const lines = content.split('\n');
 
+// THE FIX: Dynamically load KubeConfig whether local or in a Pod
 const kc = new k8s.KubeConfig();
-kc.loadFromCluster();
+if (process.env.KUBERNETES_SERVICE_HOST) {
+    kc.loadFromCluster();
+} else {
+    kc.loadFromDefault(); // Loads ~/.kube/config for your local terminal test!
+}
+
 const customObjectsApi = kc.makeApiClient(k8s.CustomObjectsApi);
 
 async function applyCiliumPolicy(source, dest, port) {
@@ -40,10 +46,10 @@ async function applyCiliumPolicy(source, dest, port) {
                 fromEndpoints: [{ 
                     matchLabels: { app: source } 
                 }],
-                // Inject the port directly parsed from the naive.conf file
+                // Inject the port parsed from naive.conf
                 toPorts: [{
                     ports: [{
-                        port: port,
+                        port: port.toString(),
                         protocol: "TCP"
                     }],
                     rules: {
@@ -58,11 +64,12 @@ async function applyCiliumPolicy(source, dest, port) {
     };
 
     try {
+        // Reverted to positional arguments to match your kubernetes-client version
         await customObjectsApi.createNamespacedCustomObject(
-            'cilium.io', 
-            'v2', 
-            'default', 
-            'ciliumnetworkpolicies', 
+            'cilium.io',
+            'v2',
+            'default',
+            'ciliumnetworkpolicies',
             policyManifest
         );
         console.log(`[SUCCESS] Applied L7 network policy: ${policyName} on port ${port}`);
@@ -70,7 +77,7 @@ async function applyCiliumPolicy(source, dest, port) {
         if (err.body && err.body.reason === 'AlreadyExists') {
             console.log(`[SKIPPED] Network policy ${policyName} already exists.`);
         } else {
-            console.error(`[ERROR] Failed to create policy ${policyName}:`, err.cause ? err.cause.message : err);
+            console.error(`[ERROR] Failed to create policy ${policyName}:`, err.cause ? err.cause.message : (err.body ? err.body.message : err.message));
         }
     }
 }
@@ -95,11 +102,12 @@ async function applyRuntimePolicies() {
                 const namespace = manifest.metadata.namespace || 'default';
                 
                 try {
+                    // Reverted to positional arguments
                     await customObjectsApi.createNamespacedCustomObject(
-                        'cilium.io', 
-                        'v1alpha1', 
-                        namespace, 
-                        'tracingpoliciesnamespaced', 
+                        'cilium.io',
+                        'v1alpha1',
+                        namespace,
+                        'tracingpoliciesnamespaced',
                         manifest
                     );
                     console.log(`[SUCCESS] Applied runtime policy: ${name}`);
@@ -126,8 +134,7 @@ async function run() {
         const trimmed = line.trim();
         if (!trimmed) continue;
 
-        
-        // Captures Group 1: Source, Group 2: Destination, Group 3: Port
+        // Regex capturing: 1. Source -> 2. Destination : 3. Port
         const match = trimmed.match(/^\d+\.\s*([a-zA-Z0-9-]+)\s*->\s*([a-zA-Z0-9-]+):(\d+)$/);
         
         if (match) {
@@ -136,7 +143,6 @@ async function run() {
             const port = match[3];
             console.log(`Parsed rule: Allow traffic from [${source}] to [${destination}] on port ${port}`);
             
-            // Pass the port into the Cilium policy function
             await applyCiliumPolicy(source, destination, port);
             appliedCount++;
         } else {
