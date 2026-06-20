@@ -142,7 +142,7 @@ if __name__ == "__main__":
         processor.engineer_features()
         
         df = processor.get_dataframe()
-        print("\n--- Preview of the Numerical Feature Tensor ---")
+        print("\nPreview of the Numerical Feature Tensor ")
         print(df.head())
         
         torch_dataset = HubbleDataset(df)
