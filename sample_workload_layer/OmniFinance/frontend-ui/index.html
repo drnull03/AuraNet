@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OmniFinance | Enterprise Banking</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons for Professional Corporate Look -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -27,7 +26,6 @@
 </head>
 <body class="text-slate-800 antialiased min-h-screen flex flex-col">
 
-    <!-- Top Navigation -->
     <nav class="glass-panel border-b border-slate-200 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
@@ -49,21 +47,17 @@
         </div>
     </nav>
 
-    <!-- Main Content -->
     <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         
-        <!-- Welcome Header -->
         <div class="mb-8">
             <h1 class="text-2xl font-bold text-slate-900">Branch Operations Dashboard</h1>
-            <p class="text-sm text-slate-500 mt-1">Manage customer accounts and monitor regional liquidity.</p>
+            <p class="text-sm text-slate-500 mt-1">Manage customer accounts, monitor regional liquidity, and run internal diagnostics.</p>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            <!-- Left Column: The Attack Vector (Account Search) -->
             <div class="lg:col-span-2 space-y-8">
                 
-                <!-- Account Lookup Panel -->
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="px-6 py-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                         <h2 class="text-lg font-semibold text-slate-800 flex items-center">
@@ -91,19 +85,16 @@
                             </button>
                         </form>
 
-                        <!-- Results Area -->
                         <div id="results-area" class="mt-6 hidden">
                             <div class="border border-slate-200 rounded-lg overflow-hidden">
                                 <div class="bg-slate-50 px-4 py-2 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                                     Database Response
                                 </div>
                                 <div class="p-4 bg-white font-mono text-sm overflow-x-auto text-slate-700" id="json-result">
-                                    <!-- Results injected here -->
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Error / Quarantine Area -->
                         <div id="error-area" class="mt-6 hidden">
                             <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
                                 <div class="flex">
@@ -119,11 +110,9 @@
                                 </div>
                             </div>
                         </div>
-
                     </div>
                 </div>
 
-                <!-- Recent Transactions (Dummy Data for realism) -->
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200">
                     <div class="px-6 py-5 border-b border-slate-100">
                         <h2 class="text-lg font-semibold text-slate-800">Recent Branch Activity</h2>
@@ -154,42 +143,37 @@
 
             </div>
 
-            <!-- Right Column: Institutional Stats -->
             <div class="space-y-6">
-                <!-- Liquidity Card -->
-                <div class="bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl shadow-lg p-6 text-white border border-slate-700 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-blue-500 opacity-20 rounded-full blur-2xl"></div>
-                    <h3 class="text-slate-300 text-sm font-medium">Available Liquidity</h3>
+                <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl shadow-lg p-6 text-white border border-blue-500 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white opacity-10 rounded-full blur-2xl"></div>
+                    <h3 class="text-blue-100 text-sm font-medium">Available Liquidity</h3>
                     <p class="text-3xl font-bold mt-2">$142.8M</p>
-                    <div class="mt-4 flex items-center text-sm text-emerald-400">
+                    <div class="mt-4 flex items-center text-sm text-emerald-300">
                         <i data-lucide="trending-up" class="w-4 h-4 mr-1"></i>
                         <span>+2.4% from yesterday</span>
                     </div>
                 </div>
 
-                <!-- Active Loans Card -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-slate-800 font-semibold">Active Loan Processing</h3>
-                        <i data-lucide="file-text" class="text-slate-400 w-5 h-5"></i>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden border-t-4 border-t-purple-500">
+                    <div class="px-6 py-5 border-b border-slate-100 bg-slate-50">
+                        <h3 class="text-slate-800 font-semibold flex items-center">
+                            <i data-lucide="network" class="w-5 h-5 text-purple-500 mr-2"></i>
+                            Staff Diagnostic Tool
+                        </h3>
+                        <span class="text-xs font-mono text-slate-400 mt-1 block">GET /api/loans/scrape?id=</span>
                     </div>
-                    <div class="space-y-4">
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span class="text-slate-500">Mortgage Applications</span>
-                                <span class="font-medium text-slate-700">84%</span>
-                            </div>
-                            <div class="w-full bg-slate-100 rounded-full h-2">
-                                <div class="bg-blue-500 h-2 rounded-full" style="width: 84%"></div>
-                            </div>
+                    <div class="p-6">
+                        <p class="text-xs text-slate-500 mb-4">Internal endpoint used by the Loan Service to verify cross-service connectivity.</p>
+                        
+                        <div class="flex gap-2">
+                            <input type="text" id="ssrf-id" class="block w-full px-3 py-2 border border-slate-300 rounded focus:ring-purple-500 focus:border-purple-500 text-sm placeholder-slate-400" placeholder="Target ID..." value="1">
+                            <button id="btn-ssrf" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm font-medium transition-colors whitespace-nowrap">
+                                Execute SSRF
+                            </button>
                         </div>
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span class="text-slate-500">Personal Loans</span>
-                                <span class="font-medium text-slate-700">42%</span>
-                            </div>
-                            <div class="w-full bg-slate-100 rounded-full h-2">
-                                <div class="bg-indigo-500 h-2 rounded-full" style="width: 42%"></div>
+
+                        <div id="ssrf-result-area" class="mt-4 hidden">
+                            <div class="bg-slate-100 border border-slate-300 text-slate-800 font-mono text-xs p-3 rounded overflow-x-auto" id="ssrf-output">
                             </div>
                         </div>
                     </div>
@@ -199,25 +183,31 @@
         </div>
     </main>
 
-    <!-- UI Logic -->
     <script>
         lucide.createIcons();
 
+        // SQLi Elements
         const searchForm = document.getElementById('search-form');
         const inputField = document.getElementById('account-id');
         const resultsArea = document.getElementById('results-area');
         const jsonResult = document.getElementById('json-result');
         const errorArea = document.getElementById('error-area');
         
+        // Status Elements
         const statusPill = document.getElementById('system-status');
         const statusIndicator = document.getElementById('status-indicator');
         const statusText = document.getElementById('status-text');
 
-        // The URL we will hit. (We will build the api-gateway to route this)
-        const API_BASE_URL = '/api/accounts?id=';
+        // SSRF Elements
+        const btnSsrf = document.getElementById('btn-ssrf');
+        const inputSsrf = document.getElementById('ssrf-id');
+        const ssrfResultArea = document.getElementById('ssrf-result-area');
+        const ssrfOutput = document.getElementById('ssrf-output');
+
+        // Hardcoded to localhost:8080 for local testing. In production, this would be relative.
+        const API_BASE_URL = 'http://localhost:8080';
 
         function setLockdownState() {
-            // UI responds dramatically to a network drop (quarantine)
             statusPill.className = "flex items-center px-3 py-1 bg-red-50 text-red-700 rounded-full border border-red-200 text-sm font-bold transition-all duration-300";
             statusIndicator.className = "w-2 h-2 bg-red-600 rounded-full mr-2 pulse-red";
             statusText.innerText = "SECURITY LOCKDOWN";
@@ -234,22 +224,20 @@
             errorArea.classList.add('hidden');
         }
 
+        // --- SQLi Search Logic ---
         searchForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const query = inputField.value;
             
-            // Reset state
             setOnlineState();
             resultsArea.classList.add('hidden');
             jsonResult.innerHTML = '<span class="text-slate-400 animate-pulse">Executing query...</span>';
             resultsArea.classList.remove('hidden');
 
             try {
-                // We send the raw string exactly as typed to allow the SQLi payload to pass through
-                const response = await fetch(API_BASE_URL + query, {
+                const response = await fetch(`${API_BASE_URL}/api/accounts?id=${query}`, {
                     method: 'GET',
                     headers: { 'Accept': 'application/json' },
-                    // Short timeout to catch the Cilium quarantine quickly
                     signal: AbortSignal.timeout(3000) 
                 });
 
@@ -260,15 +248,36 @@
                 }
 
                 const data = await response.json();
-                
-                // Pretty print the JSON response
                 jsonResult.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
                 
             } catch (error) {
-                // If AuraNet quarantined the pod, the TCP connection drops or timeouts.
-                // We catch that here and trigger the dramatic UI shift for the jury.
                 console.error("Fetch Error:", error);
                 setLockdownState();
+            }
+        });
+
+        
+        btnSsrf.addEventListener('click', async () => {
+            const query = inputSsrf.value;
+            
+            ssrfResultArea.classList.remove('hidden');
+            ssrfOutput.innerHTML = '<span class="text-slate-500 animate-pulse">Initiating lateral scrape...</span>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/loans/scrape?id=${query}`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    signal: AbortSignal.timeout(3000) 
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                ssrfOutput.innerHTML = `<span class="text-red-600 font-bold">// SSRF SUCCESSFUL - DATA STOLEN</span>\n<pre class="mt-2 text-slate-800">${JSON.stringify(data, null, 2)}</pre>`;
+                
+            } catch (error) {
+                console.error("SSRF Blocked:", error);
+                ssrfOutput.innerHTML = `<span class="text-blue-600 font-bold animate-pulse">CONNECTION DROPPED</span>\n<span class="text-slate-600 block mt-1">Zero Trust Policy Enforced. Lateral movement blocked by AuraNet.</span>`;
             }
         });
     </script>
