@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniFinance | Zero Trust Topology</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f8fafc; /* Light projector-friendly background */
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+        }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, rgba(148, 163, 184, 0.1) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
+        }
+    </style>
+</head>
+<body class="bg-grid">
+
+    <!-- Container for 16:9 Presentation -->
+    <div class="relative w-[1050px] h-[600px] bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden flex">
+        
+        <!-- Header / Legend -->
+        <div class="absolute top-6 left-8 z-20">
+            <h1 class="text-2xl font-bold text-slate-800 tracking-tight flex items-center">
+                <i data-lucide="landmark" class="w-6 h-6 text-blue-600 mr-2"></i>
+                OmniFinance Topology
+            </h1>
+            <p class="text-sm font-mono text-slate-500 mt-1">naive.conf | Zero Trust Baseline</p>
+        </div>
+
+        <div class="absolute top-6 right-8 z-20 bg-slate-50 border border-slate-200 p-3 rounded-lg shadow-sm">
+            <div class="flex flex-col space-y-2 text-xs font-bold uppercase tracking-wider text-slate-600">
+                <span class="flex items-center">
+                    <div class="w-8 h-1 bg-emerald-500 mr-2 relative">
+                        <div class="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-4 border-t-transparent border-b-4 border-b-transparent border-l-[6px] border-l-emerald-500"></div>
+                    </div> 
+                    Allowed Path
+                </span>
+                <span class="flex items-center text-slate-400">
+                    <div class="w-8 h-1 bg-transparent border-t-2 border-dashed border-slate-300 mr-2"></div> 
+                    No Arrow = Default Deny
+                </span>
+            </div>
+        </div>
+
+        <!-- SVG Connection Lines (Green Arrows for Allowed Only) -->
+        <svg class="absolute inset-0 w-full h-full pointer-events-none z-0">
+            <defs>
+                <!-- Green Arrowhead -->
+                <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+                </marker>
+            </defs>
+
+            <!-- 1. Frontend -> Gateway -->
+            <path d="M 210 300 L 285 300" fill="none" stroke="#10b981" stroke-width="3" marker-end="url(#arrow-green)" />
+            
+            <!-- 2. Gateway -> Account -->
+            <path d="M 480 280 C 520 280 520 150 565 150" fill="none" stroke="#10b981" stroke-width="3" marker-end="url(#arrow-green)" />
+            
+            <!-- 3. Gateway -> Loan -->
+            <path d="M 480 320 C 520 320 520 450 565 450" fill="none" stroke="#10b981" stroke-width="3" marker-end="url(#arrow-green)" />
+
+            <!-- 4. Account -> DB -->
+            <path d="M 760 150 C 800 150 800 280 845 280" fill="none" stroke="#10b981" stroke-width="3" marker-end="url(#arrow-green)" />
+
+            <!-- 5. Loan -> DB -->
+            <path d="M 760 450 C 800 450 800 320 845 320" fill="none" stroke="#10b981" stroke-width="3" marker-end="url(#arrow-green)" />
+
+            <!-- NO ARROW for Loan -> Account (SSRF Attack) -->
+            <!-- We draw nothing here, enforcing the "no arrow = not allowed" rule -->
+        </svg>
+
+        <!-- ================= PATH LABELS (URL / Method) ================= -->
+        
+        <!-- Frontend to Gateway Label -->
+        <div class="absolute top-[260px] left-[215px] bg-emerald-50 border border-emerald-200 px-2 py-1 rounded z-10 text-center">
+            <p class="text-[10px] font-bold text-emerald-700 font-mono">GET /*</p>
+        </div>
+
+        <!-- Gateway to Account Label -->
+        <div class="absolute top-[180px] left-[450px] bg-emerald-50 border border-emerald-200 px-2 py-1 rounded z-10 text-center">
+            <p class="text-[10px] font-bold text-emerald-700 font-mono">GET /api/accounts</p>
+        </div>
+
+        <!-- Gateway to Loan Label -->
+        <div class="absolute top-[400px] left-[460px] bg-emerald-50 border border-emerald-200 px-2 py-1 rounded z-10 text-center">
+            <p class="text-[10px] font-bold text-emerald-700 font-mono">GET /api/loans</p>
+        </div>
+
+        <!-- Account to DB Label -->
+        <div class="absolute top-[180px] left-[740px] bg-emerald-50 border border-emerald-200 px-2 py-1 rounded z-10 text-center">
+            <p class="text-[10px] font-bold text-emerald-700 font-mono">TCP / 5432</p>
+        </div>
+
+        <!-- Loan to DB Label -->
+        <div class="absolute top-[400px] left-[745px] bg-emerald-50 border border-emerald-200 px-2 py-1 rounded z-10 text-center">
+            <p class="text-[10px] font-bold text-emerald-700 font-mono">TCP / 5432</p>
+        </div>
+
+        <!-- ================= MICROSERVICE NODES ================= -->
+
+        <!-- 1. Frontend UI -->
+        <div class="absolute top-[250px] left-[30px] w-[180px] bg-white border-2 border-slate-200 shadow-lg rounded-xl p-4 z-10 flex flex-col items-center text-center hover:border-blue-400 transition-colors">
+            <div class="bg-blue-50 p-3 rounded-full text-blue-600 mb-2">
+                <i data-lucide="monitor" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-slate-800 font-bold text-sm">Frontend UI</h3>
+            <p class="text-slate-500 text-[10px] mt-1 font-mono">React / Nginx</p>
+        </div>
+
+        <!-- 2. API Gateway -->
+        <div class="absolute top-[250px] left-[300px] w-[180px] bg-white border-2 border-slate-200 shadow-lg rounded-xl p-4 z-10 flex flex-col items-center text-center hover:border-purple-400 transition-colors">
+            <div class="bg-purple-50 p-3 rounded-full text-purple-600 mb-2">
+                <i data-lucide="router" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-slate-800 font-bold text-sm">API Gateway</h3>
+            <p class="text-slate-500 text-[10px] mt-1 font-mono">Node.js (:8080)</p>
+        </div>
+
+        <!-- 3. Account Service -->
+        <div class="absolute top-[100px] left-[580px] w-[180px] bg-white border-2 border-slate-200 shadow-lg rounded-xl p-4 z-10 flex flex-col items-center text-center hover:border-emerald-400 transition-colors">
+            <div class="bg-emerald-50 p-3 rounded-full text-emerald-600 mb-2">
+                <i data-lucide="users" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-slate-800 font-bold text-sm">Account Service</h3>
+            <p class="text-slate-500 text-[10px] mt-1 font-mono">Python (:5000)</p>
+        </div>
+
+        <!-- 4. Loan Service -->
+        <div class="absolute top-[400px] left-[580px] w-[180px] bg-white border-2 border-slate-200 shadow-lg rounded-xl p-4 z-10 flex flex-col items-center text-center hover:border-amber-400 transition-colors">
+            <div class="bg-amber-50 p-3 rounded-full text-amber-600 mb-2">
+                <i data-lucide="file-text" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-slate-800 font-bold text-sm">Loan Service</h3>
+            <p class="text-slate-500 text-[10px] mt-1 font-mono">Go (:8081)</p>
+        </div>
+
+        <!-- 5. Finance DB -->
+        <div class="absolute top-[250px] left-[850px] w-[160px] bg-white border-2 border-slate-200 shadow-lg rounded-xl p-4 z-10 flex flex-col items-center text-center hover:border-rose-400 transition-colors">
+            <div class="bg-rose-50 p-3 rounded-full text-rose-600 mb-2">
+                <i data-lucide="database" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-slate-800 font-bold text-sm">Finance DB</h3>
+            <p class="text-slate-500 text-[10px] mt-1 font-mono">Postgres (:5432)</p>
+        </div>
+
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VitalSync | Clinical Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .pulse-light { animation: softPulse 2s infinite; }
+        @keyframes softPulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .pulse-red { animation: hardPulse 1.5s infinite; }
+        @keyframes hardPulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Top Navigation (Clinical Purple Theme) -->
+    <nav class="glass-panel border-b border-purple-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <i data-lucide="activity" class="h-8 w-8 text-purple-600 mr-3"></i>
+                    <span class="font-bold text-2xl tracking-tight text-slate-900">Vital<span class="text-purple-600">Sync</span></span>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <div id="system-status" class="flex items-center px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200 text-sm font-medium transition-all duration-300">
+                        <div class="w-2 h-2 bg-emerald-500 rounded-full mr-2 pulse-light" id="status-indicator"></div>
+                        <span id="status-text">Network Secure</span>
+                    </div>
+                    <div class="flex items-center border-l border-purple-200 pl-6">
+                        <img class="h-8 w-8 rounded-full border border-purple-200" src="https://ui-avatars.com/api/?name=Dr+House&background=f3e8ff&color=9333ea" alt="Profile">
+                        <span class="ml-2 text-sm font-medium text-slate-600">Dr. Gregory H.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        
+        <!-- Welcome Header -->
+        <div class="mb-8 border-b border-purple-100 pb-4">
+            <h1 class="text-3xl font-bold text-slate-900">Clinical Operations Dashboard</h1>
+            <p class="text-sm text-slate-500 mt-1">Access patient records, imaging, and generate automated diagnostic reports.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- LEFT COLUMN: The LFI / Path Traversal Attack Vector -->
+            <div class="space-y-6">
+                <div class="bg-white rounded-xl shadow-sm border border-purple-100 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-purple-50 bg-purple-50/50 flex justify-between items-center">
+                        <h2 class="text-lg font-semibold text-slate-800 flex items-center">
+                            <i data-lucide="microscope" class="w-5 h-5 text-purple-500 mr-2"></i>
+                            Radiology Imaging Archive
+                        </h2>
+                        <span class="text-[10px] font-mono text-purple-600 bg-purple-100 px-2 py-1 rounded border border-purple-200">GET /api/images?file=</span>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm text-slate-600 mb-4">Retrieve medical imaging files from the isolated clinical storage volume.</p>
+                        
+                        <form id="lfi-form" class="flex gap-4">
+                            <div class="relative flex-grow">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i data-lucide="file-image" class="h-5 w-5 text-slate-400"></i>
+                                </div>
+                                <input type="text" id="image-filename" 
+                                    class="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-sm" 
+                                    placeholder="e.g., chest_xray_001.png" value="chest_xray_001.png" required>
+                            </div>
+                            <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm font-medium shadow-sm transition-all whitespace-nowrap">
+                                Retrieve
+                            </button>
+                        </form>
+
+                        <!-- LFI Results -->
+                        <div id="lfi-result-area" class="mt-4 hidden">
+                            <div class="bg-slate-50 border border-slate-200 rounded p-3 text-xs font-mono text-slate-700 overflow-x-auto h-40" id="lfi-output">
+                                <!-- Results populate here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: The Command Injection (RCE) Attack Vector -->
+            <div class="space-y-6">
+                <div class="bg-white rounded-xl shadow-sm border border-purple-100 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-purple-50 bg-purple-50/50 flex justify-between items-center">
+                        <h2 class="text-lg font-semibold text-slate-800 flex items-center">
+                            <i data-lucide="clipboard-signature" class="w-5 h-5 text-purple-500 mr-2"></i>
+                            Automated Reporting
+                        </h2>
+                        <span class="text-[10px] font-mono text-purple-600 bg-purple-100 px-2 py-1 rounded border border-purple-200">POST /api/reports</span>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm text-slate-600 mb-4">Generate and compile a patient's historical records into a formatted PDF using the backend shell utility.</p>
+                        
+                        <form id="rce-form" class="flex gap-4">
+                            <div class="relative flex-grow">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i data-lucide="user" class="h-5 w-5 text-slate-400"></i>
+                                </div>
+                                <input type="text" id="patient-name" 
+                                    class="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-sm" 
+                                    placeholder="Patient Name..." value="John_Doe" required>
+                            </div>
+                            <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded text-sm font-medium shadow-sm transition-all whitespace-nowrap">
+                                Generate PDF
+                            </button>
+                        </form>
+
+                        <!-- RCE Results -->
+                        <div id="rce-result-area" class="mt-4 hidden">
+                            <div class="bg-slate-900 border border-slate-700 rounded p-3 text-xs font-mono text-emerald-400 overflow-x-auto h-40" id="rce-output">
+                                <!-- RCE execution results populate here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Error Banner (Triggered by Quarantine) -->
+            <div class="lg:col-span-2">
+                 <div id="error-area" class="hidden bg-red-50 border border-red-200 p-4 rounded-lg shadow-sm">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i data-lucide="shield-alert" class="h-6 w-6 text-red-600"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-bold text-red-800">Connection Terminated by Zero Trust Agent</h3>
+                            <div class="mt-1 text-sm text-red-700">
+                                Network request timed out. The backend service has likely been quarantined by the AuraNet AI due to anomalous traffic patterns.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // Hardcoded to Gateway for local testing
+        const API_BASE_URL = 'http://localhost:8080';
+
+        // UI State Management
+        const statusPill = document.getElementById('system-status');
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
+        const errorArea = document.getElementById('error-area');
+
+        function setLockdownState() {
+            statusPill.className = "flex items-center px-3 py-1 bg-red-50 text-red-700 rounded-full border border-red-200 text-sm font-bold transition-all duration-300";
+            statusIndicator.className = "w-2 h-2 bg-red-600 rounded-full mr-2 pulse-red";
+            statusText.innerText = "CLINICAL LOCKDOWN";
+            errorArea.classList.remove('hidden');
+        }
+
+        function setOnlineState() {
+            statusPill.className = "flex items-center px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200 text-sm font-medium transition-all duration-300";
+            statusIndicator.className = "w-2 h-2 bg-emerald-500 rounded-full mr-2 pulse-light";
+            statusText.innerText = "Network Secure";
+            errorArea.classList.add('hidden');
+        }
+
+        // --- LFI Attack Logic ---
+        document.getElementById('lfi-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setOnlineState();
+            const filename = document.getElementById('image-filename').value;
+            const output = document.getElementById('lfi-output');
+            
+            document.getElementById('lfi-result-area').classList.remove('hidden');
+            output.innerHTML = '<span class="text-slate-400 animate-pulse">Requesting file from storage...</span>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/images?file=${filename}`, {
+                    signal: AbortSignal.timeout(3000) 
+                });
+                
+                if (!response.ok) throw new Error("Service Unavailable");
+                const text = await response.text();
+                
+                // If it contains root:, it's clearly an /etc/passwd dump
+                if(text.includes('root:x:0:0')) {
+                    output.innerHTML = `<span class="text-red-600 font-bold">// PATH TRAVERSAL SUCCESSFUL</span>\n<pre class="mt-1">${text}</pre>`;
+                } else {
+                    output.innerHTML = `<span class="text-purple-600 font-bold">// FILE LOADED</span>\n<pre class="mt-1">${text}</pre>`;
+                }
+            } catch (err) {
+                setLockdownState();
+                output.innerHTML = '<span class="text-red-500 font-bold">CONNECTION DROPPED.</span>';
+            }
+        });
+
+        // --- RCE Attack Logic ---
+        document.getElementById('rce-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setOnlineState();
+            const patientName = document.getElementById('patient-name').value;
+            const output = document.getElementById('rce-output');
+            
+            document.getElementById('rce-result-area').classList.remove('hidden');
+            output.innerHTML = '<span class="text-slate-500 animate-pulse">$ executing shell process...</span>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/reports/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ patient_name: patientName }),
+                    signal: AbortSignal.timeout(3000)
+                });
+                
+                if (!response.ok) throw new Error("Service Unavailable");
+                const text = await response.text();
+                
+                output.innerHTML = `<pre>${text}</pre>`;
+            } catch (err) {
+                setLockdownState();
+                output.innerHTML = '<span class="text-red-500 font-bold">CONNECTION DROPPED. SHELL TERMINATED.</span>';
+            }
+        });
+    </script>
+</body>
+</html>
