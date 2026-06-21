@@ -1,0 +1,190 @@
+{{- /* 1. FINANCE DATABASE */ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.db.name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.db.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.db.name }}
+    spec:
+      containers:
+      - name: database
+        image: {{ .Values.db.image }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: {{ .Values.db.port }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.db.name }}
+spec:
+  selector:
+    app: {{ .Values.db.name }}
+  ports:
+    - port: {{ .Values.db.port }}
+
+---
+{{- /* 2. ACCOUNT SERVICE (Python) */ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.account.name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.account.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.account.name }}
+    spec:
+      containers:
+      - name: account
+        image: {{ .Values.account.image }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: {{ .Values.account.port }}
+        env:
+        - name: DB_HOST
+          value: {{ .Values.db.name }}
+        - name: DB_USER
+          value: {{ .Values.db.user }}
+        - name: DB_PASSWORD
+          value: {{ .Values.db.password }}
+        - name: DB_NAME
+          value: {{ .Values.db.database }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.account.name }}
+spec:
+  selector:
+    app: {{ .Values.account.name }}
+  ports:
+    - port: {{ .Values.account.port }}
+
+---
+{{- /* 3. LOAN SERVICE (Go) */ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.loan.name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.loan.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.loan.name }}
+    spec:
+      containers:
+      - name: loan
+        image: {{ .Values.loan.image }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: {{ .Values.loan.port }}
+        env:
+        - name: DB_HOST
+          value: {{ .Values.db.name }}
+        - name: DB_USER
+          value: {{ .Values.db.user }}
+        - name: DB_PASSWORD
+          value: {{ .Values.db.password }}
+        - name: DB_NAME
+          value: {{ .Values.db.database }}
+        - name: ACCOUNT_SERVICE_URL
+          value: "http://{{ .Values.account.name }}:{{ .Values.account.port }}"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.loan.name }}
+spec:
+  selector:
+    app: {{ .Values.loan.name }}
+  ports:
+    - port: {{ .Values.loan.port }}
+
+---
+{{- /* 4. API GATEWAY (Node.js) */ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.gateway.name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.gateway.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.gateway.name }}
+    spec:
+      containers:
+      - name: gateway
+        image: {{ .Values.gateway.image }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: {{ .Values.gateway.port }}
+        env:
+        - name: ACCOUNT_SERVICE_URL
+          value: "http://{{ .Values.account.name }}:{{ .Values.account.port }}"
+        - name: LOAN_SERVICE_URL
+          value: "http://{{ .Values.loan.name }}:{{ .Values.loan.port }}"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.gateway.name }}
+spec:
+  selector:
+    app: {{ .Values.gateway.name }}
+  ports:
+    - port: {{ .Values.gateway.port }}
+
+---
+{{- /* 5. FRONTEND UI (Nginx) */ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.frontend.name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.frontend.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.frontend.name }}
+    spec:
+      containers:
+      - name: frontend
+        image: {{ .Values.frontend.image }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: {{ .Values.frontend.port }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.frontend.name }}
+spec:
+  type: NodePort # Exposes the UI to your local browser!
+  selector:
+    app: {{ .Values.frontend.name }}
+  ports:
+    - port: {{ .Values.frontend.port }}
+      nodePort: 30080

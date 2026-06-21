@@ -1,0 +1,6 @@
+apiVersion: v2
+name: omnifinance
+description: A Zero Trust demonstration microservice application
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

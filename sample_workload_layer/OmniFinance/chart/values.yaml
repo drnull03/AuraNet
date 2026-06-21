@@ -1,0 +1,29 @@
+# OmniFinance Global Configuration
+
+db:
+  name: finance-db
+  image: omnifinance-db:latest
+  port: 5432
+  user: postgres
+  password: supersecret
+  database: omnifinance
+
+account:
+  name: account-service
+  image: omnifinance-account:latest
+  port: 5000
+
+loan:
+  name: loan-service
+  image: omnifinance-loan:latest
+  port: 8081
+
+gateway:
+  name: api-gateway
+  image: omnifinance-gateway:latest
+  port: 8080
+
+frontend:
+  name: frontend-ui
+  image: omnifinance-frontend:latest
+  port: 80
