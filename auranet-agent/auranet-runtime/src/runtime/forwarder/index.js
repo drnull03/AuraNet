@@ -61,14 +61,14 @@ async function startForwarder() {
                     const podName = processData.pod.name; 
                     
                     // Ignore kube-system and our own security pods to prevent infinite loops
-                    if (namespace === 'kube-system' || namespace === 'auranet-system') return;
+                    if (namespace === 'kube-system' || namespace === 'auranet-namespace') return;
 
                     let threatSignature = null;
                     let actionContext = '';
 
-                    // Analyze execution events (RCE, Scans, Droppers)
+                    // Analyze execution events 
                     if (functionName === 'sys_execve') {
-                        const binary = processData.binary.split('/').pop(); // Extracts 'nc' from '/usr/bin/nc'
+                        const binary = processData.binary.split('/').pop(); // Extracts Binary Name
                         threatSignature = THREAT_MAP[binary];
                         actionContext = `Executed binary: ${binary}`;
                     } 

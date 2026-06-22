@@ -16,7 +16,7 @@ def main():
     
     # Start the server on localhost port 8080 for 3 full Federated Learning rounds
     fl.server.start_server(
-        server_address="0.0.0.0:8080",
+        server_address="0.0.0.0:8080",api-gateway
         config=fl.server.ServerConfig(num_rounds=3),
         strategy=strategy,
     )
