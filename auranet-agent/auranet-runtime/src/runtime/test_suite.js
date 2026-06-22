@@ -25,7 +25,7 @@ function parseTetragonEvent(eventJson, mockPublishFn) {
         const workload = labels['app'] || labels['k8s-app'] || 'unknown-workload';
         
         // Ignore system namespaces
-        if (namespace === 'kube-system' || namespace === 'auranet-system') return;
+        if (namespace === 'kube-system' || namespace === 'auranet-namespace') return;
 
         let threatSignature = null;
         let actionContext = '';
@@ -67,7 +67,7 @@ function runTest(testName, mockJson, expectedSubject, expectedThreat) {
     
     let publishCalled = false;
     
-    // THE MOCK: We inject this fake NATS publisher to spy on the logic's output
+    // inject this fake NATS publisher to spy on the logic's output
     const mockNatsPublish = (subject, payload) => {
         publishCalled = true;
         try {
