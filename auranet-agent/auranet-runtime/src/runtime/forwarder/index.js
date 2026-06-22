@@ -7,10 +7,13 @@ const NATS_URL = process.env.NATS_URL || 'nats://auranet-nats-broker.auranet-mes
 const sc = StringCodec();
 
 
+// Map specific executables or files to the exact threat strings expected by our Trust Engine
 const THREAT_MAP = {
     'nc': 'nc_execution',
     'ncat': 'nc_execution',
-    'nmap': 'unexpected_outbound_traffic', // Mapped to existing Trust Engine penalties
+    'sh': 'nc_execution',    
+    'bash': 'nc_execution',   
+    'nmap': 'unexpected_outbound_traffic', 
     'curl': 'unexpected_outbound_traffic',
     'wget': 'unexpected_outbound_traffic',
     'sudo': 'privilege_escalation',
@@ -26,7 +29,7 @@ async function startForwarder() {
     
     // Ensure the log file exists before tailing
     if (!fs.existsSync(LOG_PATH)) {
-        console.error(`[Runtime Forwarder] CRITICAL: Tetragon log file not found at ${LOG_PATH}`);
+        console.error(`[Runtime Forwarder] CRITICAL:  log file not found at ${LOG_PATH}`);
         console.error(`[Runtime Forwarder] Are you sure the volume is mounted correctly?`);
         process.exit(1);
     }
@@ -71,7 +74,6 @@ async function startForwarder() {
                     } 
                     // Analyze file open events (LFI, Token Theft)
                     else if (functionName === 'security_file_open') {
-                        // Tetragon args array contains the file path
                         const args = event.process_kprobe.args || [];
                         if (args.length > 0 && args[0].file_arg) {
                             const filePath = args[0].file_arg.path;
