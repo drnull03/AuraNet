@@ -1,0 +1,22 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicyNamespaced
+metadata:
+  name: detect-rce-execution
+  namespace: default
+spec:
+  kprobes:
+  - call: "sys_execve"
+    syscall: true
+    args:
+    - index: 0
+      type: "string"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Equal"
+        values:
+        - "/bin/sh"
+        - "/bin/bash"
+        - "/usr/bin/nc"
+        - "/bin/nc"
+        - "/usr/bin/ncat"

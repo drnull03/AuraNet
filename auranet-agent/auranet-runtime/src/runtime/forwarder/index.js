@@ -86,7 +86,7 @@ async function startForwarder() {
                         }
                     }
 
-                    // If we matched a threat, fire it to NATS!
+                    // if  matched a threat, fire it to NATS!
                     if (threatSignature) {
                         // STRICT CONFORMANCE TO TRUST ENGINE 
                         // Expected: auranet.events.runtime.<workload> (exactly 4 parts)

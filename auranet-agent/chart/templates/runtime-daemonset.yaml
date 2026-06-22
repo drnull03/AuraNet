@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: auranet-runtime
+  namespace: auranet-namespace
+  labels:
+    app: auranet-runtime
+    component: forwarder
+spec:
+  selector:
+    matchLabels:
+      app: auranet-runtime
+  template:
+    metadata:
+      labels:
+        app: auranet-runtime
+        component: forwarder
+    spec:
+      hostNetwork: true
+      containers:
+      - name: forwarder
+        image: "{{ .Values.runtime.image.repository }}:{{ .Values.runtime.image.tag }}"
+        imagePullPolicy: {{ .Values.runtime.image.pullPolicy }}
+        env:
+        - name: LOG_PATH
+          value: {{ .Values.runtime.logPath }}
+        - name: NATS_URL
+          value: {{ .Values.runtime.natsUrl }}
+        volumeMounts:
+        - name: tetragon-logs
+          mountPath: /var/run/cilium/tetragon
+          readOnly: true
+      volumes:
+      - name: tetragon-logs
+        hostPath:
+          path: /var/run/cilium/tetragon
+          type: DirectoryOrCreate

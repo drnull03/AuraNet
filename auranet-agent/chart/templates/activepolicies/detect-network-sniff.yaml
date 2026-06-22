@@ -1,0 +1,21 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicyNamespaced
+metadata:
+  name: detect-network-sniffing
+  namespace: default
+spec:
+  # Catch attackers attempting to run packet captures inside the pod
+  kprobes:
+  - call: "sys_execve"
+    syscall: true
+    args:
+    - index: 0
+      type: "string"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Equal"
+        values:
+        - "/usr/sbin/tcpdump"
+        - "/usr/bin/tcpdump"
+        - "/usr/bin/tshark"
