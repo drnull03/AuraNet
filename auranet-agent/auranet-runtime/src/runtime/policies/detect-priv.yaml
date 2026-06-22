@@ -1,0 +1,22 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicyNamespaced
+metadata:
+  name: detect-privilege-escalation
+  namespace: default
+spec:
+  # Catch processes attempting to switch to the root user
+  kprobes:
+  - call: "sys_execve"
+    syscall: true
+    args:
+    - index: 0
+      type: "string"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Equal"
+        values:
+        - "/usr/bin/sudo"
+        - "/bin/sudo"
+        - "/usr/bin/su"
+        - "/bin/su"

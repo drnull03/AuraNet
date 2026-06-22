@@ -1,0 +1,22 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicyNamespaced
+metadata:
+  name: detect-dropper-utils
+  namespace: default
+spec:
+  # Catch attackers trying to download external malware payloads into the container
+  kprobes:
+  - call: "sys_execve"
+    syscall: true
+    args:
+    - index: 0
+      type: "string"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Equal"
+        values:
+        - "/usr/bin/curl"
+        - "/bin/curl"
+        - "/usr/bin/wget"
+        - "/bin/wget"
