@@ -1,86 +1,129 @@
-# 1. API Gateway: Only accept traffic from the Frontend UI
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+---
+# 1. Frontend -> API Gateway
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
-  name: api-gateway-ztna
+  name: bootstrap-allow-frontend-ui-to-api-gateway
   namespace: default
+  labels:
+    app.kubernetes.io/managed-by: auranet-bootstrap
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app: api-gateway
-  policyTypes:
-  - Ingress
   ingress:
-  - from:
-    - podSelector:
-        matchLabels:
-          app: frontend-ui
-    ports:
-    - protocol: TCP
-      port: 8080
+  - fromEndpoints:
+    - matchLabels:
+        app: frontend-ui
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+      rules:
+        http: [{}]
+    authentication:
+      mode: required
+
 ---
-# 2. Account Service: Only accept traffic from the API Gateway
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+# 2. API Gateway -> Account Service
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
-  name: account-service-ztna
+  name: bootstrap-allow-api-gateway-to-account-service
   namespace: default
+  labels:
+    app.kubernetes.io/managed-by: auranet-bootstrap
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app: account-service
-  policyTypes:
-  - Ingress
   ingress:
-  - from:
-    - podSelector:
-        matchLabels:
-          app: api-gateway
-    ports:
-    - protocol: TCP
-      port: 5000
+  - fromEndpoints:
+    - matchLabels:
+        app: api-gateway
+    toPorts:
+    - ports:
+      - port: "5000"
+        protocol: TCP
+      rules:
+        http: [{}]
+    authentication:
+      mode: required
+
 ---
-# 3. Loan Service: Only accept traffic from the API Gateway
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+# 3. API Gateway -> Loan Service
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
-  name: loan-service-ztna
+  name: bootstrap-allow-api-gateway-to-loan-service
   namespace: default
+  labels:
+    app.kubernetes.io/managed-by: auranet-bootstrap
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app: loan-service
-  policyTypes:
-  - Ingress
   ingress:
-  - from:
-    - podSelector:
-        matchLabels:
-          app: api-gateway
-    ports:
-    - protocol: TCP
-      port: 8081
+  - fromEndpoints:
+    - matchLabels:
+        app: api-gateway
+    toPorts:
+    - ports:
+      - port: "8081"
+        protocol: TCP
+      rules:
+        http: [{}]
+    authentication:
+      mode: required
+
 ---
-# 4. Finance DB: Only accept traffic from Account and Loan services
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+# 4. Account Service -> Finance DB
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
-  name: finance-db-ztna
+  name: bootstrap-allow-account-service-to-finance-db
   namespace: default
+  labels:
+    app.kubernetes.io/managed-by: auranet-bootstrap
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app: finance-db
-  policyTypes:
-  - Ingress
   ingress:
-  - from:
-    - podSelector:
-        matchLabels:
-          app: account-service
-    - podSelector:
-        matchLabels:
-          app: loan-service
-    ports:
-    - protocol: TCP
-      port: 5432
+  - fromEndpoints:
+    - matchLabels:
+        app: account-service
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+      rules:
+        http: [{}]
+    authentication:
+      mode: required
+
+---
+# 5. Loan Service -> Finance DB
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: bootstrap-allow-loan-service-to-finance-db
+  namespace: default
+  labels:
+    app.kubernetes.io/managed-by: auranet-bootstrap
+spec:
+  endpointSelector:
+    matchLabels:
+      app: finance-db
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app: loan-service
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+      rules:
+        http: [{}]
+    authentication:
+      mode: required
