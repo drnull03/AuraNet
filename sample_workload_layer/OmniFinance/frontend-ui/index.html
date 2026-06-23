@@ -204,8 +204,7 @@
         const ssrfResultArea = document.getElementById('ssrf-result-area');
         const ssrfOutput = document.getElementById('ssrf-output');
 
-        // Hardcoded to localhost:8080 for local testing. In production, this would be relative.
-        const API_BASE_URL = 'http://localhost:8080';
+        const API_BASE_URL = '';
 
         function setLockdownState() {
             statusPill.className = "flex items-center px-3 py-1 bg-red-50 text-red-700 rounded-full border border-red-200 text-sm font-bold transition-all duration-300";
@@ -256,7 +255,7 @@
             }
         });
 
-        
+        // --- SSRF Logic ---
         btnSsrf.addEventListener('click', async () => {
             const query = inputSsrf.value;
             
