@@ -1,0 +1,5 @@
+apiVersion: v2
+name: auranet-controller
+description: The Central Federated Learning Aggregator for AuraNet
+version: 0.1.0
+appVersion: "1.0.0"

@@ -1,0 +1,19 @@
+replicaCount: 1
+
+image:
+  repository: auranet/controller
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+resources:
+  # Setting limits to prevent PyTorch from eating the whole node
+  limits:
+    memory: "1024Mi"
+    cpu: "1000m"
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
