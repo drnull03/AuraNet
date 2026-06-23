@@ -97,8 +97,6 @@ spec:
     - ports:
       - port: "5432"
         protocol: TCP
-      rules:
-        http: [{}]
     authentication:
       mode: required
 
@@ -123,7 +121,5 @@ spec:
     - ports:
       - port: "5432"
         protocol: TCP
-      rules:
-        http: [{}]
     authentication:
       mode: required
