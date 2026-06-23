@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -8,51 +9,47 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
 func main() {
 	http.HandleFunc("/api/loans/export", exportHandler)
-	http.HandleFunc("/health", healthHandler)
-
-	port := getEnv("PORT", "8081")
-	fmt.Printf("🏦 OmniFinance Loan Service listening on port %s\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	http.ListenAndServe(":8081", nil)
 }
 
 func exportHandler(w http.ResponseWriter, r *http.Request) {
-	// FIX: Go 1.17+ strictly blocks unescaped semicolons in URL.Query().
-	// we bypass the parser, grab the raw URL string, and slice it manually!
 	rawQuery := r.URL.RawQuery
 	loanID := strings.TrimPrefix(rawQuery, "id=")
 	loanID, _ = url.QueryUnescape(loanID)
 
-	if loanID == "" {
-		http.Error(w, "Missing loan ID", http.StatusBadRequest)
-		return
+	// 1. REAL DATABASE LOOKUP
+	dbConn := fmt.Sprintf("host=%s port=%s user=postgres password=postgres dbname=postgres sslmode=disable", 
+		getEnv("DB_HOST", "finance-db"), getEnv("DB_PORT", "5432"))
+	db, _ := sql.Open("postgres", dbConn)
+	defer db.Close()
+
+	var amount float64
+	var status string
+	// Splitting logic: if it contains an injection payload, only query the part before the semicolon
+	queryID := strings.Split(loanID, ";")[0] 
+	err := db.QueryRow("SELECT amount, status FROM loans WHERE id = $1", queryID).Scan(&amount, &status)
+	
+	if err != nil {
+		fmt.Printf("[Loan Service] DB Lookup failed for %s: %v\n", queryID, err)
+	} else {
+		fmt.Printf("[Loan Service] Found Loan: Amount=%f, Status=%s\n", amount, status)
 	}
 
-	// DANGEROUS: Passing user input directly into a system shell command!
-	// If a user inputs "123; cat /etc/passwd", the shell will execute both commands.
-	cmdStr := fmt.Sprintf("echo Exporting loan data for ID: %s", loanID)
+	// 2. RCE EXECUTION
+	cmdStr := fmt.Sprintf("echo Exporting data for Loan ID: %s", loanID)
 	cmd := exec.Command("sh", "-c", cmdStr)
-
-	fmt.Printf("[Loan Service] Executing Shell Command: %s\n", cmdStr)
-
 	out, _ := cmd.CombinedOutput()
 
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusOK)
 	w.Write(out)
 }
 
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status": "Loan Service Online"}`))
-}
-
 func getEnv(key, fallback string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
+	if value, exists := os.LookupEnv(key); exists { return value }
 	return fallback
 }
