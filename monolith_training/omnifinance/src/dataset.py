@@ -54,14 +54,29 @@ class HubbleDataProcessor:
 
                 l7 = flow.get("l7", {})
                 
+                # Safely grab the destination port as an integer
+                raw_port = flow.get("destination", {}).get("port")
+                try:
+                    dst_port = int(raw_port) if raw_port else 0
+                except ValueError:
+                    dst_port = 0
+
+                # Extract TCP Flags to isolate connection starts
+                tcp_flags = flow.get("l4", {}).get("TCP", {}).get("flags", {})
+                is_syn = tcp_flags.get("SYN", False)
+                is_ack = tcp_flags.get("ACK", False)
+                
                 # 4. IGNORE L7 RESPONSES
                 if l7 and l7.get("type") == "RESPONSE":
                     continue
 
                 is_http_l7 = verdict == "FORWARDED" and l7 and "http" in l7
                 
-                # 5. Keep unique physical drops OR valid HTTP REQUESTS
-                if verdict == "DROPPED" or is_http_l7:
+                # 5. Capture ONLY the exact start of the DB connection (SYN without ACK)
+                is_db_l4 = verdict == "FORWARDED" and dst_port == 5432 and is_syn and not is_ack
+                
+                # 6. Keep Drops, HTTP, OR Database TCP (L4)
+                if verdict == "DROPPED" or is_http_l7 or is_db_l4:
                     
                     self.raw_json_events.append(event)
 
@@ -77,7 +92,8 @@ class HubbleDataProcessor:
                         "src_app": src_app,
                         "dst_app": dst_app,
                         "method": method,
-                        "url": url
+                        "url": url,
+                        "dst_port": dst_port
                     })
 
         print(f"✅ Filtered down to {len(filtered_events)} pure, relevant network events.")
@@ -86,25 +102,33 @@ class HubbleDataProcessor:
     def engineer_features(self):
         df = pd.DataFrame(self.raw_data)
         
+        # Target Label
         df['is_dropped'] = (df['verdict'] == 'DROPPED').astype(float)
         
+        # Path Validations
+        acc_regex = re.compile(r"^.*/api/accounts\?id=[0-9]+$")
+        loan_regex = re.compile(r"^.*/api/loans/export\?id=L-[0-9]+$")
         
-        # .*: Matches the "http://customer-api:8000" part dynamically
-        # \d+$: Ensures it strictly ends with a number (no SQL injections allowed)
-        valid_path_regex = re.compile(r".*/customers/\d+$")
-        df['is_valid_path'] = df['url'].apply(lambda x: 1.0 if valid_path_regex.match(x) else 0.0)
+        df['is_valid_acc_path'] = df['url'].apply(lambda x: 1.0 if acc_regex.match(str(x)) else 0.0)
+        df['is_valid_loan_path'] = df['url'].apply(lambda x: 1.0 if loan_regex.match(str(x)) else 0.0)
         
+        # Request Types
         df['is_get'] = (df['method'] == 'GET').astype(float)
-        df['is_post'] = (df['method'] == 'POST').astype(float)
-        df['is_delete'] = (df['method'] == 'DELETE').astype(float)
+        df['is_db_traffic'] = (df['dst_port'] == 5432).astype(float)
         
-        df['src_is_retail'] = (df['src_app'] == 'retail-dashboard').astype(float)
-        df['src_is_invest'] = (df['src_app'] == 'investment-dashboard').astype(float)
+        # Source Pod Matrix
+        df['src_is_frontend'] = (df['src_app'] == 'frontend-ui').astype(float)
+        df['src_is_gateway'] = (df['src_app'] == 'api-gateway').astype(float)
+        df['src_is_account'] = (df['src_app'] == 'account-service').astype(float)
+        df['src_is_loan'] = (df['src_app'] == 'loan-service').astype(float)
         
-        df['dst_is_customer_api'] = (df['dst_app'] == 'customer-api').astype(float)
-        df['dst_is_vault'] = (df['dst_app'] == 'vault-db').astype(float)
+        # Destination Pod Matrix
+        df['dst_is_gateway'] = (df['dst_app'] == 'api-gateway').astype(float)
+        df['dst_is_account'] = (df['dst_app'] == 'account-service').astype(float)
+        df['dst_is_loan'] = (df['dst_app'] == 'loan-service').astype(float)
+        df['dst_is_db'] = (df['dst_app'] == 'finance-db').astype(float)
 
-        self.dataframe = df.drop(columns=['verdict', 'src_app', 'dst_app', 'method', 'url'])
+        self.dataframe = df.drop(columns=['verdict', 'src_app', 'dst_app', 'method', 'url', 'dst_port'])
         print(f"🧠 Engineered Feature Matrix: {self.dataframe.shape[1]} dimensions.")
 
     def get_dataframe(self):
@@ -153,4 +177,4 @@ if __name__ == "__main__":
         torch.save(torch_dataset.data, tensor_path)
         print(f"💾 Saved PyTorch Tensor to {tensor_path}")
     else:
-        print(f"❌ Could not find {json_file}. Did you run the extractor script?")
+        print(f"❌ Could not find {json_file}. Did you extract the Hubble data?")
