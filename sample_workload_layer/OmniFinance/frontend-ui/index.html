@@ -154,26 +154,26 @@
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden border-t-4 border-t-purple-500">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden border-t-4 border-t-amber-500">
                     <div class="px-6 py-5 border-b border-slate-100 bg-slate-50">
                         <h3 class="text-slate-800 font-semibold flex items-center">
-                            <i data-lucide="network" class="w-5 h-5 text-purple-500 mr-2"></i>
-                            Staff Diagnostic Tool
+                            <i data-lucide="terminal" class="w-5 h-5 text-amber-500 mr-2"></i>
+                            Loan Data Exporter
                         </h3>
-                        <span class="text-xs font-mono text-slate-400 mt-1 block">GET /api/loans/scrape?id=</span>
+                        <span class="text-xs font-mono text-slate-400 mt-1 block">GET /api/loans/export?id=</span>
                     </div>
                     <div class="p-6">
-                        <p class="text-xs text-slate-500 mb-4">Internal endpoint used by the Loan Service to verify cross-service connectivity.</p>
+                        <p class="text-xs text-slate-500 mb-4">Export loan documents to the processing queue. Uses backend shell utilities.</p>
                         
                         <div class="flex gap-2">
-                            <input type="text" id="ssrf-id" class="block w-full px-3 py-2 border border-slate-300 rounded focus:ring-purple-500 focus:border-purple-500 text-sm placeholder-slate-400" placeholder="Target ID..." value="1">
-                            <button id="btn-ssrf" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm font-medium transition-colors whitespace-nowrap">
-                                Execute SSRF
+                            <input type="text" id="rce-id" class="block w-full px-3 py-2 border border-slate-300 rounded focus:ring-amber-500 focus:border-amber-500 text-sm font-mono placeholder-slate-400" value="123; cat /etc/passwd">
+                            <button id="btn-rce" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors whitespace-nowrap">
+                                Export Data
                             </button>
                         </div>
 
-                        <div id="ssrf-result-area" class="mt-4 hidden">
-                            <div class="bg-slate-100 border border-slate-300 text-slate-800 font-mono text-xs p-3 rounded overflow-x-auto" id="ssrf-output">
+                        <div id="rce-result-area" class="mt-4 hidden">
+                            <div class="bg-slate-900 border border-slate-700 text-emerald-400 font-mono text-xs p-3 rounded overflow-x-auto" id="rce-output">
                             </div>
                         </div>
                     </div>
@@ -198,12 +198,13 @@
         const statusIndicator = document.getElementById('status-indicator');
         const statusText = document.getElementById('status-text');
 
-        // SSRF Elements
-        const btnSsrf = document.getElementById('btn-ssrf');
-        const inputSsrf = document.getElementById('ssrf-id');
-        const ssrfResultArea = document.getElementById('ssrf-result-area');
-        const ssrfOutput = document.getElementById('ssrf-output');
+        // RCE Elements (Updated)
+        const btnRce = document.getElementById('btn-rce');
+        const inputRce = document.getElementById('rce-id');
+        const rceResultArea = document.getElementById('rce-result-area');
+        const rceOutput = document.getElementById('rce-output');
 
+        // Use relative paths so Nginx can proxy it using K8s DNS
         const API_BASE_URL = '';
 
         function setLockdownState() {
@@ -255,28 +256,30 @@
             }
         });
 
-        // --- SSRF Logic ---
-        btnSsrf.addEventListener('click', async () => {
-            const query = inputSsrf.value;
+        // --- RCE / Command Injection Logic (Updated) ---
+        btnRce.addEventListener('click', async () => {
+            const query = inputRce.value;
             
-            ssrfResultArea.classList.remove('hidden');
-            ssrfOutput.innerHTML = '<span class="text-slate-500 animate-pulse">Initiating lateral scrape...</span>';
+            rceResultArea.classList.remove('hidden');
+            rceOutput.innerHTML = '<span class="text-slate-500 animate-pulse">$ executing shell process...</span>';
 
             try {
-                const response = await fetch(`${API_BASE_URL}/api/loans/scrape?id=${query}`, {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json' },
+                // Routes cleanly to the loan API export endpoint
+                const response = await fetch(`${API_BASE_URL}/api/loans/export?id=${encodeURIComponent(query)}`, {                    method: 'GET',
                     signal: AbortSignal.timeout(3000) 
                 });
 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 
-                const data = await response.json();
-                ssrfOutput.innerHTML = `<span class="text-red-600 font-bold">// SSRF SUCCESSFUL - DATA STOLEN</span>\n<pre class="mt-2 text-slate-800">${JSON.stringify(data, null, 2)}</pre>`;
+                const text = await response.text();
+                
+                // Print the raw shell output directly to the UI
+                rceOutput.innerHTML = `<pre>${text}</pre>`;
                 
             } catch (error) {
-                console.error("SSRF Blocked:", error);
-                ssrfOutput.innerHTML = `<span class="text-blue-600 font-bold animate-pulse">CONNECTION DROPPED</span>\n<span class="text-slate-600 block mt-1">Zero Trust Policy Enforced. Lateral movement blocked by AuraNet.</span>`;
+                console.error("Connection Dropped:", error);
+                setLockdownState();
+                rceOutput.innerHTML = `<span class="text-red-500 font-bold">CONNECTION DROPPED. SHELL TERMINATED.</span>`;
             }
         });
     </script>
