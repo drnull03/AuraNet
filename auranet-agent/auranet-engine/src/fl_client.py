@@ -20,7 +20,7 @@ class AuraNetFlowerClient(fl.client.NumPyClient):
     def set_parameters(self, parameters: List[np.ndarray]):
         """Injects the new global weights from the server into the local PyTorch model."""
         params_dict = zip(self.model.state_dict().keys(), parameters)
-        state_dict = dict({k: torch.tensor(v) for k, v in params_dict})
+        state_dict = dict({k: torch.tensor(np.copy(v)) for k, v in params_dict})
         
         with self.model_lock:
             self.model.load_state_dict(state_dict, strict=True)
@@ -32,26 +32,24 @@ class AuraNetFlowerClient(fl.client.NumPyClient):
         """
         Triggered by the server every 10 minutes.
         """
-        print("\n[Worker C] 🌐 Federated Round Triggered by Controller!")
+        print("\n[Worker C]  Federated Round Triggered by Controller!")
         
-        # --- THE FIX: PROTECT ROUND 1 FROM RANDOM WEIGHTS ---
         if not self.global_state.get("is_initialized", False):
-            print("[Worker C] 🛡️ First boot: Warm monolith received. Skipping upload to protect global model.")
+            print("[Worker C]  First boot: Warm monolith received. Skipping upload to protect global model.")
             self.set_parameters(parameters)
             self.global_state["is_initialized"] = True
             
             # Return the exact parameters we just received
             return parameters, 1, {}
-        # ----------------------------------------------------
 
         # Standard Flow for Round 2 and beyond
         # 1. Extract local training insights
         local_parameters = self.get_parameters(config={})
-        print("[Worker C] 📤 Local training insights extracted.")
+        print("[Worker C]  Local training insights extracted.")
         
         # 2. Hot-swap the new global brain
         self.set_parameters(parameters)
-        print("[Worker C] 📥 New global brain successfully hot-swapped.")
+        print("[Worker C]  New global brain successfully hot-swapped.")
 
         # 3. Return local weights back to aggregator
         return local_parameters, 1, {}

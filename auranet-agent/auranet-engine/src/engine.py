@@ -37,7 +37,10 @@ if __name__ == "__main__":
     model.eval()  # Default to evaluation mode so Worker A can start streaming instantly
     
     benign_buffer = []
-    global_state = {"master_weights": None}
+    global_state = {
+        "master_weights": None,
+        "is_initialized": False
+    }
     
     # Initialize Thread Locks for Memory Safety
     buffer_lock = threading.Lock()
