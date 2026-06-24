@@ -21,5 +21,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 #Copy the engine source code
 COPY src/ /app/src/
 
-# 6. Start the Master Orchestrator
+# Start the Master Orchestrator
 CMD ["python", "src/engine.py"]
