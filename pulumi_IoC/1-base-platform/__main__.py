@@ -59,7 +59,7 @@ k8s_provider = k8s.Provider(
     opts=pulumi.ResourceOptions(depends_on=[kubeconfig])
 )
 
-# 4. Install Cilium via Helm Release
+#  Install Cilium via Helm Release
 cilium_release = k8s.helm.v3.Release(
     "cilium-ebpf-datapath",
     k8s.helm.v3.ReleaseArgs(
@@ -95,7 +95,7 @@ cilium_release = k8s.helm.v3.Release(
     opts=pulumi.ResourceOptions(provider=k8s_provider, depends_on=[kubeconfig])
 )
 
-# 5. Install Tetragon via Helm Release
+
 tetragon_release = k8s.helm.v3.Release(
     "tetragon-security-observability",
     k8s.helm.v3.ReleaseArgs(
@@ -122,7 +122,7 @@ tetragon_release = k8s.helm.v3.Release(
 )
 
 
-# 6. Automate the 10-Minute Certificate Rotation Patch
+#  Automate the 10-Minute Certificate Rotation Patch
 patch_spire_ttl = command.local.Command(
     "patch-spire-ttl",
     create="""

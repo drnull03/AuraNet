@@ -7,7 +7,7 @@ const customObjectsApi = kc.makeApiClient(k8s.CustomObjectsApi);
 async function wipePolicies() {
     console.log("Starting AuraNet Teardown Sequence...");
 
-    // 1. Wipe Cilium Network Policies
+    //  Wipe Cilium Network Policies
     try {
         const cnps = await customObjectsApi.listNamespacedCustomObject(
             'cilium.io', 'v2', 'default', 'ciliumnetworkpolicies'
@@ -23,7 +23,7 @@ async function wipePolicies() {
         console.error("[ERROR] wiping network policies:", trueError);
     }
 
-    // 2. Wipe Tetragon Tracing Policies
+    //  Wipe  Tracing Policies
     try {
         const tracingPolicies = await customObjectsApi.listNamespacedCustomObject(
             'cilium.io', 'v1alpha1', 'default', 'tracingpoliciesnamespaced'

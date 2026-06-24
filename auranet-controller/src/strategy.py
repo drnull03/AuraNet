@@ -1,7 +1,51 @@
-import flwr as fl
-from typing import Dict, Optional, Tuple, List
-from flwr.common import Parameters, Scalar
 
+
+
+
+
+
+import time
+import flwr as fl
+from typing import List, Tuple, Union, Optional, Dict
+from flwr.common import FitRes, Parameters, Scalar
+from flwr.server.client_proxy import ClientProxy
+
+import config
+
+class AuraNetFedProxStrategy(fl.server.strategy.FedProx):
+    def __init__(self, *args, **kwargs):
+        # We inherit all the heavy mathematical lifting from Flower's FedProx strategy
+        super().__init__(*args, **kwargs)
+
+    def aggregate_fit(
+        self,
+        server_round: int,
+        results: List[Tuple[ClientProxy, FitRes]],
+        failures: List[Union[Tuple[ClientProxy, FitRes], BaseException]],
+    ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
+        """
+        Overrides the default aggregation to inject our 10-minute throttle.
+        """
+        print(f"\n[Controller]  Aggregating weights for Round {server_round}...")
+        
+        #  Run the standard FedProx mathematical aggregation
+        aggregated_parameters, aggregated_metrics = super().aggregate_fit(
+            server_round, results, failures
+        )
+
+        if aggregated_parameters is not None:
+            print(f"[Controller] Round {server_round} Aggregation Complete.")
+            
+            #  THE THROTTLE: Force the server to sleep before broadcasting the next round
+            # We skip the sleep on the final round to allow the server to shut down cleanly
+            if server_round < config.FL_ROUNDS:
+                print(f"[Controller]  Throttling network. Sleeping for {config.ROUND_TIMEOUT_SECONDS} seconds to allow edge nodes to train locally...")
+                time.sleep(config.ROUND_TIMEOUT_SECONDS)
+        else:
+            print(f"[Controller] ⚠️ Round {server_round} Aggregation Failed. Not enough clients.")
+
+        #  Return the new master brain. Once this returns, the server begins the next round.
+        return aggregated_parameters, aggregated_metrics
 
 # [DISABLED FOR 2-NODE DEMO] Krum Byzantine Fault Tolerance Strategy
 
@@ -31,7 +75,10 @@ from flwr.common import Parameters, Scalar
 # Averages all node weights but incorporates a proximal term (mu) 
 # to handle statistical heterogeneity across nodes.
 
-class AuraNetFedProxStrategy(fl.server.strategy.FedProx):
+
+
+#### old code ignore
+"""class AuraNetFedProxStrategy(fl.server.strategy.FedProx):
     def aggregate_fit(
         self,
         server_round: int,
@@ -48,4 +95,4 @@ class AuraNetFedProxStrategy(fl.server.strategy.FedProx):
         if aggregated_parameters is not None:
             print(f"[Aggregator]  Round {server_round} FedProx aggregation successful. All nodes merged safely.")
             
-        return aggregated_parameters, aggregated_metrics
+        return aggregated_parameters, aggregated_metrics"""

@@ -6,7 +6,7 @@ It is an IT engineering project The official title of the project is """AuraNet"
 
 
 AuraNet is an autonomous, self-healing Zero Trust Architecture (ZTA) operating at the kernel level. It is built on Kubernetes, utilizes  cryptographic identity (SPIFFE/SPIRE), and relies heavily on observability orchestrated through eBPF and Cilium.
-The Prject Also uses Tetragon for runtime monitoring for achieveing zero trust.
+The Prject Also uses eBPF for runtime monitoring for achieveing zero trust.
 
 The AI model that we are gonna build later with flower and python it is a nurosymbolic AI the symbolic part is an autoencoder we will also be using fedPox as an aggregator algo
 
@@ -37,7 +37,7 @@ this design decision was made as trade of to preformance
 
 we are using pulumi as infra as code 
 we divided the project into 4 layers
-1. layer 1: kind cluster cilium ,tetragon and hubble  And SPIRE
+1. layer 1: kind cluster cilium ,eBPF and hubble  And SPIRE
 2. layer 2: Our own custom custom auranet agent (it is divided into multiple components the zero trust controller,inference engine,Ml agent,central aggregator, it will also read naive policy rules and apply them)
 3. layer 3: this is the plugable layer it should deploy some sample pods representing the company workload infrastructure  
 
