@@ -2,15 +2,17 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install dependencies first to cache the layer
+# 1. Install CPU-only PyTorch explicitly to avoid the 5GB CUDA bloat
+RUN pip install --no-cache-dir torch==2.0.1 --index-url https://download.pytorch.org/whl/cpu
+
+# 2. Copy requirements and install the rest (Flower, Numpy)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the source code
+# 3. Copy the models and source code
+COPY models/ /app/models/
 COPY src/ /app/src/
 
-# Expose the gRPC port Flower uses to communicate with the Agents
 EXPOSE 8080
 
-# Run the central Flower server
 CMD ["python", "src/server.py"]
