@@ -5,3 +5,12 @@ runtime:
     pullPolicy: IfNotPresent
   logPath: /var/run/cilium/tetragon/tetragon.log
   natsUrl: nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222
+
+engine:
+  image:
+    repository: auranet/engine
+    tag: latest
+    pullPolicy: IfNotPresent
+  flServerAddress: "auranet-controller.auranet-namespace.svc.cluster.local:8080"
+  hubbleRelayAddress: "hubble-relay.kube-system.svc.cluster.local:80"
+  natsUrl: nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222

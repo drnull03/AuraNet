@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: auranet-engine
+  namespace: auranet-namespace
+  labels:
+    app: auranet-engine
+    component: ai-agent
+spec:
+  selector:
+    matchLabels:
+      app: auranet-engine
+  template:
+    metadata:
+      labels:
+        app: auranet-engine
+        component: ai-agent
+    spec:
+      containers:
+      - name: engine
+        image: "{{ .Values.engine.image.repository }}:{{ .Values.engine.image.tag }}"
+        imagePullPolicy: {{ .Values.engine.image.pullPolicy }}
+        env:
+        # Dynamically injects the host node's name into the pod
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: NATS_URL
+          value: {{ .Values.engine.natsUrl }}
+        - name: FL_SERVER_ADDRESS
+          value: {{ .Values.engine.flServerAddress }}
+        - name: HUBBLE_RELAY_ADDRESS
+          value: {{ .Values.engine.hubbleRelayAddress }}
