@@ -1,7 +1,7 @@
 import numpy as np
 import flwr as fl
 from flwr.common import FitRes, Status, Code, ndarrays_to_parameters, parameters_to_ndarrays
-from src.strategy import AuraNetKrumStrategy
+from strategy import AuraNetKrumStrategy
 
 # A dummy client proxy to simulate our auranet-engine edge nodes
 class MockClientProxy(fl.server.client_proxy.ClientProxy):
