@@ -30,29 +30,26 @@ class AuraNetFlowerClient(fl.client.NumPyClient):
 
     def fit(self, parameters: List[np.ndarray], fl_config: Dict[str, fl.common.Scalar]):
         """
-        Triggered by the server every 10 minutes. 
-        Because our training is handled asynchronously by Worker B, this method 
-        just performs a hot-swap of the weights and immediately returns the latest local state.
+        Triggered by the server every 10 minutes.
         """
         print("\n[Worker C] 🌐 Federated Round Triggered by Controller!")
-        print("[Worker C] 📥 Downloading new global brain...")
         
-        # Hot-swap the new global weights into our local model
-        self.set_parameters(parameters)
-        print("[Worker C] ✅ Global weights successfully hot-swapped.")
-
-        # Extract our current local weights to send back to the aggregator
+        # 1. FIRST: Extract our current local weights (the ones Worker B has been training)
         local_parameters = self.get_parameters(config={})
+        print("[Worker C] 📤 Local training insights extracted.")
         
-        #Return the weights, the size of our dataset (used for weighted averaging), and metrics
+        # 2. SECOND: Hot-swap the new global weights from the server into our local model
+        self.set_parameters(parameters)
+        print("[Worker C] 📥 New global brain successfully hot-swapped.")
+
+        # 3. Return our extracted local weights back to the aggregator
         # We hardcode num_examples to 1 for the demo so all nodes carry equal weight
         return local_parameters, 1, {}
-
 def start_fl_client(model, model_lock, global_state):
     """Initializes and connects the Flower client to the central server."""
     client = AuraNetFlowerClient(model, model_lock, global_state)
     
-    print(f"[Worker C] 🔌 Connecting to AuraNet Aggregator at {config.FL_SERVER_ADDRESS}...")
+    print(f"[Worker C]  Connecting to AuraNet Aggregator at {config.FL_SERVER_ADDRESS}...")
     
     fl.client.start_numpy_client(
         server_address=config.FL_SERVER_ADDRESS,

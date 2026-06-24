@@ -28,7 +28,7 @@ def run_background_workers(model, benign_buffer, buffer_lock, global_state):
         loop.close()
 
 if __name__ == "__main__":
-    print(f"🚀 Booting AuraNet Engine for Workload: {config.WORKLOAD_NAME}")
+    print(f" Booting AuraNet Engine for  Some Node")
     print("====")
 
     # Initialize Shared Global State

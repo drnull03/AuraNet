@@ -17,13 +17,13 @@ class GenesisAutoencoder(nn.Module):
 
 def get_genesis_parameters():
     """Loads the pre-trained weights to Warm-Start the Federated Network."""
-    print("🧠 [Controller] Loading Genesis Weights for Warm Start...")
+    print("[Controller] Loading Genesis Weights for Warm Start...")
     
     model = GenesisAutoencoder(input_dim=13) 
     
     if os.path.exists(config.GENESIS_WEIGHTS_PATH):
         model.load_state_dict(torch.load(config.GENESIS_WEIGHTS_PATH))
-        print(f"✅ [Controller] Successfully loaded {config.GENESIS_WEIGHTS_PATH}")
+        print(f"[Controller] Successfully loaded {config.GENESIS_WEIGHTS_PATH}")
     else:
         print(f"⚠️ [Controller] Genesis weights not found at {config.GENESIS_WEIGHTS_PATH}. Starting from scratch.")
         
@@ -31,7 +31,7 @@ def get_genesis_parameters():
     return fl.common.ndarrays_to_parameters(ndarrays)
 
 def start_federated_server():
-    print("\n🌐 [Controller] Initializing AuraNet FL Aggregator...")
+    print("\n [Controller] Initializing AuraNet FL Aggregator...")
     
     
     # DISABLED: Krum Strategy

@@ -19,10 +19,10 @@ from flwr.common import Parameters, Scalar
 #         results: List[Tuple[fl.server.client_proxy.ClientProxy, fl.common.FitRes]],
 #         failures: List[BaseException],
 #     ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
-#         print(f"\n[Aggregator] 🔄 Round {server_round} - Aggregating weights using KRUM...")
+#         print(f"\n[Aggregator]  Round {server_round} - Aggregating weights using KRUM...")
 #         aggregated_parameters, aggregated_metrics = super().aggregate_fit(server_round, results, failures)
 #         if aggregated_parameters is not None:
-#             print(f"[Aggregator] ✅ Round {server_round} Krum aggregation successful. Outliers rejected.")
+#             print(f"[Aggregator]  Round {server_round} Krum aggregation successful. Outliers rejected.")
 #         return aggregated_parameters, aggregated_metrics
 
 
@@ -39,13 +39,13 @@ class AuraNetFedProxStrategy(fl.server.strategy.FedProx):
         failures: List[BaseException],
     ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
         
-        print(f"\n[Aggregator] 🔄 Round {server_round} - Aggregating weights from {len(results)} Agents using FEDPROX...")
+        print(f"\n[Aggregator]  Round {server_round} - Aggregating weights from {len(results)} Agents using FEDPROX...")
         
         aggregated_parameters, aggregated_metrics = super().aggregate_fit(
             server_round, results, failures
         )
         
         if aggregated_parameters is not None:
-            print(f"[Aggregator] ✅ Round {server_round} FedProx aggregation successful. All nodes merged safely.")
+            print(f"[Aggregator]  Round {server_round} FedProx aggregation successful. All nodes merged safely.")
             
         return aggregated_parameters, aggregated_metrics

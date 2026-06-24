@@ -3,15 +3,23 @@ import re
 import subprocess
 import numpy as np
 
+import config
+
 class HubbleStreamProcessor:
     def __init__(self):
-        # compile the regexes once during boot to save CPU cycles during live streaming
+        # Compile the regexes once during boot to save CPU cycles during live streaming
         self.acc_regex = re.compile(r"^.*/api/accounts\?id=[0-9]+$")
         self.loan_regex = re.compile(r"^.*/api/loans/export\?id=L-[0-9]+$")
         
-        # Follow live stream, output as JSON
-        # -f and -o flag very important
-        self.command = ["hubble", "observe", "-f", "-o", "json"]
+        # Connect to the central Relay, but apply server-side filtering for THIS specific node
+        self.command = [
+            "hubble", 
+            "observe", 
+            "--server", config.HUBBLE_RELAY_ADDRESS,
+            "--node", config.NODE_NAME,
+            "-f", 
+            "-o", "json"
+        ]
 
     def extract_app_label(self, labels):
         """Identical to monolithic dataset logic."""
@@ -45,7 +53,7 @@ class HubbleStreamProcessor:
         if verdict == "DROPPED" and event_type != 1:
             return None
             
-        #  IGNORE SPIRE mTLS HANDSHAKE DROPS
+        # IGNORE SPIRE mTLS HANDSHAKE DROPS
         if verdict == "DROPPED" and drop_reason == "AUTH_REQUIRED":
             return None
 
@@ -72,7 +80,7 @@ class HubbleStreamProcessor:
         if not (verdict == "DROPPED" or is_http_l7 or is_db_l4):
             return None
 
-        # FEATURE ENGINEERING (Strict 13-Dim Match)
+        #  FEATURE ENGINEERING (Strict 13-Dim Match)
         src_app = self.extract_app_label(source_labels)
         dst_app = self.extract_app_label(flow.get("destination", {}).get("labels", []))
         
@@ -111,7 +119,7 @@ class HubbleStreamProcessor:
         """
         Continuously yields (raw_json, feature_array) for valid packets.
         """
-        print("[Streamer] Connecting to local Hubble socket...")
+        print(f"[Streamer]  Connecting to Relay at {config.HUBBLE_RELAY_ADDRESS} for node {config.NODE_NAME}...")
         process = subprocess.Popen(
             self.command,
             stdout=subprocess.PIPE,
