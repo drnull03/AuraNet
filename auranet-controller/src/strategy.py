@@ -24,7 +24,7 @@ class AuraNetFedProxStrategy(fl.server.strategy.FedProx):
         failures: List[Union[Tuple[ClientProxy, FitRes], BaseException]],
     ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
         """
-        Overrides the default aggregation to inject our 10-minute throttle.
+        Overrides the default aggregation to inject  10-minute throttle.
         """
         print(f"\n[Controller]  Aggregating weights for Round {server_round}...")
         

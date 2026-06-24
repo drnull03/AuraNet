@@ -6,7 +6,7 @@ To ensure reliable operation and acceptable performance, the following minimum h
 
 ### Memory (RAM)
 
-* Minimum: **6 GB RAM**
+* Minimum: **32 GB RAM**
 
 ### Processor (CPU)
 
