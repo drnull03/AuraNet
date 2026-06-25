@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import asyncio
 from nats.aio.client import Client as NATS
-
+from symbolic_supervisor import SymbolicSupervisor
 import config
 from stream_processor import HubbleStreamProcessor
 
@@ -26,7 +26,8 @@ async def run_inference_pipeline(model, benign_buffer, buffer_lock):
     # Initialize the Stream Processor and Loss Function
     processor = HubbleStreamProcessor()
     criterion = nn.MSELoss()
-
+    supervisor = SymbolicSupervisor()
+    
     print("[Worker A]  AI Perception Layer Online. Listening for packets...\n")
 
     # Consume the Generator
