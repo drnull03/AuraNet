@@ -1,13 +1,14 @@
 import os
 import torch
 import torch.nn as nn
+import numpy as np
 
 import config
-from dataset import HubbleDataProcessor
+from dataset_general import HubbleDataProcessor
 from model import ZeroTrustAutoencoder
 
 def evaluate_pipeline():
-    print("[SOC] Initializing AuraNet Threat Evaluation Engine...")
+    print("[SOC] Initializing AuraNet Threat Evaluation Engine (Discovery Mode)...")
 
     if not os.path.exists(config.MODEL_WEIGHTS_PATH):
         print(f"❌ Error: Model weights not found at {config.MODEL_WEIGHTS_PATH}. Run train.py first!")
@@ -32,39 +33,56 @@ def evaluate_pipeline():
     model.eval()
     criterion = nn.MSELoss()
     
-    print(f"\n🚀 [SOC] Scanning {len(df)} mixed network flows using Threshold: {config.TRIPWIRE_THRESHOLD}\n")
+    print(f"\n🚀 [SOC] Scanning {len(df)} network flows to discover baseline MSE...\n")
+    print(f"{'MSE LOSS':<10} | {'DIRECTION':<10} | {'METHOD':<8} | {'CONTEXT'}")
     print("=" * 80)
     
-    anomalies_caught = 0
-    total_evaluated = 0
+    mse_scores = []
     
-    # 3. Evaluate each flow
+    # 3. Evaluate each flow and log it
     for i in range(len(df)):
-        total_evaluated += 1
-        row_tensor = torch.FloatTensor(df.iloc[i].values)
+        # THE FIX: Add .copy() and .unsqueeze(0) to match training batch shapes
+        row_tensor = torch.FloatTensor(df.iloc[i].values.copy()).unsqueeze(0)
         context = raw_events[i]
         
-        # Format the output context
-        src_app = context.get('src_app', 'unknown')
+        direction = context.get('traffic_direction', 'UNKNOWN')
         method = context.get('method', 'NONE')
         url = context.get('url', 'NONE')
-        flow_desc = f"[{src_app}] -> {method} {url}"
+        ip_src = context.get('ip_source', 'UNKNOWN')
         
+        if method == "" and url == "":
+            display_context = f"TCP Flow from {ip_src}"
+            method = "TCP"
+        else:
+            display_context = url[:50] + "..." if len(url) > 50 else url
+
+        # Calculate Loss
         with torch.no_grad():
             reconstructed = model(row_tensor)
             mse_loss = criterion(reconstructed, row_tensor).item()
+            
+        mse_scores.append(mse_loss)
         
-        # 4. SOAR Tripwire Logic
-        if mse_loss > config.TRIPWIRE_THRESHOLD:
-            anomalies_caught += 1
-            print(f"🚨 ANOMALY DETECTED! (MSE: {mse_loss:.4f})")
-            print(f"   Context: {flow_desc}")
-            print(f"   Action:  Triggering AutoHeal for {src_app}...\n")
+        alert_flag = "🚨" if mse_loss > 0.005 else "  "
+        # THE FIX: Increased precision to .6f to see micro-errors
+        print(f"{alert_flag} {mse_loss:.6f} | {direction:<10} | {method:<8} | {display_context}")
             
     print("=" * 80)
-    print(f"🎯 [SOC] Evaluation Complete.")
-    print(f"   Total Flows Inspected: {total_evaluated}")
-    print(f"   Threats Neutralized:   {anomalies_caught}")
+    
+    if mse_scores:
+        mean_mse = np.mean(mse_scores)
+        max_mse = np.max(mse_scores)
+        p95 = np.percentile(mse_scores, 95)
+        p99 = np.percentile(mse_scores, 99)
+        
+        print(f"🎯 [SOC] Threshold Discovery Analysis Complete.")
+        print(f"   Total Flows Inspected: {len(df)}")
+        print(f"   Mean Error (Normal):   {mean_mse:.6f}")
+        print(f"   Absolute Max Error:    {max_mse:.6f}")
+        print(f"   95th Percentile:       {p95:.6f} (Filters 5% of highest traffic)")
+        print(f"   99th Percentile:       {p99:.6f} (Filters 1% of highest traffic)")
+    else:
+        print("⚠️ No data was processed.")
 
 if __name__ == "__main__":
     evaluate_pipeline()

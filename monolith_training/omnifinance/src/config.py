@@ -17,4 +17,5 @@ BATCH_SIZE = 8
 LEARNING_RATE = 0.01
 
 # SOC Inference Settings
+#good for both specific and general
 TRIPWIRE_THRESHOLD = 0.05

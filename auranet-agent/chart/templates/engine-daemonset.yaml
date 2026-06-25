@@ -21,7 +21,6 @@ spec:
         image: "{{ .Values.engine.image.repository }}:{{ .Values.engine.image.tag }}"
         imagePullPolicy: {{ .Values.engine.image.pullPolicy }}
         env:
-        # Dynamically injects the host node's name into the pod
         - name: NODE_NAME
           valueFrom:
             fieldRef:
@@ -32,3 +31,13 @@ spec:
           value: {{ .Values.engine.flServerAddress }}
         - name: HUBBLE_RELAY_ADDRESS
           value: {{ .Values.engine.hubbleRelayAddress }}
+        
+        volumeMounts:
+        - name: ai-config-volume
+          mountPath: /etc/auranet/config
+          readOnly: true
+          
+      volumes:
+      - name: ai-config-volume
+        configMap:
+          name: auranet-engine-config

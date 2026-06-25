@@ -49,7 +49,7 @@ async def run_local_training(model, benign_buffer, buffer_lock, global_state):
         model.train()
         
         # The Local Epoch Loop
-        for epoch in range(config.LOCAL_EPOCHS):
+        for epoch in range(config.ai.LOCAL_EPOCHS):
             optimizer.zero_grad()
             
             # Forward pass

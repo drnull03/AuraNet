@@ -6,7 +6,9 @@ from torch.utils.data import DataLoader
 
 import config
 from model import ZeroTrustAutoencoder
-from dataset import HubbleDataProcessor, HubbleDataset
+
+# left it to this could be swaped with specific model with not so generalized features
+from dataset_general import HubbleDataProcessor, HubbleDataset
 
 def train_pipeline():
     print("🐝 [MLOps] Initializing OmniFinance Training Pipeline...")
