@@ -14,3 +14,16 @@ engine:
   flServerAddress: "auranet-controller.auranet-namespace.svc.cluster.local:8080"
   hubbleRelayAddress: "hubble-relay.kube-system.svc.cluster.local:80"
   natsUrl: nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222
+
+
+
+  aiConfig:
+    inputDim: 13
+    tripwireThreshold: 0.05
+    localTrainIntervalSec: 120
+    maxBufferSize: 5000
+    localEpochs: 5
+    learningRate: 0.001
+    trustedIdentities:
+      - "k8s:app=gitlab-runner"
+      - "k8s:app=auranet-controller"

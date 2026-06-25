@@ -12,7 +12,7 @@ async def run_local_training(model, benign_buffer, buffer_lock, global_state):
     and runs local FedProx training to adapt to new baseline traffic.
     """
     
-    optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
+    optimizer = optim.Adam(model.parameters(), lr=config.ai.LEARNING_RATE)
     criterion = nn.MSELoss()
     
     # The 'mu' parameter for FedProx. Controls how strictly the local model 
@@ -20,11 +20,11 @@ async def run_local_training(model, benign_buffer, buffer_lock, global_state):
     # TODO later diaa might change this to see the best value
     proximal_mu = 0.1 
 
-    print(f"[Worker B] Local FedProx Trainer initialized. Cadence: {config.LOCAL_TRAIN_INTERVAL_SEC}s\n")
+    print(f"[Worker B] Local FedProx Trainer initialized. Cadence: {config.ai.LOCAL_TRAIN_INTERVAL_SEC}s\n")
 
     while True:
         # Throttle: Go to sleep for 2 minutes
-        await asyncio.sleep(config.LOCAL_TRAIN_INTERVAL_SEC)
+        await asyncio.sleep(config.ai.LOCAL_TRAIN_INTERVAL_SEC)
         
         # Safely extract and clear the buffer
         # mutex lock in python are super easy damn
@@ -42,7 +42,7 @@ async def run_local_training(model, benign_buffer, buffer_lock, global_state):
         # Convert the batch into a PyTorch Tensor
         x_train = torch.FloatTensor(training_data)
         
-        # 3. Get the latest global weights (updated by Worker C every 10 mins)
+        # Get the latest global weights (updated by Worker C every 10 mins)
         master_weights = global_state.get("master_weights", None)
         
         # Switch model to training mode

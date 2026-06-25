@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auranet-engine-config
+  namespace: auranet-namespace
+  labels:
+    app: auranet-engine
+data:
+  ai-config.json: |
+    {
+      "inputDim": {{ .Values.engine.aiConfig.inputDim }},
+      "tripwireThreshold": {{ .Values.engine.aiConfig.tripwireThreshold }},
+      "localTrainIntervalSec": {{ .Values.engine.aiConfig.localTrainIntervalSec }},
+      "maxBufferSize": {{ .Values.engine.aiConfig.maxBufferSize }},
+      "localEpochs": {{ .Values.engine.aiConfig.localEpochs }},
+      "learningRate": {{ .Values.engine.aiConfig.learningRate }},
+      "trustedIdentities": {{ toJson .Values.engine.aiConfig.trustedIdentities }}
+    }

@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     # Initialize Shared Global State
     # Using the 13->16->8->4 
-    model = ZeroTrustAutoencoder(input_dim=config.INPUT_DIM)
+    model = ZeroTrustAutoencoder(input_dim=config.ai.INPUT_DIM)
     model.eval()  # Default to evaluation mode so Worker A can start streaming instantly
     
     benign_buffer = []

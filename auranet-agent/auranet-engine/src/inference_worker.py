@@ -46,7 +46,7 @@ async def run_inference_pipeline(model, benign_buffer, buffer_lock):
         symbolic_decision = "Unknown" 
 
         #  The Decision Matrix
-        is_anomaly = mse_loss > config.TRIPWIRE_THRESHOLD
+        is_anomaly = mse_loss > config.ai.TRIPWIRE_THRESHOLD
 
         if is_anomaly and symbolic_decision == "Unknown":
             
@@ -70,7 +70,7 @@ async def run_inference_pipeline(model, benign_buffer, buffer_lock):
             
             # Fallback to the node's general workload name only if Hubble lost the app label
             if culprit_workload == "unknown":
-                culprit_workload = config.WORKLOAD_NAME 
+                culprit_workload = "CHANGED"
 
             # Dynamically route the penalty to the attacker's specific NATS subject
             subject = f"{config.NATS_SUBJECT_PREFIX}{culprit_workload}"
@@ -85,12 +85,12 @@ async def run_inference_pipeline(model, benign_buffer, buffer_lock):
             
             # Lock the buffer safely and force the model to learn this new behavior
             with buffer_lock:
-                if len(benign_buffer) < config.MAX_BUFFER_SIZE:
+                if len(benign_buffer) < config.ai.MAX_BUFFER_SIZE:
                     benign_buffer.append(feature_array)
 
         else:
             # BENIGN TRAFFIC (Normal Operations)
             # Lock the memory queue and save it for the 2-minute local training loop
             with buffer_lock:
-                if len(benign_buffer) < config.MAX_BUFFER_SIZE:
+                if len(benign_buffer) < config.ai.MAX_BUFFER_SIZE:
                     benign_buffer.append(feature_array)
