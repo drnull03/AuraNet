@@ -77,18 +77,20 @@ async def run_inference_pipeline(model, benign_buffer, buffer_lock):
                 "probability": probability,
                 "raw_context": json.dumps(raw_event)
             }
-            print(f"🚨 [Worker A] AI THREAT DETECTED! MSE: {mse_loss:.4f} -> Firing to {subject}")
+            print(f"[Worker A] AI THREAT DETECTED! MSE: {mse_loss:.4f} -> Firing to {subject}")
             await nc.publish(subject, json.dumps(alert_payload).encode())
 
         elif is_anomaly and symbolic_decision == "Safe":
             # SYMBOLIC OVERRIDE 
             print(f"[Worker A] High MSE ({mse_loss:.4f}) overridden by Symbolic Supervisor. Forcing adaptation.")
-            with buffer_lock:
-                if len(benign_buffer) < config.ai.MAX_BUFFER_SIZE:
-                    benign_buffer.append(feature_array)
+            if config.ai.LEARNING_ENGINE:
+                with buffer_lock:
+                    if len(benign_buffer) < config.ai.MAX_BUFFER_SIZE:
+                        benign_buffer.append(feature_array)
 
         else:
             # BENIGN TRAFFIC
-            with buffer_lock:
-                if len(benign_buffer) < config.ai.MAX_BUFFER_SIZE:
-                    benign_buffer.append(feature_array)
+            if config.ai.LEARNING_ENGINE:
+                with buffer_lock:
+                    if len(benign_buffer) < config.ai.MAX_BUFFER_SIZE:
+                        benign_buffer.append(feature_array)

@@ -1,5 +1,6 @@
 import asyncio
 import threading
+import time
 
 import config
 from model import ZeroTrustAutoencoder
@@ -8,33 +9,29 @@ from training_worker import run_local_training
 from fl_client import start_fl_client
 
 def run_background_workers(model, benign_buffer, buffer_lock, global_state):
-    """
-    Creates an isolated asyncio event loop to run Worker A (Inference) 
-    and Worker B (Local Training) concurrently on a background thread.
-    """
+    """Creates an isolated asyncio event loop for background workers."""
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     
-    # Schedule Worker A and Worker B
-    inference_task = loop.create_task(run_inference_pipeline(model, benign_buffer, buffer_lock))
-    training_task = loop.create_task(run_local_training(model, benign_buffer, buffer_lock, global_state))
+    # ALWAYS schedule Worker A (Inference)
+    tasks = [loop.create_task(run_inference_pipeline(model, benign_buffer, buffer_lock))]
+    
+    # ONLY schedule Worker B (Training) if learning is enabled
+    if config.ai.LEARNING_ENGINE:
+        tasks.append(loop.create_task(run_local_training(model, benign_buffer, buffer_lock, global_state)))
     
     try:
-        # Run both async loops forever
-        loop.run_until_complete(asyncio.gather(inference_task, training_task))
+        loop.run_until_complete(asyncio.gather(*tasks))
     except Exception as e:
         print(f"[Engine] ❌ Background workers crashed: {e}")
     finally:
         loop.close()
 
 if __name__ == "__main__":
-    print(f" Booting AuraNet Engine for  Some Node")
-    print("====")
+    print(f"Booting AuraNet Engine for {config.NODE_NAME}")
 
-    # Initialize Shared Global State
-    # Using the 13->16->8->4 
     model = ZeroTrustAutoencoder(input_dim=config.ai.INPUT_DIM)
-    model.eval()  # Default to evaluation mode so Worker A can start streaming instantly
+    model.eval() 
     
     benign_buffer = []
     global_state = {
@@ -42,24 +39,30 @@ if __name__ == "__main__":
         "is_initialized": False
     }
     
-    # Initialize Thread Locks for Memory Safety
     buffer_lock = threading.Lock()
     model_lock = threading.Lock()
 
-    # fire up worker A and B
-    print("[Engine]  Spinning up Async Background Thread for AI & Streaming.")
+    print("[Engine]Spinning up Async Background Thread...")
     bg_thread = threading.Thread(
         target=run_background_workers,
         args=(model, benign_buffer, buffer_lock, global_state),
-        daemon=True  # Ensures this thread dies automatically if the main program exits
+        daemon=True 
     )
     bg_thread.start()
 
-    # Spin up Worker C in the main thread
-    # The Flower client will block here indefinitely, listening for the central controller
-    try:
-        start_fl_client(model, model_lock, global_state)
-    except KeyboardInterrupt:
-        print("\n[Engine] 🛑 Keyboard Interrupt detected. Shutting down AuraNet Agent...")
-    except Exception as e:
-        print(f"\n[Engine] ❌ FL Client crashed: {e}")
+    if config.ai.LEARNING_ENGINE:
+        try:
+            start_fl_client(model, model_lock, global_state)
+        except KeyboardInterrupt:
+            print("\n[Engine] 🛑 Keyboard Interrupt detected. Shutting down...")
+        except Exception as e:
+            print(f"\n[Engine] ❌ FL Client crashed: {e}")
+    else:
+        print("\n[Engine] 🛑 LEARNING_ENGINE is False. Running in INFERENCE-ONLY mode.")
+        print("[Engine] ⚠️ Local Training and Federated Learning are DISABLED.")
+        try:
+            # Keep the main thread alive so Worker A can keep streaming
+            while True:
+                time.sleep(60)
+        except KeyboardInterrupt:
+            print("\n[Engine] 🛑 Keyboard Interrupt detected. Shutting down...")

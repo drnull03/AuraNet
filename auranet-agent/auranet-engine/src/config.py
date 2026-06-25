@@ -21,7 +21,8 @@ class DynamicConfig:
             "maxBufferSize": 5000,
             "localEpochs": 5,
             "learningRate": 0.001,
-            "trustedIdentities": []
+            "trustedIdentities": [],
+            "learningEngine": True
         }
         self._reload_if_changed()
 
@@ -75,6 +76,11 @@ class DynamicConfig:
     def TRUSTED_IDENTITIES(self):
         self._reload_if_changed()
         return set(self._cache.get("trustedIdentities", []))
+
+    @property
+    def LEARNING_ENGINE(self):
+        self._reload_if_changed()
+        return self._cache.get("learningEngine", True)
 
 # Instantiate the dynamic config object
 ai = DynamicConfig()
