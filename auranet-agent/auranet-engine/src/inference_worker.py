@@ -43,54 +43,52 @@ async def run_inference_pipeline(model, benign_buffer, buffer_lock):
 
         # The Neurosymbolic Supervisor (Placeholder Hook)
         # Future Logic: If raw_event matches an internal CI/CD IP, set this to "Safe"
-        symbolic_decision = supervisor.evaluate(raw_event)
-
-        #  The Decision Matrix
+        symbolic_decision = supervisor.evaluate(raw_event) 
         is_anomaly = mse_loss > config.ai.TRIPWIRE_THRESHOLD
 
-        if is_anomaly and symbolic_decision == "Unknown":
+        source_labels = raw_event.get("flow", {}).get("source", {}).get("labels", [])
+        culprit_workload = "unknown"
+        for label in source_labels:
+            if label.startswith("k8s:app="):
+                culprit_workload = label.split("=")[1]
+                break
+        if culprit_workload == "unknown":
+            culprit_workload = config.NODE_NAME 
             
-            # Map the MSE into a probability
-            # E.g., an MSE of 0.08 / 0.1 = 0.80 (80% confidence)
+        subject = f"{config.NATS_SUBJECT_PREFIX}{culprit_workload}"
+
+        
+        if symbolic_decision not in ["Safe", "Unknown"]:
+            # SYMBOLIC THREAT
+            # The rule engine caught an obvious attack. Fire with -1 probability.
+            alert_payload = {
+                "threat": symbolic_decision,
+                "probability": -1,
+                "raw_context": json.dumps(raw_event)
+            }
+            print(f"[Worker A] DETERMINISTIC THREAT: {symbolic_decision.upper()} -> Firing to {subject}")
+            await nc.publish(subject, json.dumps(alert_payload).encode())
+
+        elif is_anomaly and symbolic_decision == "Unknown":
+            # NEURAL ANOMALY 
             probability = min((mse_loss / 0.1), 0.99) 
-            
             alert_payload = {
                 "threat": "network_anomaly",
                 "probability": probability,
                 "raw_context": json.dumps(raw_event)
             }
-            
-            source_labels = raw_event.get("flow", {}).get("source", {}).get("labels", [])
-            culprit_workload = "unknown"
-            
-            for label in source_labels:
-                if label.startswith("k8s:app="):
-                    culprit_workload = label.split("=")[1]
-                    break
-            
-            # Fallback to the node's general workload name only if Hubble lost the app label
-            if culprit_workload == "unknown":
-                culprit_workload = config.NODE_NAME
-
-            # Dynamically route the penalty to the attacker's specific NATS subject
-            subject = f"{config.NATS_SUBJECT_PREFIX}{culprit_workload}"
-            
-            print(f" [Worker A] THREAT DETECTED! MSE: {mse_loss:.4f} -> Firing to {subject}")
+            print(f"🚨 [Worker A] AI THREAT DETECTED! MSE: {mse_loss:.4f} -> Firing to {subject}")
             await nc.publish(subject, json.dumps(alert_payload).encode())
 
         elif is_anomaly and symbolic_decision == "Safe":
             # SYMBOLIC OVERRIDE 
-            # # The AI panicked, but the K8s kernel verifies this is trusted traffic..
             print(f"[Worker A] High MSE ({mse_loss:.4f}) overridden by Symbolic Supervisor. Forcing adaptation.")
-            
-            # Lock the buffer safely and force the model to learn this new behavior
             with buffer_lock:
                 if len(benign_buffer) < config.ai.MAX_BUFFER_SIZE:
                     benign_buffer.append(feature_array)
 
         else:
-            # BENIGN TRAFFIC (Normal Operations)
-            # Lock the memory queue and save it for the 2-minute local training loop
+            # BENIGN TRAFFIC
             with buffer_lock:
                 if len(benign_buffer) < config.ai.MAX_BUFFER_SIZE:
                     benign_buffer.append(feature_array)
