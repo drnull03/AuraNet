@@ -7,7 +7,7 @@ from dataset import HubbleDataProcessor
 from model import ZeroTrustAutoencoder
 
 def evaluate_pipeline():
-    print("🛡️ [SOC] Initializing AuraNet Threat Evaluation Engine...")
+    print("[SOC] Initializing AuraNet Threat Evaluation Engine...")
 
     if not os.path.exists(config.MODEL_WEIGHTS_PATH):
         print(f"❌ Error: Model weights not found at {config.MODEL_WEIGHTS_PATH}. Run train.py first!")
@@ -17,7 +17,7 @@ def evaluate_pipeline():
         return
 
     # 1. Process Test Traffic In-Memory
-    print("📊 [SOC] Processing raw test telemetry on the fly...")
+    print("[SOC] Processing raw test telemetry on the fly...")
     processor = HubbleDataProcessor(config.TEST_DATA_PATH)
     processor.load_and_filter()
     processor.engineer_features()
