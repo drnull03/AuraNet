@@ -29,7 +29,7 @@ def train_nlp_pipeline():
     criterion = nn.CrossEntropyLoss(ignore_index=0) 
     optimizer = optim.Adam(model.parameters(), lr=0.005)
 
-    epochs = 50
+    epochs = 100
     print(f"\n🚀 Training LSTM Autoencoder for {epochs} epochs...\n")
     
     for epoch in range(epochs):
