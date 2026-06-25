@@ -13,12 +13,12 @@ def test_inference_throughput_meltdown():
     STRESS TEST: Blasts 100,000 packets through the AI sequentially to find the absolute
     ceiling of packets-per-second (PPS) the edge node can handle in real-time.
     """
-    model = ZeroTrustAutoencoder(input_dim=config.INPUT_DIM)
+    model = ZeroTrustAutoencoder(input_dim=config.ai.INPUT_DIM)
     model.eval()
     
     num_packets = 100_000
     # Pre-generate a massive tensor representing 100k random network packets
-    dummy_stream = torch.rand(num_packets, 1, config.INPUT_DIM)
+    dummy_stream = torch.rand(num_packets, 1, config.ai.INPUT_DIM)
     
     print(f"\n[Chaos] Unleashing {num_packets:,} packets into the neural network...")
     

@@ -23,11 +23,11 @@ def test_buffer_memory_limit():
     with buffer_lock:
         for _ in range(20000):
             # The agent MUST enforce the MAX_BUFFER_SIZE limit
-            if len(benign_buffer) < config.MAX_BUFFER_SIZE:
+            if len(benign_buffer) < config.ai.MAX_BUFFER_SIZE:
                 benign_buffer.append(np.zeros(13))
                 
     # ASSERTION: The buffer stopped accepting packets exactly at the config limit
-    assert len(benign_buffer) == config.MAX_BUFFER_SIZE, f"Memory Leak! Buffer grew to {len(benign_buffer)}"
+    assert len(benign_buffer) == config.ai.MAX_BUFFER_SIZE, f"Memory Leak! Buffer grew to {len(benign_buffer)}"
 
 def test_fedprox_drift_detection():
     """

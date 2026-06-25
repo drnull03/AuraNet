@@ -10,12 +10,12 @@ import config
 
 def test_model_initialization():
     """Test that the model boots up with the correct 13-dimensional input."""
-    model = ZeroTrustAutoencoder(input_dim=config.INPUT_DIM)
+    model = ZeroTrustAutoencoder(input_dim=config.ai.INPUT_DIM)
     assert model is not None
 
 def test_model_forward_pass_shape():
     """Test that a 13-dim input perfectly reconstructs into a 13-dim output."""
-    model = ZeroTrustAutoencoder(input_dim=config.INPUT_DIM)
+    model = ZeroTrustAutoencoder(input_dim=config.ai.INPUT_DIM)
     
     # Create a dummy batch of 5 packets, each with 13 features
     dummy_input = torch.rand(5, 13) 
@@ -27,7 +27,7 @@ def test_model_forward_pass_shape():
 
 def test_model_sigmoid_bounds():
     """Test that the decoder's Sigmoid function keeps all outputs between 0 and 1."""
-    model = ZeroTrustAutoencoder(input_dim=config.INPUT_DIM)
+    model = ZeroTrustAutoencoder(input_dim=config.ai.INPUT_DIM)
     
     # Push extreme values (negative and highly positive) through the network
     extreme_input = torch.tensor([[-100.0] * 13, [100.0] * 13])

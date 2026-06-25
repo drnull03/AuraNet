@@ -43,7 +43,7 @@ async def run_inference_pipeline(model, benign_buffer, buffer_lock):
 
         # The Neurosymbolic Supervisor (Placeholder Hook)
         # Future Logic: If raw_event matches an internal CI/CD IP, set this to "Safe"
-        symbolic_decision = "Unknown" 
+        symbolic_decision = supervisor.evaluate(raw_event)
 
         #  The Decision Matrix
         is_anomaly = mse_loss > config.ai.TRIPWIRE_THRESHOLD
@@ -70,7 +70,7 @@ async def run_inference_pipeline(model, benign_buffer, buffer_lock):
             
             # Fallback to the node's general workload name only if Hubble lost the app label
             if culprit_workload == "unknown":
-                culprit_workload = "CHANGED"
+                culprit_workload = config.NODE_NAME
 
             # Dynamically route the penalty to the attacker's specific NATS subject
             subject = f"{config.NATS_SUBJECT_PREFIX}{culprit_workload}"
@@ -79,8 +79,8 @@ async def run_inference_pipeline(model, benign_buffer, buffer_lock):
             await nc.publish(subject, json.dumps(alert_payload).encode())
 
         elif is_anomaly and symbolic_decision == "Safe":
-            # SYMBOLIC OVERRIDE (Concept Drift Mitigation)
-            # The AI panicked, but the hardcoded rules know this is safe CI/CD traffic.
+            # SYMBOLIC OVERRIDE 
+            # # The AI panicked, but the K8s kernel verifies this is trusted traffic..
             print(f"[Worker A] High MSE ({mse_loss:.4f}) overridden by Symbolic Supervisor. Forcing adaptation.")
             
             # Lock the buffer safely and force the model to learn this new behavior
