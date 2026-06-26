@@ -26,6 +26,9 @@ async def run_inference_pipeline(brain_a, brain_b, benign_buffer, buffer_lock):
     mse_criterion = nn.MSELoss()
     ce_criterion = nn.CrossEntropyLoss(ignore_index=0, reduction='none')
     supervisor = SymbolicSupervisor()
+
+    rolling_mse_window = deque(maxlen=config.ai.Z_SCORE_WINDOW_SIZE)
+    MIN_WARMUP_SAMPLES = 100
     
     print("[Worker A] Dual AI Perception Layer Online. Listening for packets...\n")
 
@@ -39,7 +42,18 @@ async def run_inference_pipeline(brain_a, brain_b, benign_buffer, buffer_lock):
             reconstructed = brain_a(tensor_input)
             mse_loss = mse_criterion(reconstructed, tensor_input).item()
 
-        is_anomaly_a = mse_loss > config.ai.TRIPWIRE_THRESHOLD
+        is_anomaly_a = False
+        if len(rolling_mse_window) < MIN_WARMUP_SAMPLES:
+            # fallback to static threshold during initial agent boot
+            is_anomaly_a = mse_loss > config.ai.TRIPWIRE_THRESHOLD
+        else:
+            # Calculate Dynamic Z-Score
+            current_mean = np.mean(rolling_mse_window)
+            # this took our to debug it turned out it is dividing by zero problem
+            current_std = np.std(rolling_mse_window) + 1e-8    # Add epsilon to prevent divide-by-zero
+            z_score = (mse_loss - current_mean) / current_std
+            
+            is_anomaly_a = z_score > config.ai.Z_SCORE_THRESHOLD
         
         # Brain B (Grammatical Payload)
         nlp_loss = 0.0
@@ -47,7 +61,7 @@ async def run_inference_pipeline(brain_a, brain_b, benign_buffer, buffer_lock):
         
         url = raw_event.get("flow", {}).get("l7", {}).get("http", {}).get("url", "")
         
-        if url:
+        if url and '?' in url:
             # On-the-fly Tokenization
             encoded = [min(ord(c), 127) for c in url][:150]
             padding = [0] * (150 - len(encoded))
