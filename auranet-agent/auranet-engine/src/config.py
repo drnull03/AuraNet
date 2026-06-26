@@ -20,6 +20,7 @@ class DynamicConfig:
         self._cache = {
             "inputDim": 13,
             "nlpTripwire": 2.0,
+            "nlpBodyTripwire": 2.0,
             "zScoreThreshold": 3.0,    
             "zScoreWindowSize": 1000,
             "tripwireThreshold": 0.05,
@@ -28,7 +29,8 @@ class DynamicConfig:
             "localEpochs": 5,
             "learningRate": 0.001,
             "trustedIdentities": [],
-            "learningEngine": True
+            "learningEngine": True,
+            "thirdBrain": False
         }
         self._reload_if_changed()
 
@@ -101,6 +103,16 @@ class DynamicConfig:
     def Z_SCORE_WINDOW_SIZE(self):
         self._reload_if_changed()
         return self._cache.get("zScoreWindowSize", 1000)
+        
+    @property                                               # :) update
+    def NLP_BODY_TRIPWIRE(self):                            # :) update
+        self._reload_if_changed()                           # :) update
+        return self._cache.get("nlpBodyTripwire", 2.0)      # :) update
+        
+    @property                                               # :) update
+    def THIRD_BRAIN(self):                                  # :) update
+        self._reload_if_changed()                           # :) update
+        return self._cache.get("thirdBrain", False)
 
 # Instantiate the dynamic config object
 ai = DynamicConfig()

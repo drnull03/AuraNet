@@ -9,7 +9,7 @@ from stream_processor import HubbleStreamProcessor
 from collections import deque
 import numpy as np
 
-async def run_inference_pipeline(brain_a, brain_b, benign_buffer, buffer_lock):
+async def run_inference_pipeline(brain_a, brain_b, brain_c, benign_buffer, buffer_lock):
     """
     Worker A: The Cascade Funnel. Evaluates lightweight behavior first,
     then triggers heavy NLP payload inspection only for valid L7 requests.
@@ -80,6 +80,27 @@ async def run_inference_pipeline(brain_a, brain_b, benign_buffer, buffer_lock):
             
             is_anomaly_b = nlp_loss > config.ai.NLP_TRIPWIRE
 
+        nlp_body_loss = 0.0                                                        
+        is_anomaly_c = False                                                        
+        
+        body = raw_event.get("flow", {}).get("l7", {}).get("http", {}).get("body", "")
+        
+        if config.ai.THIRD_BRAIN and body:                                          
+            # On-the-fly Tokenization (Using 512 length for bodies)                 
+            encoded_body = [min(ord(c), 127) for c in body][:512]                   
+            padding_body = [0] * (512 - len(encoded_body))                          
+            tensor_nlp_body = torch.LongTensor(encoded_body + padding_body).unsqueeze(0) 
+            
+            with torch.no_grad():                                                  
+                logits_body = brain_c(tensor_nlp_body).transpose(1, 2)              
+                char_losses_body = ce_criterion(logits_body, tensor_nlp_body)       
+                
+                mask_body = tensor_nlp_body != 0                                    
+                if mask_body.sum().item() > 0:                                      
+                    nlp_body_loss = char_losses_body.sum().item() / mask_body.sum().item() 
+            
+            is_anomaly_c = nlp_body_loss > config.ai.NLP_BODY_TRIPWIRE
+
         # The Symbolic Supervisor & Routing
         symbolic_decision = supervisor.evaluate(raw_event) 
 
@@ -107,13 +128,20 @@ async def run_inference_pipeline(brain_a, brain_b, benign_buffer, buffer_lock):
             print(f"[Worker A]  NLP PAYLOAD THREAT! CE Loss: {nlp_loss:.4f} -> Firing to {subject}")
             await nc.publish(subject, json.dumps(alert_payload).encode())
 
+
+        elif is_anomaly_c and symbolic_decision == "Unknown":                                                           
+            probability = min((nlp_body_loss / (config.ai.NLP_BODY_TRIPWIRE * 2)), 0.99)                                
+            alert_payload = {"threat": "l7_body_anomaly", "probability": probability, "raw_context": json.dumps(raw_event)} 
+            print(f"[Worker A] 🚨 NLP BODY THREAT! CE Loss: {nlp_body_loss:.4f} -> Firing to {subject}")                
+            await nc.publish(subject, json.dumps(alert_payload).encode())
+
         elif is_anomaly_a and symbolic_decision == "Unknown":
             probability = min((z_score / (config.ai.Z_SCORE_THRESHOLD * 2)), 0.99) if len(rolling_mse_window) >= MIN_WARMUP_SAMPLES else 0.99
             alert_payload = {"threat": "network_behavior_anomaly", "probability": probability, "raw_context": json.dumps(raw_event)}
             print(f"[Worker A] BEHAVIORAL THREAT! Z-Score: {z_score:.2f} (MSE: {mse_loss:.4f}) -> Firing to {subject}")
             await nc.publish(subject, json.dumps(alert_payload).encode())
 
-        elif (is_anomaly_a or is_anomaly_b) and symbolic_decision == "Safe":
+        elif (is_anomaly_a or is_anomaly_b or is_anomaly_c) and symbolic_decision == "Safe":
             # this is for when we delegate trust with auranet-cli
             # after delegating trust brain A can learn the new flows
             # and we can untrust the flow again using cli again 

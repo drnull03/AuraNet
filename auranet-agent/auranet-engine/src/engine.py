@@ -9,13 +9,13 @@ from inference_worker import run_inference_pipeline
 from training_worker import run_local_training
 from fl_client import start_fl_client
 
-def run_background_workers(brain_a, brain_b, benign_buffer, buffer_lock, global_state):
+def run_background_workers(brain_a, brain_b, brain_c, benign_buffer, buffer_lock, global_state):
     """Creates an isolated asyncio event loop for background workers."""
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     
     # Schedule Worker A (Inference) with BOTH brains
-    tasks = [loop.create_task(run_inference_pipeline(brain_a, brain_b, benign_buffer, buffer_lock))]
+    tasks = [loop.create_task(run_inference_pipeline(brain_a, brain_b, brain_c, benign_buffer, buffer_lock))]
     
     # Worker B (Training) only federates Brain A (Tabular). Brain B is static.
     if config.ai.LEARNING_ENGINE:
@@ -44,9 +44,17 @@ if __name__ == "__main__":
     else:
         print(f"[Engine] WARNING: NLP weights not found at {config.NLP_WEIGHTS_PATH}.")
         print(f"[Engine] Brain B is untrained! Neural parsing will be highly erratic.")
-        
-    
     brain_b.eval()
+
+
+    # Initialize Brain C (Grammatical Body)                                                                          
+    brain_c = UrlNlpAutoencoder(vocab_size=128, seq_length=512)                                                      
+    if os.path.exists(config.NLP_BODY_WEIGHTS_PATH):                                                                 
+        print(f"[Engine] 🧠 Loading pre-trained Brain C (Body NLP) weights from {config.NLP_BODY_WEIGHTS_PATH}...")  
+        brain_c.load_state_dict(torch.load(config.NLP_BODY_WEIGHTS_PATH, weights_only=True))                         
+    else:                                                                                                            
+        print(f"[Engine] ⚠️ WARNING: NLP Body weights not found at {config.NLP_BODY_WEIGHTS_PATH}.")                 
+    brain_c.eval()
 
     benign_buffer = []
     global_state = {
@@ -60,7 +68,7 @@ if __name__ == "__main__":
     print("[Engine] Spinning up Async Background Thread...")
     bg_thread = threading.Thread(
         target=run_background_workers,
-        args=(brain_a, brain_b, benign_buffer, buffer_lock, global_state),
+        args=(brain_a, brain_b, brain_c, benign_buffer, buffer_lock, global_state),
         daemon=True 
     )
     bg_thread.start()
