@@ -1,4 +1,5 @@
 // virtual-patches/rules.js
+const { getThreatMatrix } = require('../threat-parser');
 
 // The mapping now includes a 'severity' score (1-100)
 
@@ -8,33 +9,34 @@
 //we are gonna add more of these 
 //when using the LLM approach 
 //or cloud flare method we use the full context of the array
-const RULE_ENGINE = {
-    "sql_injection": { patch: "block-sql-injection.yaml", severity: 100 },
-    "privilege_escalation": { patch: "strict-rbac-jail.yaml", severity: 90 },
-    "path_traversal": { patch: "block-path-traversal.yaml", severity: 80 },
-    "network_anomaly": { patch: "default-quarantine.yaml", severity: 20 },
-    "unknown_anomaly": { patch: "default-quarantine.yaml", severity: 10 }
-};
+
 
 function determineVirtualPatch(threatSignatures) {
+    const THREAT_MATRIX = getThreatMatrix();
+    
+    // Fallback if no specific signatures are provided
     if (!threatSignatures || threatSignatures.length === 0) {
-        return RULE_ENGINE["unknown_anomaly"].patch;
+        return "unknown_anomaly_patch.yaml";
     }
 
     let highestSeverity = -1;
-    let selectedPatch = RULE_ENGINE["unknown_anomaly"].patch;
+    let selectedThreat = "unknown_anomaly";
 
-    // Loop through ALL threats to find the highest severity
+    // Loop through ALL threats to find the one with the highest numerical penalty
     for (const threat of threatSignatures) {
-        const rule = RULE_ENGINE[threat];
+        const severity = THREAT_MATRIX[threat] || THREAT_MATRIX["unknown_anomaly"];
         
-        if (rule && rule.severity > highestSeverity) {
-            highestSeverity = rule.severity;
-            selectedPatch = rule.patch;
+        if (severity > highestSeverity) {
+            highestSeverity = severity;
+            selectedThreat = threat;
         }
     }
 
-    return selectedPatch;
+    // Enforce strict naming convention: <threat_name>_patch.yaml
+    const patchFileName = `${selectedThreat}_patch.yaml`;
+    console.log(`[Rules Engine] Analyzed threats. Selected highest severity (${highestSeverity}): ${patchFileName}`);
+    
+    return patchFileName;
 }
 
 module.exports = {

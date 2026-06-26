@@ -3,15 +3,11 @@ const CONTEXT_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 const QUARANTINE_THRESHOLD = 10;         
 const MAX_TRUST = 100;
 
+
 // THE THREAT MATRIX 
-//these will change soon
-const RUNTIME_PENALTIES = {
-    "nc_execution": 70,
-    "unauthorized_file_read": 60,
-    "privilege_escalation": 90,         // Instant quarantine basically
-    "unexpected_outbound_traffic": 50,
-    "unknown_anomaly": 30               // Fallback penalty
-};
+//change old threat matrix to this
+const { getThreatMatrix } = require('./threat-parser');
+
 
 //  THE MEMORY 
 // Key: workload name (e.g., 'payment-api')
@@ -19,6 +15,7 @@ const RUNTIME_PENALTIES = {
 const workloadHistory = new Map();
 
 function calculateDeduction(subject, data) {
+    const THREAT_MATRIX = getThreatMatrix();
     //  If it's an AI Alert: Check if Symbolic (-1) or Neural won
     if (subject.includes('.ai.')) {
         // Read directly. If undefined, default to 0 so it safely gets ignored

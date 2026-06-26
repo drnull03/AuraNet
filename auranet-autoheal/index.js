@@ -19,7 +19,7 @@ if (process.env.KUBERNETES_SERVICE_HOST) {
 const k8sCoreApi = kc.makeApiClient(k8s.CoreV1Api);
 const k8sCustomApi = kc.makeApiClient(k8s.CustomObjectsApi);
 
-// 1. DYNAMIC QUARANTINE
+// DYNAMIC QUARANTINE
 async function applyQuarantine(workloadName) {
     const policyName = `quarantine-${workloadName}`;
     const quarantineManifest = {
@@ -35,7 +35,6 @@ async function applyQuarantine(workloadName) {
 
     try {
         console.log(`[K8s] 🚨 Applying emergency network quarantine to [${workloadName}]...`);
-        // FIXED: Using Object syntax for the new kubernetes-client version
         await k8sCustomApi.createNamespacedCustomObject({
             group: "cilium.io",
             version: "v2",
@@ -43,17 +42,17 @@ async function applyQuarantine(workloadName) {
             plural: "ciliumnetworkpolicies",
             body: quarantineManifest
         });
-        console.log(`[K8s] 🔒 Quarantine active: ${policyName}`);
+        console.log(`[K8s]  Quarantine active: ${policyName}`);
     } catch (err) {
         if (err.body && err.body.reason === "AlreadyExists") {
-            console.log(`[K8s] 🔒 Quarantine already active for: ${workloadName}`);
+            console.log(`[K8s]  Quarantine already active for: ${workloadName}`);
         } else {
             console.error(`[K8s] Quarantine failed:`, err.body ? err.body.message : err);
         }
     }
 }
 
-// 2. VIRTUAL PATCH
+// VIRTUAL PATCH
 async function applyVirtualPatch(patchFileName) {
     try {
         const patchPath = path.join(__dirname, "virtual-patches", patchFileName);
@@ -65,7 +64,6 @@ async function applyVirtualPatch(patchFileName) {
         const patchObj = yaml.load(fs.readFileSync(patchPath, "utf8"));
         console.log(`[K8s] 🛡️ Applying virtual patch: ${patchObj.metadata.name}...`);
         
-        // FIXED: Using Object syntax
         await k8sCustomApi.createNamespacedCustomObject({
             group: "cilium.io",
             version: "v2",
@@ -73,21 +71,21 @@ async function applyVirtualPatch(patchFileName) {
             plural: "ciliumnetworkpolicies",
             body: patchObj
         });
-        console.log(`[K8s] 🛡️ Virtual patch applied successfully.`);
+        console.log(`[K8s] Virtual patch applied successfully.`);
     } catch (err) {
         if (err.body && err.body.reason === "AlreadyExists") {
-            console.log(`[K8s] 🛡️ Virtual patch is already active in the cluster.`);
+            console.log(`[K8s] Virtual patch is already active in the cluster.`);
         } else {
             console.error(`[K8s] Patch failed:`, err.body ? err.body.message : err);
         }
     }
 }
 
-// 3. CYCLE WORKLOAD
+// CYCLE (restarting the pod) 
 async function cycleWorkloadPods(workloadName) {
     try {
         console.log(`[K8s] ♻️ Cycling compromised pods for [${workloadName}]...`);
-        // FIXED: Using Object syntax
+        
         await k8sCoreApi.deleteCollectionNamespacedPod({
             namespace: NAMESPACE,
             labelSelector: `app=${workloadName}`
@@ -98,12 +96,11 @@ async function cycleWorkloadPods(workloadName) {
     }
 }
 
-// 4. LIFT QUARANTINE
+// LIFT QUARANTINE
 async function removeQuarantine(workloadName) {
     const policyName = `quarantine-${workloadName}`;
     try {
-        console.log(`[K8s] 🔓 Lifting emergency quarantine for [${workloadName}]...`);
-        // FIXED: Using Object syntax
+        console.log(`[K8s]Lifting emergency quarantine for [${workloadName}]...`);
         await k8sCustomApi.deleteNamespacedCustomObject({
             group: "cilium.io",
             version: "v2",
@@ -111,7 +108,7 @@ async function removeQuarantine(workloadName) {
             plural: "ciliumnetworkpolicies",
             name: policyName
         });
-        console.log(`[K8s] 🔓 Quarantine lifted. System restored.`);
+        console.log(`[K8s] Quarantine lifted. System restored.`);
     } catch (err) {
         console.error(`[K8s] Failed to lift quarantine:`, err.body ? err.body.message : err);
     }
