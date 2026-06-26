@@ -6,6 +6,8 @@ from nats.aio.client import Client as NATS
 from symbolic_supervisor import SymbolicSupervisor
 import config
 from stream_processor import HubbleStreamProcessor
+from collections import deque
+import numpy as np
 
 async def run_inference_pipeline(brain_a, brain_b, benign_buffer, buffer_lock):
     """
@@ -43,6 +45,7 @@ async def run_inference_pipeline(brain_a, brain_b, benign_buffer, buffer_lock):
             mse_loss = mse_criterion(reconstructed, tensor_input).item()
 
         is_anomaly_a = False
+        z_score = 0.0
         if len(rolling_mse_window) < MIN_WARMUP_SAMPLES:
             # fallback to static threshold during initial agent boot
             is_anomaly_a = mse_loss > config.ai.TRIPWIRE_THRESHOLD

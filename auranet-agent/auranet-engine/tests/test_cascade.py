@@ -164,3 +164,54 @@ async def test_benign_traffic_buffering(mock_nats_class, mock_processor_class, a
     mock_nc.publish.assert_not_called()
     # Assert the packet was stored for local training
     assert len(benign_buffer) == 1
+
+
+
+@pytest.mark.asyncio
+@patch('inference_worker.HubbleStreamProcessor')
+@patch('inference_worker.NATS')
+async def test_dynamic_z_score_thresholding(mock_nats_class, mock_processor_class, auranet_brains):
+    """TEST 5: Verify the Z-Score warmup, dynamic triggering, and data immunity."""
+    brain_a, brain_b, benign_buffer, buffer_lock = auranet_brains
+    
+    mock_nc = AsyncMock()
+    mock_nats_class.return_value = mock_nc
+    
+    # --- THE FIX: Make Brain A strictly deterministic for math testing ---
+    # We force the model to always output [0.1]. 
+    # Normal input [0.1] -> MSE = 0.0
+    # Attack input [1.0] -> MSE = 0.81 (Guarantees a massive Z-Score spike)
+    mock_brain_a = MagicMock()
+    mock_brain_a.return_value = torch.FloatTensor([[0.1] * 13])
+    
+    # 1. Prepare the Data Stream
+    normal_event = generate_mock_event(url="/api/accounts?id=4")
+    normal_features = [0.1] * 13  
+    
+    attack_event = generate_mock_event(url="/api/accounts?id=4")
+    attack_features = [1.0] * 13  
+    
+    stream_data = [(normal_event, normal_features) for _ in range(100)]
+    stream_data.append((attack_event, attack_features))
+    stream_data.append((normal_event, normal_features))
+    
+    mock_processor_instance = mock_processor_class.return_value
+    mock_processor_instance.stream_traffic.return_value = stream_data
+    
+    # 2. Force Configurations
+    config.ai._cache["tripwireThreshold"] = 100.0
+    config.ai._cache["nlpTripwire"] = 100.0
+    config.ai._cache["zScoreThreshold"] = 3.0 
+    
+    # 3. Execute the Pipeline using the MOCKED brain
+    await run_inference_pipeline(mock_brain_a, brain_b, benign_buffer, buffer_lock)
+    
+    # 4. Assertions
+    mock_nc.publish.assert_called_once()
+    published_args = mock_nc.publish.call_args[0]
+    payload = json.loads(published_args[1].decode())
+    
+    assert payload["threat"] == "network_behavior_anomaly"
+    assert payload["probability"] > 0.0  
+    
+    assert len(benign_buffer) == 101
