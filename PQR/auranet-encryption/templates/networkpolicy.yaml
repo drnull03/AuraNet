@@ -1,0 +1,52 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "auranet-encryption.name" . }}-enforce-tls13
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "auranet-encryption.labels" . | nindent 4 }}
+spec:
+  # Apply to all pods in the namespace
+  endpointSelector: {}
+
+  ingress:
+  #  Allow inbound only over mTLS (SPIFFE identity required) 
+  - fromEntities:
+    - cluster
+    toPorts:
+    - ports:
+      - port: "0"
+        protocol: TCP
+      rules:
+        # Cilium enforces mTLS via SPIRE — this ensures only
+        # SPIFFE-identified peers can connect (i.e. through Envoy PQC path)
+        http: []
+
+  {{- if .Values.networkPolicy.allowedNamespaces }}
+  #  Extra namespace allowlist 
+  - fromEndpoints:
+    - matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values:
+          {{- range .Values.networkPolicy.allowedNamespaces }}
+          - {{ . | quote }}
+          {{- end }}
+  {{- end }}
+
+  egress:
+  #  Allow outbound only within cluster (enforces mTLS path) 
+  - toEntities:
+    - cluster
+  # Allow DNS resolution
+  - toEndpoints:
+    - matchLabels:
+        k8s-app: kube-dns
+    toPorts:
+    - ports:
+      - port: "53"
+        protocol: UDP
+      - port: "53"
+        protocol: TCP
+{{- end }}

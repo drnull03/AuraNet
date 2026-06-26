@@ -1,0 +1,20 @@
+apiVersion: v2
+name: auranet-encryption
+description: |
+  Post-Quantum Encryption (PQE) for Cilium service mesh.
+  Enforces x25519_kyber768 hybrid KEM at the Envoy transport layer
+  using CiliumEnvoyConfig. Requires Cilium 1.16+ with SPIRE/SPIFFE mTLS.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - pqc
+  - post-quantum
+  - cilium
+  - encryption
+  - kyber
+  - mtls
+maintainers:
+  - name: platform-team
+annotations:
+  category: security

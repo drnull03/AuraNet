@@ -104,14 +104,14 @@ class DynamicConfig:
         self._reload_if_changed()
         return self._cache.get("zScoreWindowSize", 1000)
         
-    @property                                               # :) update
-    def NLP_BODY_TRIPWIRE(self):                            # :) update
-        self._reload_if_changed()                           # :) update
-        return self._cache.get("nlpBodyTripwire", 2.0)      # :) update
+    @property                                                
+    def NLP_BODY_TRIPWIRE(self):                             
+        self._reload_if_changed()                            
+        return self._cache.get("nlpBodyTripwire", 2.0)      
         
-    @property                                               # :) update
-    def THIRD_BRAIN(self):                                  # :) update
-        self._reload_if_changed()                           # :) update
+    @property                                               
+    def THIRD_BRAIN(self):                                  
+        self._reload_if_changed()                           
         return self._cache.get("thirdBrain", False)
 
 # Instantiate the dynamic config object

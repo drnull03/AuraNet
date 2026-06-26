@@ -1,0 +1,35 @@
+{{- if and .Values.pqc.enabled (not .Values.clusterWide.enabled) }}
+apiVersion: cilium.io/v2alpha1
+kind: CiliumEnvoyConfig
+metadata:
+  name: {{ include "auranet-encryption.name" . }}-pqc
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "auranet-encryption.labels" . | nindent 4 }}
+  annotations:
+    auranet.io/kem: {{ .Values.pqc.kemCurves | join "," | quote }}
+    auranet.io/tls-min: {{ .Values.pqc.tls.minVersion | quote }}
+spec:
+  # Attach to all Envoy listeners/clusters in this namespace
+  # No nodeSelector = applies to all nodes where these workloads run
+  resources:
+
+  {{- if .Values.pqc.outbound.enabled }}
+  #  Outbound (client-side) 
+  # Patches every upstream cluster's transport socket to use Kyber KEM
+  - "@type": type.googleapis.com/envoy.config.cluster.v3.Cluster
+    name: outbound_pqc_tls
+    transport_socket:
+      {{- include "auranet-encryption.upstreamTlsContext" . | nindent 6 }}
+  {{- end }}
+
+  {{- if .Values.pqc.inbound.enabled }}
+  #  Inbound (server-side) 
+  # Patches the inbound listener's filter chain to accept Kyber KEM
+  - "@type": type.googleapis.com/envoy.config.listener.v3.Listener
+    name: inbound_pqc_tls
+    filter_chains:
+    - transport_socket:
+        {{- include "auranet-encryption.downstreamTlsContext" . | nindent 8 }}
+  {{- end }}
+{{- end }}

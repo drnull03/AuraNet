@@ -1,0 +1,30 @@
+{{- if and .Values.pqc.enabled .Values.clusterWide.enabled }}
+apiVersion: cilium.io/v2alpha1
+kind: CiliumClusterwideEnvoyConfig
+metadata:
+  name: {{ include "auranet-encryption.name" . }}-pqc-global
+  labels:
+    {{- include "auranet-encryption.labels" . | nindent 4 }}
+  annotations:
+    auranet.io/kem: {{ .Values.pqc.kemCurves | join "," | quote }}
+    auranet.io/scope: "cluster-wide"
+spec:
+  resources:
+
+  {{- if .Values.pqc.outbound.enabled }}
+  #  Outbound (client-side) — ALL namespaces 
+  - "@type": type.googleapis.com/envoy.config.cluster.v3.Cluster
+    name: outbound_pqc_tls_global
+    transport_socket:
+      {{- include "auranet-encryption.upstreamTlsContext" . | nindent 6 }}
+  {{- end }}
+
+  {{- if .Values.pqc.inbound.enabled }}
+  #  Inbound (server-side) — ALL namespaces 
+  - "@type": type.googleapis.com/envoy.config.listener.v3.Listener
+    name: inbound_pqc_tls_global
+    filter_chains:
+    - transport_socket:
+        {{- include "auranet-encryption.downstreamTlsContext" . | nindent 8 }}
+  {{- end }}
+{{- end }}

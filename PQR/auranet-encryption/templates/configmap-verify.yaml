@@ -1,0 +1,78 @@
+{{- if .Values.verify.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "auranet-encryption.name" . }}-verify
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "auranet-encryption.labels" . | nindent 4 }}
+  annotations:
+    auranet.io/usage: "kubectl exec into any pod and run /scripts/verify-pqc.sh <target-host>"
+data:
+  verify-pqc.sh: |
+    #!/bin/bash
+    # 
+    #  auranet-encryption — PQC handshake verification script
+    #  Usage: ./verify-pqc.sh <target-host> [port]
+    # 
+    set -euo pipefail
+
+    TARGET=${1:?"Usage: $0 <target-host> [port]"}
+    PORT=${2:-443}
+    KEM="{{ .Values.pqc.kemCurves | first }}"
+
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  auranet-encryption — PQC Verification"
+    echo "  Target : $TARGET:$PORT"
+    echo "  KEM    : $KEM"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    # Run TLS handshake and capture output
+    RESULT=$(echo | openssl s_client \
+      -connect "$TARGET:$PORT" \
+      -groups "$KEM" \
+      -tls1_3 \
+      2>&1) || true
+
+    echo "$RESULT" | grep -E "Server Temp Key|Protocol|Cipher|SPIFFE" || true
+
+    echo ""
+    echo " Checking for Kyber negotiation "
+    if echo "$RESULT" | grep -qi "kyber"; then
+      echo "✅  Kyber KEM negotiated — PQC active"
+    else
+      echo "⚠️   Kyber KEM NOT found in handshake"
+      echo "    Possible reasons:"
+      echo "    1. Cilium Envoy build doesn't include OQS support"
+      echo "    2. CiliumEnvoyConfig not yet reconciled (check: cilium status)"
+      echo "    3. Target pod not running in namespace: {{ .Values.namespace }}"
+    fi
+
+    echo ""
+    echo " TLS Version check "
+    if echo "$RESULT" | grep -q "TLSv1.3"; then
+      echo "✅  TLS 1.3 confirmed"
+    else
+      echo "❌  TLS 1.3 not negotiated — check tls.minVersion in values"
+    fi
+
+    echo ""
+    echo " SPIFFE identity check "
+    SPIFFE=$(echo "$RESULT" | grep "URI:spiffe" || true)
+    if [ -n "$SPIFFE" ]; then
+      echo "SPIFFE identity present: $SPIFFE"
+    else
+      echo "No SPIFFE URI in cert (may be internal cluster cert)"
+    fi
+
+  cilium-status.sh: |
+    #!/bin/bash
+    # Quick check that CiliumEnvoyConfig was accepted by the agent
+    echo " CiliumEnvoyConfig status "
+    kubectl get ciliumenvoyconfig -n {{ .Values.namespace }} -o wide
+
+    echo ""
+    echo " Cilium agent PQC-related logs "
+    kubectl logs -n kube-system -l app.kubernetes.io/name=cilium \
+      --tail=50 | grep -i "kyber\|pqc\|kem\|envoy" || echo "No PQC logs found"
+{{- end }}
