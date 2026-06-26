@@ -105,9 +105,9 @@ async def run_inference_pipeline(brain_a, brain_b, benign_buffer, buffer_lock):
             await nc.publish(subject, json.dumps(alert_payload).encode())
 
         elif is_anomaly_a and symbolic_decision == "Unknown":
-            probability = min((mse_loss / 0.1), 0.99) 
+            probability = min((z_score / (config.ai.Z_SCORE_THRESHOLD * 2)), 0.99) if len(rolling_mse_window) >= MIN_WARMUP_SAMPLES else 0.99
             alert_payload = {"threat": "network_behavior_anomaly", "probability": probability, "raw_context": json.dumps(raw_event)}
-            print(f"[Worker A]  BEHAVIORAL THREAT! MSE Loss: {mse_loss:.4f} -> Firing to {subject}")
+            print(f"[Worker A] BEHAVIORAL THREAT! Z-Score: {z_score:.2f} (MSE: {mse_loss:.4f}) -> Firing to {subject}")
             await nc.publish(subject, json.dumps(alert_payload).encode())
 
         elif (is_anomaly_a or is_anomaly_b) and symbolic_decision == "Safe":
@@ -116,6 +116,7 @@ async def run_inference_pipeline(brain_a, brain_b, benign_buffer, buffer_lock):
             # and we can untrust the flow again using cli again 
             # might make auranet-cli trust timed for 30 minutes or so in the future we will see
             print(f"[Worker A]  High AI Loss overridden by Symbolic Supervisor. Forcing adaptation.")
+            rolling_mse_window.append(mse_loss)
             if config.ai.LEARNING_ENGINE:
                 with buffer_lock:
                     if len(benign_buffer) < config.ai.MAX_BUFFER_SIZE:
@@ -123,6 +124,7 @@ async def run_inference_pipeline(brain_a, brain_b, benign_buffer, buffer_lock):
 
         else:
             # Benign Traffic
+            rolling_mse_window.append(mse_loss)
             if config.ai.LEARNING_ENGINE:
                 with buffer_lock:
                     if len(benign_buffer) < config.ai.MAX_BUFFER_SIZE:
