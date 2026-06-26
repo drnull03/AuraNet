@@ -18,6 +18,8 @@ RUN pip install --no-cache-dir torch==2.0.1 --index-url https://download.pytorch
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY models/ /app/models/
+
 #Copy the engine source code
 COPY src/ /app/src/
 

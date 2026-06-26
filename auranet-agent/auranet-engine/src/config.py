@@ -8,6 +8,9 @@ NATS_URL = os.getenv("NATS_URL", "nats://auranet-nats-broker.auranet-messaging.s
 FL_SERVER_ADDRESS = os.getenv("FL_SERVER_ADDRESS", "auranet-controller.auranet-namespace.svc.cluster.local:8080")
 NATS_SUBJECT_PREFIX = "auranet.events.ai."
 
+
+NLP_WEIGHTS_PATH = os.getenv("NLP_WEIGHTS_PATH", "models/nlp_ae_v1.pth")
+
 #config map stuff
 CONFIG_FILE_PATH = "/etc/auranet/config/ai-config.json"
 
@@ -16,6 +19,7 @@ class DynamicConfig:
         self.last_modified = 0
         self._cache = {
             "inputDim": 13,
+            "nlpTripwire": 2.0,
             "tripwireThreshold": 0.05,
             "localTrainIntervalSec": 120,
             "maxBufferSize": 5000,
@@ -81,6 +85,11 @@ class DynamicConfig:
     def LEARNING_ENGINE(self):
         self._reload_if_changed()
         return self._cache.get("learningEngine", True)
+
+    @property
+    def NLP_TRIPWIRE(self):
+        self._reload_if_changed()
+        return self._cache.get("nlpTripwire", 2.0)
 
 # Instantiate the dynamic config object
 ai = DynamicConfig()

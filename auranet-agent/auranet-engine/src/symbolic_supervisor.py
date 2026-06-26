@@ -38,13 +38,12 @@ class SymbolicSupervisor:
             method = http_data.get("method", "")
 
             # Rule 1: Massive URI/URL (Buffer Overflow / Massive Injection)
-            # 2048 characters is the standard max limit for safe URLs
-            if len(url) > 1024:
+            if len(url) > 512:
                 return "symbolic_uri_too_large"
 
-            # Rule 2: Path Traversal Attempts
-            if "../" in url or "%2e%2e%2f" in url.lower():
-                return "symbolic_path_traversal"
+            # Null bytes are universally malicious in HTTP requests and used to blind parsers.
+            if "%00" in url or "\x00" in url:
+                return "symbolic_null_byte_evasion"
 
             # Rule 3: Banned/Dangerous HTTP Methods
             if method in ["TRACE", "TRACK", "CONNECT"]:
