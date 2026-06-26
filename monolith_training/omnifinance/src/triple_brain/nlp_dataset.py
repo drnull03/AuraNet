@@ -8,7 +8,7 @@ class NlpDataProcessor:
     def __init__(self, json_path, max_seq_length=150):
         self.json_path = json_path
         self.max_seq_length = max_seq_length
-        self.urls = []
+        self.bodies = []
         self.tensor_data = None
 
     def load_and_tokenize(self):
@@ -29,9 +29,9 @@ class NlpDataProcessor:
                 if not l7 or l7.get("type") == "RESPONSE":
                     continue
                     
-                url = l7.get("http", {}).get("url", "")
-                if url:
-                    self.urls.append(url)
+                body = l7.get("http", {}).get("body", "")
+                if body:
+                    self.bodies.append(body)
 
         print(f"✅ Extracted {len(self.urls)} HTTP URLs.")
         self._build_tensor()
@@ -69,6 +69,7 @@ class NlpDataset(Dataset):
 
 if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
+    # bascially the same data dk why i added /body my bad copied to that dir
     json_train = os.path.join(current_dir, "../../data/raw/body/hubble_training_data.json")
     json_test = os.path.join(current_dir, "../../data/raw/body/hubble_testing_data.json")
     
