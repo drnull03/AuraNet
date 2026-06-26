@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-threat-matrix
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: auranet
+data:
+  threat_matrix.conf: |
+{{ .Values.threatMatrix | indent 4 }}

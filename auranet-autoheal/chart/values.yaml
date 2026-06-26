@@ -9,3 +9,21 @@ nats:
   url: "nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222"
 
 namespace: auranet-namespace
+
+threatMatrix: |-
+  # === Neurosymbolic AI Threats ===
+  symbolic_null_byte_evasion=100
+  symbolic_uri_too_large=80
+  symbolic_banned_method=60
+  l7_payload_anomaly=90
+  l7_body_anomaly=90
+  network_behavior_anomaly=40
+
+  # === Tetragon Runtime Threats ===
+  nc_execution=70
+  unauthorized_file_read=60
+  privilege_escalation=100
+  unexpected_outbound_traffic=50
+
+  # === Fallback ===
+  unknown_anomaly=30

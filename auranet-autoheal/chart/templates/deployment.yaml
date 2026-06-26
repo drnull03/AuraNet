@@ -27,3 +27,16 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        
+        volumeMounts:
+        - name: threat-matrix-volume
+          mountPath: /etc/auranet/config/
+          readOnly: true
+          
+      volumes:
+      - name: threat-matrix-volume
+        configMap:
+          name: {{ .Release.Name }}-threat-matrix
+          items:
+            - key: threat_matrix.conf
+              path: threat_matrix.conf
