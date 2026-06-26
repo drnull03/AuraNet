@@ -84,8 +84,9 @@ async def run_inference_pipeline(brain_a, brain_b, benign_buffer, buffer_lock):
             await nc.publish(subject, json.dumps(alert_payload).encode())
 
         elif is_anomaly_b and symbolic_decision == "Unknown":
+            # brain B take higher priority than brain A because it is static
             probability = min((nlp_loss / (config.ai.NLP_TRIPWIRE * 2)), 0.99)
-            alert_payload = {"threat": "l7_payload_anomaly", "probability": probability, "raw_context": json.dumps(raw_event)}
+            alert_payload = {"threat": "payload_anomaly", "probability": probability, "raw_context": json.dumps(raw_event)}
             print(f"[Worker A]  NLP PAYLOAD THREAT! CE Loss: {nlp_loss:.4f} -> Firing to {subject}")
             await nc.publish(subject, json.dumps(alert_payload).encode())
 
@@ -96,6 +97,10 @@ async def run_inference_pipeline(brain_a, brain_b, benign_buffer, buffer_lock):
             await nc.publish(subject, json.dumps(alert_payload).encode())
 
         elif (is_anomaly_a or is_anomaly_b) and symbolic_decision == "Safe":
+            # this is for when we delegate trust with auranet-cli
+            # after delegating trust brain A can learn the new flows
+            # and we can untrust the flow again using cli again 
+            # might make auranet-cli trust timed for 30 minutes or so in the future we will see
             print(f"[Worker A]  High AI Loss overridden by Symbolic Supervisor. Forcing adaptation.")
             if config.ai.LEARNING_ENGINE:
                 with buffer_lock:
