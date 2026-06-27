@@ -2,17 +2,14 @@ const { Tail } = require('tail');
 const { connect, StringCodec } = require('nats');
 const fs = require('fs');
 
-
 // kept the name to tetragon.log for legacy purposes
 // this file is present on every node 
 const LOG_PATH = process.env.LOG_PATH || '/var/run/cilium/tetragon/tetragon.log';
-//the same nat url
+// the same nat url
 const NATS_URL = process.env.NATS_URL || 'nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222';
 const sc = StringCodec();
 
 
-// map specific executables or files to the exact threat strings expected by our Trust Engine
-//gonna find a way to make this dynamic or something
 const THREAT_MAP = {
     // Shells & Remote Access
     'nc': 'nc_execution',
@@ -52,12 +49,17 @@ const THREAT_MAP = {
     'authorized_keys': 'ssh_key_access',
     '/run/secrets/kubernetes.io/serviceaccount/token': 'k8s_token_theft'
 };
+
+// Map to store recent alerts to prevent double-firing (Deduplication)
+const recentAlerts = new Map();
+const DEDUPE_WINDOW_MS = 2000; // 2 seconds
+
 async function startForwarder() {
     console.log(`[Runtime Forwarder] Starting up...`);
     
     // Ensure the log file exists before tailing
     if (!fs.existsSync(LOG_PATH)) {
-        console.error(`[Runtime Forwarder] CRITICAL:  log file not found at ${LOG_PATH}`);
+        console.error(`[Runtime Forwarder] CRITICAL: log file not found at ${LOG_PATH}`);
         console.error(`[Runtime Forwarder] Are you sure the volume is mounted correctly?`);
         process.exit(1);
     }
@@ -68,7 +70,7 @@ async function startForwarder() {
         console.log("[Runtime Forwarder] Connected to NATS broker successfully!");
 
         const tail = new Tail(LOG_PATH);
-        console.log(`[Runtime Forwarder]  Actively tailing eBPF kernel logs: ${LOG_PATH}\n`);
+        console.log(`[Runtime Forwarder] Actively tailing eBPF kernel logs: ${LOG_PATH}\n`);
 
         tail.on("line", (data) => {
             try {
@@ -78,12 +80,12 @@ async function startForwarder() {
                 let functionName = null;
                 let isExecEvent = false;
 
-                // Check for native Execution events (Bash, nc, nmap, etc.)
+                // 1. Check for native Execution events (Bash, nc, nmap, etc.)
                 if (event.process_exec) {
                     processData = event.process_exec.process;
                     isExecEvent = true;
                 } 
-                // Check for custom Kernel Probes (File reads like /etc/passwd)
+                // 2. Check for custom Kernel Probes (File reads like /etc/passwd)
                 else if (event.process_kprobe) {
                     processData = event.process_kprobe.process;
                     functionName = event.process_kprobe.function_name;
@@ -95,7 +97,6 @@ async function startForwarder() {
 
                 const namespace = processData.pod.namespace;
                 const workload = processData.pod.workload || 'unknown-workload';
-                
                 const podName = processData.pod.name; 
                 
                 // Ignore system namespaces to prevent infinite loops
@@ -106,7 +107,6 @@ async function startForwarder() {
 
                 // Analyze Execution Events (from process_exec)
                 if (isExecEvent) {
-                    // Extract just the binary name (e.g., "/bin/bash" -> "bash")
                     const binary = processData.binary.split('/').pop();
                     threatSignature = THREAT_MAP[binary];
                     actionContext = `Executed binary: ${binary}`;
@@ -127,15 +127,30 @@ async function startForwarder() {
                     }
                 }
 
-                // If we matched a threat, fire it to NATS!
+                // If we matched a threat, verify it's not a duplicate before firing to NATS
                 if (threatSignature) {
-                    const subject = `auranet.events.runtime.${workload}`;
+                    const now = Date.now();
+                    const alertKey = `${podName}-${threatSignature}-${actionContext}`;
                     
+                    // Deduplication check
+                    if (recentAlerts.has(alertKey) && (now - recentAlerts.get(alertKey) < DEDUPE_WINDOW_MS)) {
+                        return; // Silently drop the duplicate
+                    }
+                    
+                    // Log it and update the cache
+                    recentAlerts.set(alertKey, now);
+                    
+                    // Periodic cache cleanup to prevent memory leaks
+                    if (recentAlerts.size > 1000) {
+                        recentAlerts.clear();
+                    }
+
+                    const subject = `auranet.events.runtime.${workload}`;
                     const payload = {
                         source: "runtime_ebpf",
                         threat: threatSignature,
                         context: actionContext,
-                        timestamp: Date.now()
+                        timestamp: now
                     };
 
                     console.log(`🚨 [THREAT DETECTED] Host Pod: ${podName} -> ${threatSignature}`);
