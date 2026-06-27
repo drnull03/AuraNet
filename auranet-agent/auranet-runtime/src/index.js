@@ -7,21 +7,35 @@ const fs = require('fs');
 const LOG_PATH = process.env.LOG_PATH || '/var/run/cilium/tetragon/tetragon.log';
 // the same nat url
 const NATS_URL = process.env.NATS_URL || 'nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222';
-const THREAT_MAP_PATH = process.env.THREAT_MAP_PATH || '/etc/auranet/runtime/threat-map.json';
+const THREAT_MAP_PATH = process.env.THREAT_MAP_PATH || '/etc/auranet/runtime/THREAT_MAP.conf';
 const sc = StringCodec();
 
 //load the injectable map using helm chart configmap
 let THREAT_MAP = {};
 try {
     const rawData = fs.readFileSync(THREAT_MAP_PATH, 'utf8');
-    THREAT_MAP = JSON.parse(rawData);
+    
+    // Parse the .conf file line by line
+    rawData.split('\n').forEach(line => {
+        const trimmed = line.trim();
+        // Ignore empty lines and comments
+        if (trimmed && !trimmed.startsWith('#')) {
+            // Split only on the first '=' in case the threat signature contains one
+            const splitIndex = trimmed.indexOf('=');
+            if (splitIndex > 0) {
+                const key = trimmed.substring(0, splitIndex).trim();
+                const value = trimmed.substring(splitIndex + 1).trim();
+                THREAT_MAP[key] = value;
+            }
+        }
+    });
+
     console.log(`[Runtime Forwarder] Successfully loaded Threat Map with ${Object.keys(THREAT_MAP).length} signatures from Helm.`);
 } catch (err) {
     console.error(`[Runtime Forwarder] CRITICAL: Failed to load Threat Map from ${THREAT_MAP_PATH}`);
     console.error(err.message);
     process.exit(1);
 }
-
 // Map to store recent alerts to prevent double-firing (Deduplication)
 // dumb solution but it is  a linux kernel thingy can't do anything about it
 // cat read the file twice once when it read the meta data and the second time when it reads the file

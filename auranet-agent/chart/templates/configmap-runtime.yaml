@@ -6,6 +6,6 @@ metadata:
   labels:
     app: auranet-runtime
 data:
-  # Helm's toJson function magically converts your YAML block into perfect JSON!
-  threat-map.json: |
-    {{ toJson .Values.runtime.threatMap }}
+  # This mounts exactly as a file named THREAT_MAP.conf
+  THREAT_MAP.conf: |
+{{ .Values.runtime.threatMapConf | indent 4 }}

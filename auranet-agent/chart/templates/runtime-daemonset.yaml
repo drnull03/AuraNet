@@ -17,7 +17,7 @@ spec:
         component: forwarder
     spec:
       hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet # Remember our DNS fix!
+      dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: forwarder
         image: "{{ .Values.runtime.image.repository }}:{{ .Values.runtime.image.tag }}"
@@ -27,12 +27,14 @@ spec:
           value: {{ .Values.runtime.logPath }}
         - name: NATS_URL
           value: {{ .Values.runtime.natsUrl }}
+        # Point to the injected .conf file
         - name: THREAT_MAP_PATH
-          value: /etc/auranet/runtime/threat-map.json
+          value: /etc/auranet/runtime/THREAT_MAP.conf
         volumeMounts:
         - name: tetragon-logs
           mountPath: /var/run/cilium/tetragon
           readOnly: true
+        # Mount the config folder
         - name: config-volume
           mountPath: /etc/auranet/runtime
           readOnly: true
@@ -41,6 +43,7 @@ spec:
         hostPath:
           path: /var/run/cilium/tetragon
           type: DirectoryOrCreate
+      # Attach the ConfigMap
       - name: config-volume
         configMap:
           name: auranet-runtime-config
