@@ -1,0 +1,148 @@
+#
+# The chart deploys a DaemonSet with TWO containers per node:
+#
+#  initContainer: auranet-builder
+#    • Mounts the host's /lib/modules and /usr/src (kernel headers)
+#    • Runs clang on-node to compile syscall_trace.bpf.c
+#    • Writes syscall_trace.bpf.o → shared emptyDir (/ebpf)
+#    • Exits when done (pod continues to next init / main container)
+#
+#  container: auranet-loader
+#    • Reads the .o from the shared emptyDir
+#    • Loads it into the kernel via BCC (libbpf under the hood)
+#    • Attaches raw_tracepoint/sys_enter + sys_exit
+#    • Drains the BPF ring buffer → JSON-lines on the host
+
+# Images
+builder:
+  image:
+    repository: ghcr.io/your-org/auranet-builder
+    tag: "0.2.0"
+    pullPolicy: IfNotPresent
+
+loader:
+  image:
+    repository: ghcr.io/your-org/auranet-loader
+    tag: "0.2.0"
+    pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# Tracer configuration 
+config:
+  # JSON-lines output path inside the container (and on the host via hostPath)
+  output: /var/log/auranet/events.json
+
+  # Trace only a specific PID (0 = all processes on the node)
+  pid: 0
+
+  # Comma-separated syscall names to record. Empty = capture everything.
+  # Example: "execve,execveat,connect,openat,unlink"
+  filterSyscalls: ""
+
+  # Rotate the output file when it reaches this size (MiB). 0 = disabled.
+  rotateMb: 100
+
+  # Print every event to stderr in addition to the JSON file
+  verbose: false
+
+  logLevel: INFO
+
+# Builder (initContainer) settings
+builder:
+  # Extra clang flags forwarded to build-ebpf.sh via EXTRA_CFLAGS
+  extraCflags: ""
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# Output persistence 
+output:
+  # Host path where JSON events are written (survives pod restarts)
+  hostPath: /var/log/auranet
+  mountPath: /var/log/auranet
+
+# Kernel headers host paths 
+# The builder initContainer needs access to the node's kernel headers.
+# These are mounted read-only from the host.
+kernelHeaders:
+  # /lib/modules/<kver>/build symlink lives here
+  libModules:
+    hostPath: /lib/modules
+    mountPath: /lib/modules
+
+  # Kernel source headers (e.g. linux-headers-$(uname -r))
+  usrSrc:
+    hostPath: /usr/src
+    mountPath: /usr/src
+
+# BTF vmlinux (for CO-RE, optional but recommended) 
+btf:
+  enabled: true
+  hostPath: /sys/kernel/btf/vmlinux
+  mountPath: /sys/kernel/btf/vmlinux
+
+# Resource limits (loader container) 
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+#  Security context 
+# Both containers need elevated privileges for eBPF.
+securityContext:
+  privileged: true
+  # If your cluster policy forbids privileged, use capabilities instead:
+  # privileged: false
+  # capabilities:
+  #   add: [BPF, SYS_ADMIN, PERFMON, NET_ADMIN]
+
+# The loader must see the host PID namespace (kernel eBPF context)
+hostPID: true
+hostNetwork: false
+
+#  Node selection 
+nodeSelector: {}
+
+tolerations:
+  # Ensure every node is traced, including control-plane nodes
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
+  - key: node-role.kubernetes.io/master
+    operator: Exists
+    effect: NoSchedule
+
+affinity: {}
+
+# Service account 
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+#  Pod metadata
+podAnnotations: {}
+podLabels: {}
+
+# DaemonSet update strategy
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+
+#  Extra env vars (appended to both containers) 
+extraEnv: []
+# - name: MY_VAR
+#   value: "foo"
+
+nameOverride: ""
+fullnameOverride: ""

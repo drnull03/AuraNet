@@ -1,0 +1,32 @@
+# ── auranet-loader (runtime) ──────────────────────────────────────────────────
+# This image runs as the MAIN container in the DaemonSet.
+# It expects the compiled eBPF .o to already exist at /ebpf/syscall_trace.bpf.o
+# (placed there by the builder initContainer via a shared emptyDir volume).
+#
+# It then:
+#   1. Loads the pre-compiled .o via BCC's BPF() with src_file= path
+#   2. Attaches raw_tracepoint/sys_enter and sys_exit
+#   3. Drains the ring buffer and writes JSON-lines to the output file
+# ─────────────────────────────────────────────────────────────────────────────
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3 \
+        python3-bpfcc \
+        bpfcc-tools \
+        libbpf0 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Loader source (no eBPF C here — that's compiled on-node by the initContainer)
+COPY loader/ ./loader/
+
+RUN mkdir -p /var/log/auranet /ebpf
+
+ENV AURANET_OUTPUT=/var/log/auranet/events.json \
+    AURANET_LOG_LEVEL=INFO \
+    # Path where initContainer drops the compiled .o
+    AURANET_BPF_OBJ=/ebpf/syscall_trace.bpf.o
+
+ENTRYPOINT ["python3", "-m", "loader.main"]

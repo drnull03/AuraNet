@@ -1,0 +1,6 @@
+chart/
+*.md
+*.json
+.git/
+__pycache__/
+*.pyc

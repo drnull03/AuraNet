@@ -1,0 +1,172 @@
+{{- $fullName := include "auranet-loader.fullname" . -}}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ $fullName }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "auranet-loader.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "auranet-loader.selectorLabels" . | nindent 6 }}
+  updateStrategy:
+    type: {{ .Values.updateStrategy.type }}
+    {{- if eq .Values.updateStrategy.type "RollingUpdate" }}
+    rollingUpdate:
+      maxUnavailable: {{ .Values.updateStrategy.rollingUpdate.maxUnavailable }}
+    {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "auranet-loader.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "auranet-loader.serviceAccountName" . }}
+
+      # Required: eBPF attaches in the host PID/network namespace
+      hostPID: {{ .Values.hostPID }}
+      hostNetwork: {{ .Values.hostNetwork }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      # ── Volumes ─────────────────────────────────────────────────────────────
+      volumes:
+        # Shared between initContainer (builder) and main container (loader).
+        # The builder writes syscall_trace.bpf.o here; the loader reads it.
+        - name: ebpf-obj
+          emptyDir: {}
+
+        # JSON event output – persisted on host so it survives pod restarts
+        - name: output-dir
+          hostPath:
+            path: {{ .Values.output.hostPath }}
+            type: DirectoryOrCreate
+
+        # Host /sys – needed for eBPF map pinning and tracepoint access
+        - name: sys
+          hostPath:
+            path: /sys
+
+        # Kernel modules dir – contains the build/ symlink to headers
+        - name: lib-modules
+          hostPath:
+            path: {{ .Values.kernelHeaders.libModules.hostPath }}
+
+        # Kernel source headers (linux-headers-<kver>)
+        - name: usr-src
+          hostPath:
+            path: {{ .Values.kernelHeaders.usrSrc.hostPath }}
+
+        {{- if .Values.btf.enabled }}
+        # BTF vmlinux – enables CO-RE type information
+        - name: btf-vmlinux
+          hostPath:
+            path: {{ .Values.btf.hostPath }}
+            type: File
+        {{- end }}
+
+      # ── initContainer: build the eBPF object on THIS node ──────────────────
+      # Runs once per pod start. Exits 0 on success; pod fails to start on non-0.
+      initContainers:
+        - name: auranet-builder
+          image: {{ .Values.builder.image.repository }}:{{ .Values.builder.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.builder.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            - name: OUTPUT_DIR
+              value: /ebpf
+            - name: EXTRA_CFLAGS
+              value: {{ .Values.builder.extraCflags | quote }}
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.builder.resources | nindent 12 }}
+          volumeMounts:
+            # Write compiled .o here – shared with the loader container
+            - name: ebpf-obj
+              mountPath: /ebpf
+            # Kernel headers – builder needs these to compile
+            - name: lib-modules
+              mountPath: {{ .Values.kernelHeaders.libModules.mountPath }}
+              readOnly: true
+            - name: usr-src
+              mountPath: {{ .Values.kernelHeaders.usrSrc.mountPath }}
+              readOnly: true
+            # /proc is implicitly inherited (hostPID: true) – uname -r works
+
+      # ── Main container: load & run the eBPF program ────────────────────────
+      containers:
+        - name: auranet-loader
+          image: {{ .Values.loader.image.repository }}:{{ .Values.loader.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.loader.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            # Tell the loader where to find the .o (written by initContainer)
+            - name: AURANET_BPF_OBJ
+              value: /ebpf/syscall_trace.bpf.o
+            - name: AURANET_OUTPUT
+              value: {{ .Values.config.output | quote }}
+            - name: AURANET_PID
+              value: {{ .Values.config.pid | quote }}
+            - name: AURANET_SYSCALLS
+              value: {{ .Values.config.filterSyscalls | quote }}
+            - name: AURANET_ROTATE_MB
+              value: {{ .Values.config.rotateMb | quote }}
+            - name: AURANET_VERBOSE
+              value: {{ .Values.config.verbose | quote }}
+            - name: AURANET_LOG_LEVEL
+              value: {{ .Values.config.logLevel | quote }}
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            # Read compiled .o from shared emptyDir
+            - name: ebpf-obj
+              mountPath: /ebpf
+              readOnly: true
+            # Write JSON events to host
+            - name: output-dir
+              mountPath: {{ .Values.output.mountPath }}
+            # /sys required for eBPF tracepoint attachment
+            - name: sys
+              mountPath: /sys
+            {{- if .Values.btf.enabled }}
+            - name: btf-vmlinux
+              mountPath: {{ .Values.btf.mountPath }}
+              readOnly: true
+            {{- end }}
