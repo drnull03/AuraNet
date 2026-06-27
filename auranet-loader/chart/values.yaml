@@ -1,28 +1,13 @@
-#
-# The chart deploys a DaemonSet with TWO containers per node:
-#
-#  initContainer: auranet-builder
-#    • Mounts the host's /lib/modules and /usr/src (kernel headers)
-#    • Runs clang on-node to compile syscall_trace.bpf.c
-#    • Writes syscall_trace.bpf.o → shared emptyDir (/ebpf)
-#    • Exits when done (pod continues to next init / main container)
-#
-#  container: auranet-loader
-#    • Reads the .o from the shared emptyDir
-#    • Loads it into the kernel via BCC (libbpf under the hood)
-#    • Attaches raw_tracepoint/sys_enter + sys_exit
-#    • Drains the BPF ring buffer → JSON-lines on the host
-
 # Images
 builder:
   image:
-    repository: ghcr.io/your-org/auranet-builder
+    repository: auranet/builder
     tag: "0.2.0"
     pullPolicy: IfNotPresent
 
 loader:
   image:
-    repository: ghcr.io/your-org/auranet-loader
+    repository: auranet/loader
     tag: "0.2.0"
     pullPolicy: IfNotPresent
 

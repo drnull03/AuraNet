@@ -51,7 +51,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
 
-      # ── Volumes ─────────────────────────────────────────────────────────────
+      # Volumes 
       volumes:
         # Shared between initContainer (builder) and main container (loader).
         # The builder writes syscall_trace.bpf.o here; the loader reads it.
@@ -87,7 +87,7 @@ spec:
             type: File
         {{- end }}
 
-      # ── initContainer: build the eBPF object on THIS node ──────────────────
+      #  initContainer: build the eBPF object on THIS node 
       # Runs once per pod start. Exits 0 on success; pod fails to start on non-0.
       initContainers:
         - name: auranet-builder
@@ -122,7 +122,7 @@ spec:
               readOnly: true
             # /proc is implicitly inherited (hostPID: true) – uname -r works
 
-      # ── Main container: load & run the eBPF program ────────────────────────
+      # Main container: load & run the eBPF program 
       containers:
         - name: auranet-loader
           image: {{ .Values.loader.image.repository }}:{{ .Values.loader.image.tag | default .Chart.AppVersion }}

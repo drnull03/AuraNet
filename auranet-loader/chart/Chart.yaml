@@ -15,4 +15,4 @@ keywords:
   - observability
 maintainers:
   - name: auranet
-home: https://github.com/your-org/auranet-loader
+home: ./auranet-loader

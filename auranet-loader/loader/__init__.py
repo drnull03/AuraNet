@@ -18,7 +18,6 @@ from pathlib import Path
 
 log = logging.getLogger("auranet")
 
-# ─── Event layout (must exactly match C struct syscall_event) ─────────────────
 #
 # struct syscall_event {
 #     u64 timestamp_ns;          +0   (8)
@@ -51,11 +50,10 @@ _STRUCT = struct.Struct(
 EVENT_SIZE = _STRUCT.size   # 112
 
 
-# ─── Syscall name table (x86_64) — inline top-100 for zero import cost ────────
+
 from .syscall_names import SYSCALL_NAMES
 
 
-# ─── Loader ───────────────────────────────────────────────────────────────────
 
 class AuranetLoader:
     def __init__(self, cfg):

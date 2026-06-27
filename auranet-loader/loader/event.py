@@ -1,5 +1,8 @@
 """Typed event dataclass (optional – used for future extensions)."""
 
+
+# can be ignored for now
+
 from dataclasses import dataclass, field
 from typing import List, Optional
 

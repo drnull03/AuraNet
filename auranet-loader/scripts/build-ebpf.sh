@@ -1,21 +1,18 @@
 #!/usr/bin/env bash
-# ── build-ebpf.sh ─────────────────────────────────────────────────────────────
 # Runs inside the builder initContainer on each Kubernetes node.
 # Detects the host kernel version, finds the right headers, compiles the eBPF
 # object, and drops it into /output (a shared emptyDir volume).
-# ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
 OUTPUT_DIR="${OUTPUT_DIR:-/output}"
 SRC_FILE="/build/syscall_trace.bpf.c"
 OBJ_FILE="${OUTPUT_DIR}/syscall_trace.bpf.o"
 
-# ── 1. Detect running kernel ──────────────────────────────────────────────────
 # /proc is mounted from the host so uname -r reflects the real kernel
 KVER=$(uname -r)
 echo "[auranet-builder] Kernel version: ${KVER}"
 
-# ── 2. Locate kernel headers ──────────────────────────────────────────────────
+# Locate kernel headers
 # The DaemonSet mounts /lib/modules and /usr/src from the host.
 # Standard header locations (in priority order):
 HEADER_PATHS=(
@@ -50,7 +47,7 @@ if [ -z "${KERNEL_HEADERS}" ]; then
     exit 1
 fi
 
-# ── 3. Locate arch-specific headers ──────────────────────────────────────────
+# Locate arch-specific headers 
 ARCH=$(uname -m)
 case "${ARCH}" in
     x86_64)  BPF_ARCH="x86" ;;
@@ -76,10 +73,10 @@ for p in "${ARCH_INC_CANDIDATES[@]}"; do
     fi
 done
 
-# ── 4. Prepare output directory ───────────────────────────────────────────────
+#  Prepare output directory 
 mkdir -p "${OUTPUT_DIR}"
 
-# ── 5. Compile eBPF object ────────────────────────────────────────────────────
+#  Compile eBPF object 
 CLANG="${CLANG:-clang}"
 EXTRA_CFLAGS="${EXTRA_CFLAGS:-}"
 
@@ -118,9 +115,9 @@ echo "[auranet-builder] ${CLANG} ${CFLAGS[*]} -c ${SRC_FILE} -o ${OBJ_FILE}"
 echo "[auranet-builder] ✓ Compiled: ${OBJ_FILE}"
 ls -lh "${OBJ_FILE}"
 
-# ── 6. Verify it's a valid BPF ELF ───────────────────────────────────────────
+# Verify it's a valid BPF ELF 
 file "${OBJ_FILE}" | grep -q "ELF" && \
-    echo "[auranet-builder] ✓ Verified: valid ELF object" || \
+    echo "[auranet-builder] Verified: valid ELF object" || \
     (echo "[auranet-builder] ERROR: output is not an ELF file"; exit 1)
 
 echo "[auranet-builder] Build complete. Loader container can now start."
