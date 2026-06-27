@@ -1,10 +1,14 @@
 apiVersion: cilium.io/v1alpha1
 kind: TracingPolicyNamespaced
 metadata:
-  name: test-ebpf-interceptor
+  name: auranet-master-threat-policy
   namespace: default
 spec:
   kprobes:
+  
+  # =======================================================
+  # 1. EXECUTION HOOK (Shells, Droppers, Escapes, Miners)
+  # =======================================================
   - call: "sys_execve"
     syscall: true
     args:
@@ -15,5 +19,12 @@ spec:
       - index: 0
         operator: "Equal"
         values:
+        # Shells & Remote Access
+        - "/bin/sh"
         - "/bin/bash"
+        - "/bin/zsh"
+        - "/bin/ash"
+        - "/usr/bin/nc"
         - "/bin/nc"
+        - "/usr/bin/ncat"
+        - "/usr/bin/netcat"

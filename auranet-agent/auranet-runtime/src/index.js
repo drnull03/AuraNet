@@ -74,66 +74,78 @@ async function startForwarder() {
             try {
                 const event = JSON.parse(data);
                 
-                // We are looking for the process_kprobe events triggered by our TracingPolicies
-                if (event.process_kprobe) {
-                    const processData = event.process_kprobe.process;
-                    const functionName = event.process_kprobe.function_name; // e.g., sys_execve or security_file_open
-                    
-                    if (!processData || !processData.pod) return; // Ignore non-Kubernetes host events
+                let processData = null;
+                let functionName = null;
+                let isExecEvent = false;
 
-                    const namespace = processData.pod.namespace;
-                    const labels = processData.pod.labels || {};
-                    const workload = labels['app'] || labels['k8s-app'] || 'unknown-workload';
-                    
-                    const podName = processData.pod.name; 
-                    
-                    // Ignore kube-system and our own security pods to prevent infinite loops
-                    if (namespace === 'kube-system' || namespace === 'auranet-namespace') return;
+                // Check for native Execution events (Bash, nc, nmap, etc.)
+                if (event.process_exec) {
+                    processData = event.process_exec.process;
+                    isExecEvent = true;
+                } 
+                // Check for custom Kernel Probes (File reads like /etc/passwd)
+                else if (event.process_kprobe) {
+                    processData = event.process_kprobe.process;
+                    functionName = event.process_kprobe.function_name;
+                } else {
+                    return; // Ignore other event types (like process_exit)
+                }
+                
+                if (!processData || !processData.pod) return; 
 
-                    let threatSignature = null;
-                    let actionContext = '';
+                const namespace = processData.pod.namespace;
+                const labels = processData.pod.labels || {};
+                const workload = labels['app'] || labels['k8s-app'] || 'unknown-workload';
+                
+                const podName = processData.pod.name; 
+                
+                // Ignore system namespaces to prevent infinite loops
+                if (namespace === 'kube-system' || namespace === 'auranet-namespace') return;
 
-                    // Analyze execution events 
-                    if (functionName === 'sys_execve') {
-                        const binary = processData.binary.split('/').pop(); // Extracts Binary Name
-                        threatSignature = THREAT_MAP[binary];
-                        actionContext = `Executed binary: ${binary}`;
-                    } 
-                    // Analyze file open events (LFI, Token Theft)
-                    else if (functionName === 'security_file_open') {
-                        const args = event.process_kprobe.args || [];
-                        if (args.length > 0 && args[0].file_arg) {
-                            const filePath = args[0].file_arg.path;
-                            const fileName = filePath.split('/').pop();
-                            
-                            // Check exact path mapping or fuzzy matching for tokens
-                            threatSignature = THREAT_MAP[filePath] || THREAT_MAP[fileName] || 
-                                              (filePath.includes('token') ? 'unauthorized_file_read' : null);
-                            actionContext = `Accessed file: ${filePath}`;
-                        }
-                    }
+                let threatSignature = null;
+                let actionContext = '';
 
-                    // if  matched a threat, fire it to NATS!
-                    if (threatSignature) {
+                // Analyze Execution Events (from process_exec)
+                if (isExecEvent) {
+                    // Extract just the binary name (e.g., "/bin/bash" -> "bash")
+                    const binary = processData.binary.split('/').pop();
+                    threatSignature = THREAT_MAP[binary];
+                    actionContext = `Executed binary: ${binary}`;
+                } 
+                // Analyze File Open Events (from process_kprobe)
+                else if (functionName && functionName.includes('security_file_open')) {
+                    const args = event.process_kprobe.args || [];
+                    if (args.length > 0 && args[0].file_arg) {
+                        const filePath = args[0].file_arg.path;
+                        const fileName = filePath.split('/').pop();
                         
+                        threatSignature = THREAT_MAP[filePath] || 
+                                          THREAT_MAP[fileName] || 
+                                          (filePath.includes('token') ? 'k8s_token_theft' : null) ||
+                                          (filePath.includes('.ssh') ? 'ssh_key_access' : null);
                         
-                        const subject = `auranet.events.runtime.${workload}`;
-                        
-                        const payload = {
-                            source: "runtime_ebpf",
-                            threat: threatSignature,
-                            context: actionContext,
-                            timestamp: Date.now()
-                        };
-
-                        console.log(` [THREAT DETECTED] Host Pod: ${podName} -> ${threatSignature}`);
-                        console.log(`   Publishing to Workload Subject: ${subject}`);
-                        
-                        nc.publish(subject, sc.encode(JSON.stringify(payload)));
+                        actionContext = `Accessed file: ${filePath}`;
                     }
                 }
+
+                // If we matched a threat, fire it to NATS!
+                if (threatSignature) {
+                    const subject = `auranet.events.runtime.${workload}`;
+                    
+                    const payload = {
+                        source: "runtime_ebpf",
+                        threat: threatSignature,
+                        context: actionContext,
+                        timestamp: Date.now()
+                    };
+
+                    console.log(`🚨 [THREAT DETECTED] Host Pod: ${podName} -> ${threatSignature}`);
+                    console.log(`   Publishing to Workload Subject: ${subject}`);
+                    
+                    nc.publish(subject, sc.encode(JSON.stringify(payload)));
+                }
             } catch (parseErr) {
-                // Ignore standard parsing errors from malformed log lines
+                // Ignore malformed lines
             }
         });
 

@@ -4,12 +4,12 @@ metadata:
   name: auranet-runtime-test
   namespace: default
 spec:
-  # Use host network so it can instantly reach the NATS broker
   hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet # <-- ADD THIS LINE
   containers:
   - name: forwarder
     image: auranet/runtime:v1
-    imagePullPolicy: Never # Forces KinD to use the image you just loaded
+    imagePullPolicy: Never
     env:
     - name: LOG_PATH
       value: /var/run/cilium/tetragon/tetragon.log
