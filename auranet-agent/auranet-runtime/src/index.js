@@ -2,28 +2,56 @@ const { Tail } = require('tail');
 const { connect, StringCodec } = require('nats');
 const fs = require('fs');
 
+
+// kept the name to tetragon.log for legacy purposes
+// this file is present on every node 
 const LOG_PATH = process.env.LOG_PATH || '/var/run/cilium/tetragon/tetragon.log';
+//the same nat url
 const NATS_URL = process.env.NATS_URL || 'nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222';
 const sc = StringCodec();
 
 
-// Map specific executables or files to the exact threat strings expected by our Trust Engine
+// map specific executables or files to the exact threat strings expected by our Trust Engine
+//gonna find a way to make this dynamic or something
 const THREAT_MAP = {
+    // Shells & Remote Access
     'nc': 'nc_execution',
     'ncat': 'nc_execution',
-    'sh': 'nc_execution',    
-    'bash': 'nc_execution',   
-    'nmap': 'unexpected_outbound_traffic', 
-    'curl': 'unexpected_outbound_traffic',
-    'wget': 'unexpected_outbound_traffic',
+    'netcat': 'nc_execution',
+    'sh': 'reverse_shell_detected',    
+    'bash': 'reverse_shell_detected',
+    'zsh': 'reverse_shell_detected',
+    'ash': 'reverse_shell_detected',
+    
+    // Reconnaissance & Droppers
+    'nmap': 'nmap_scan_detected', 
+    'curl': 'suspicious_binary_download',
+    'wget': 'suspicious_binary_download',
+    'tcpdump': 'network_sniffing',
+    'tshark': 'network_sniffing',
+
+    // Privilege & Escapes
     'sudo': 'privilege_escalation',
     'su': 'privilege_escalation',
-    'tcpdump': 'unknown_anomaly', 
+    'nsenter': 'container_escape_attempt',
+    'chroot': 'container_escape_attempt',
+    'unshare': 'container_escape_attempt',
+
+    // Deep System Attacks
+    'insmod': 'kernel_module_injection',
+    'modprobe': 'kernel_module_injection',
+    'rmmod': 'kernel_module_injection',
+    'xmrig': 'crypto_miner_execution',
+
+    // Sensitive Files
     '/etc/passwd': 'unauthorized_file_read',
     '/etc/shadow': 'unauthorized_file_read',
-    'token': 'unauthorized_file_read'
+    '/dev/mem': 'memory_dump_attempt',
+    '/dev/kmem': 'memory_dump_attempt',
+    'id_rsa': 'ssh_key_access',
+    'authorized_keys': 'ssh_key_access',
+    '/run/secrets/kubernetes.io/serviceaccount/token': 'k8s_token_theft'
 };
-
 async function startForwarder() {
     console.log(`[Runtime Forwarder] Starting up...`);
     
@@ -57,7 +85,6 @@ async function startForwarder() {
                     const labels = processData.pod.labels || {};
                     const workload = labels['app'] || labels['k8s-app'] || 'unknown-workload';
                     
-                    // We only extract podName for local logging, we DO NOT use it in the NATS subject
                     const podName = processData.pod.name; 
                     
                     // Ignore kube-system and our own security pods to prevent infinite loops
@@ -88,8 +115,8 @@ async function startForwarder() {
 
                     // if  matched a threat, fire it to NATS!
                     if (threatSignature) {
-                        // STRICT CONFORMANCE TO TRUST ENGINE 
-                        // Expected: auranet.events.runtime.<workload> (exactly 4 parts)
+                        
+                        
                         const subject = `auranet.events.runtime.${workload}`;
                         
                         const payload = {
