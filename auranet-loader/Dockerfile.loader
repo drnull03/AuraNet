@@ -1,4 +1,3 @@
-# ── auranet-loader (runtime) ──────────────────────────────────────────────────
 # This image runs as the MAIN container in the DaemonSet.
 # It expects the compiled eBPF .o to already exist at /ebpf/syscall_trace.bpf.o
 # (placed there by the builder initContainer via a shared emptyDir volume).
@@ -7,7 +6,6 @@
 #   1. Loads the pre-compiled .o via BCC's BPF() with src_file= path
 #   2. Attaches raw_tracepoint/sys_enter and sys_exit
 #   3. Drains the ring buffer and writes JSON-lines to the output file
-# ─────────────────────────────────────────────────────────────────────────────
 FROM ubuntu:22.04
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

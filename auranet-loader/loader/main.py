@@ -15,6 +15,7 @@ def parse_args():
     p.add_argument("--bpf-obj", "-b",
         default=os.environ.get("AURANET_BPF_OBJ", "/ebpf/syscall_trace.bpf.o"),
         help="Path to the compiled eBPF .o file (written by the builder initContainer)")
+    # this gonna change to the same tetragon path to make it switchable 
     p.add_argument("--output", "-o",
         default=os.environ.get("AURANET_OUTPUT", "/var/log/auranet/events.json"),
         help="Output JSON-lines file")

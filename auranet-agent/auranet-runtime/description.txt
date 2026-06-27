@@ -5,3 +5,4 @@ The AuraNet Runtime is the host-level security layer. While the AI Autoencoder m
 This component is deliberately designed to be a fast, rule-based tripwire. It does not use Machine Learning. It looks for definitive, binary signs of compromise.
 
 
+# The better choice here is to use AI but for our current computing resources this is enough

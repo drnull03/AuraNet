@@ -87,7 +87,7 @@ helm install auranet-loader ./chart/auranet-loader \
 kubectl -n auranet-namespace rollout status daemonset/auranet
 
 # 2. Check the builder initContainer finished OK on a node
-kubectl -n auranet logs \
+kubectl -n auranet-namespace logs \
   -l app.kubernetes.io/name=auranet-loader \
   -c auranet-builder
 
@@ -100,7 +100,7 @@ kubectl -n auranet logs \
 # [auranet-builder] Build complete. Loader container can now start.
 
 # 3. Check the loader is running
-kubectl -n auranet logs \
+kubectl -n auranet-namespace logs \
   -l app.kubernetes.io/name=auranet-loader \
   -c auranet-loader
 
