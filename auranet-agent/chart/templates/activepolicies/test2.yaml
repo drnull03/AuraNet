@@ -1,0 +1,24 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicyNamespaced
+metadata:
+  name: auranet-master-threat-policy
+  namespace: default
+spec:
+  kprobes:
+  - call: "security_file_open"
+    syscall: false
+    args:
+    - index: 0
+      type: "file"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Equal"
+        values:
+        - "/etc/passwd"
+        - "/etc/shadow"
+        - "/dev/mem"
+        - "/dev/kmem"
+        - "/root/.ssh/id_rsa"
+        - "/root/.ssh/authorized_keys"
+        - "/run/secrets/kubernetes.io/serviceaccount/token"

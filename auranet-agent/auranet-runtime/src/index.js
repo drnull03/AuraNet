@@ -7,52 +7,26 @@ const fs = require('fs');
 const LOG_PATH = process.env.LOG_PATH || '/var/run/cilium/tetragon/tetragon.log';
 // the same nat url
 const NATS_URL = process.env.NATS_URL || 'nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222';
+const THREAT_MAP_PATH = process.env.THREAT_MAP_PATH || '/etc/auranet/runtime/threat-map.json';
 const sc = StringCodec();
 
-
-const THREAT_MAP = {
-    // Shells & Remote Access
-    'nc': 'nc_execution',
-    'ncat': 'nc_execution',
-    'netcat': 'nc_execution',
-    'sh': 'reverse_shell_detected',    
-    'bash': 'reverse_shell_detected',
-    'zsh': 'reverse_shell_detected',
-    'ash': 'reverse_shell_detected',
-    
-    // Reconnaissance & Droppers
-    'nmap': 'nmap_scan_detected', 
-    'curl': 'suspicious_binary_download',
-    'wget': 'suspicious_binary_download',
-    'tcpdump': 'network_sniffing',
-    'tshark': 'network_sniffing',
-
-    // Privilege & Escapes
-    'sudo': 'privilege_escalation',
-    'su': 'privilege_escalation',
-    'nsenter': 'container_escape_attempt',
-    'chroot': 'container_escape_attempt',
-    'unshare': 'container_escape_attempt',
-
-    // Deep System Attacks
-    'insmod': 'kernel_module_injection',
-    'modprobe': 'kernel_module_injection',
-    'rmmod': 'kernel_module_injection',
-    'xmrig': 'crypto_miner_execution',
-
-    // Sensitive Files
-    '/etc/passwd': 'unauthorized_file_read',
-    '/etc/shadow': 'unauthorized_file_read',
-    '/dev/mem': 'memory_dump_attempt',
-    '/dev/kmem': 'memory_dump_attempt',
-    'id_rsa': 'ssh_key_access',
-    'authorized_keys': 'ssh_key_access',
-    '/run/secrets/kubernetes.io/serviceaccount/token': 'k8s_token_theft'
-};
+//load the injectable map using helm chart configmap
+let THREAT_MAP = {};
+try {
+    const rawData = fs.readFileSync(THREAT_MAP_PATH, 'utf8');
+    THREAT_MAP = JSON.parse(rawData);
+    console.log(`[Runtime Forwarder] Successfully loaded Threat Map with ${Object.keys(THREAT_MAP).length} signatures from Helm.`);
+} catch (err) {
+    console.error(`[Runtime Forwarder] CRITICAL: Failed to load Threat Map from ${THREAT_MAP_PATH}`);
+    console.error(err.message);
+    process.exit(1);
+}
 
 // Map to store recent alerts to prevent double-firing (Deduplication)
+// dumb solution but it is  a linux kernel thingy can't do anything about it
+// cat read the file twice once when it read the meta data and the second time when it reads the file
 const recentAlerts = new Map();
-const DEDUPE_WINDOW_MS = 2000; // 2 seconds
+const DEDUPE_WINDOW_MS = 2000; // 2 seconds enough time for actull naive double cat problem
 
 async function startForwarder() {
     console.log(`[Runtime Forwarder] Starting up...`);
@@ -80,12 +54,12 @@ async function startForwarder() {
                 let functionName = null;
                 let isExecEvent = false;
 
-                // 1. Check for native Execution events (Bash, nc, nmap, etc.)
+                // Check for native Execution events (Bash, nc, nmap, etc.)
                 if (event.process_exec) {
                     processData = event.process_exec.process;
                     isExecEvent = true;
                 } 
-                // 2. Check for custom Kernel Probes (File reads like /etc/passwd)
+                //  Check for custom Kernel Probes (File reads like /etc/passwd)
                 else if (event.process_kprobe) {
                     processData = event.process_kprobe.process;
                     functionName = event.process_kprobe.function_name;
@@ -117,10 +91,10 @@ async function startForwarder() {
                     if (args.length > 0 && args[0].file_arg) {
                         const filePath = args[0].file_arg.path;
                         const fileName = filePath.split('/').pop();
-                        
+                        //might remove the includes soon because the threat map are gonna be injectable
                         threatSignature = THREAT_MAP[filePath] || 
                                           THREAT_MAP[fileName] || 
-                                          (filePath.includes('token') ? 'k8s_token_theft' : null) ||
+                                          (filePath.includes('token') ? 'k8s_token_theft' : null) ||   
                                           (filePath.includes('.ssh') ? 'ssh_key_access' : null);
                         
                         actionContext = `Accessed file: ${filePath}`;
@@ -141,6 +115,7 @@ async function startForwarder() {
                     recentAlerts.set(alertKey, now);
                     
                     // Periodic cache cleanup to prevent memory leaks
+                    //might lower this even more
                     if (recentAlerts.size > 1000) {
                         recentAlerts.clear();
                     }
