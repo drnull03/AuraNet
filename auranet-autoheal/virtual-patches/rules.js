@@ -1,5 +1,5 @@
 // virtual-patches/rules.js
-const { getThreatMatrix } = require('../threat-parser');
+const { getThreatMatrix } = require('./threat-parser');
 
 // The mapping now includes a 'severity' score (1-100)
 

@@ -1,0 +1,15 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  # The autoheal script expects the K8s object name to match the file name logic
+  name: unknown-anomaly-patch
+  namespace: default
+spec:
+  # In a real dynamic system, this might be broader, but for this test we'll target loan-service
+  endpointSelector:
+    matchLabels:
+      app: loan-service
+  egress:
+  - toEntities:
+    - cluster
+    # Drops external internet access (world) as a safety measure

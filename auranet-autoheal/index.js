@@ -6,7 +6,9 @@ const yaml = require("js-yaml");
 const { determineVirtualPatch } = require("./virtual-patches/rules");
 
 const NATS_URL = process.env.NATS_URL || "nats://127.0.0.1:4222";
-const NAMESPACE = process.env.POD_NAMESPACE || "default";
+
+// FIX 1: Explicitly target the namespace where your workloads actually live!
+const TARGET_NAMESPACE = "default"; 
 const sc = StringCodec();
 
 // Initialize K8s Clients
@@ -19,13 +21,18 @@ if (process.env.KUBERNETES_SERVICE_HOST) {
 const k8sCoreApi = kc.makeApiClient(k8s.CoreV1Api);
 const k8sCustomApi = kc.makeApiClient(k8s.CustomObjectsApi);
 
+// Helper to safely extract K8s error messages
+function getK8sError(err) {
+    return (err.body && err.body.message) ? err.body.message : (err.message || "Unknown K8s Error");
+}
+
 // DYNAMIC QUARANTINE
 async function applyQuarantine(workloadName) {
     const policyName = `quarantine-${workloadName}`;
     const quarantineManifest = {
         apiVersion: "cilium.io/v2",
         kind: "CiliumNetworkPolicy",
-        metadata: { name: policyName, namespace: NAMESPACE },
+        metadata: { name: policyName, namespace: TARGET_NAMESPACE },
         spec: {
             endpointSelector: { matchLabels: { app: workloadName } },
             ingress: [{}], // Default Deny
@@ -38,7 +45,7 @@ async function applyQuarantine(workloadName) {
         await k8sCustomApi.createNamespacedCustomObject({
             group: "cilium.io",
             version: "v2",
-            namespace: NAMESPACE,
+            namespace: TARGET_NAMESPACE,
             plural: "ciliumnetworkpolicies",
             body: quarantineManifest
         });
@@ -47,7 +54,7 @@ async function applyQuarantine(workloadName) {
         if (err.body && err.body.reason === "AlreadyExists") {
             console.log(`[K8s]  Quarantine already active for: ${workloadName}`);
         } else {
-            console.error(`[K8s] Quarantine failed:`, err.body ? err.body.message : err);
+            console.error(`[K8s] Quarantine failed:`, getK8sError(err));
         }
     }
 }
@@ -67,7 +74,7 @@ async function applyVirtualPatch(patchFileName) {
         await k8sCustomApi.createNamespacedCustomObject({
             group: "cilium.io",
             version: "v2",
-            namespace: NAMESPACE,
+            namespace: TARGET_NAMESPACE,
             plural: "ciliumnetworkpolicies",
             body: patchObj
         });
@@ -76,7 +83,7 @@ async function applyVirtualPatch(patchFileName) {
         if (err.body && err.body.reason === "AlreadyExists") {
             console.log(`[K8s] Virtual patch is already active in the cluster.`);
         } else {
-            console.error(`[K8s] Patch failed:`, err.body ? err.body.message : err);
+            console.error(`[K8s] Patch failed:`, getK8sError(err));
         }
     }
 }
@@ -87,12 +94,12 @@ async function cycleWorkloadPods(workloadName) {
         console.log(`[K8s] ♻️ Cycling compromised pods for [${workloadName}]...`);
         
         await k8sCoreApi.deleteCollectionNamespacedPod({
-            namespace: NAMESPACE,
+            namespace: TARGET_NAMESPACE,
             labelSelector: `app=${workloadName}`
         });
         console.log(`[K8s] ♻️ Pods eradicated. Clean replicas are spinning up.`);
     } catch (err) {
-        console.error(`[K8s] Failed to cycle pods:`, err.body ? err.body.message : err);
+        console.error(`[K8s] Failed to cycle pods:`, getK8sError(err));
     }
 }
 
@@ -100,17 +107,17 @@ async function cycleWorkloadPods(workloadName) {
 async function removeQuarantine(workloadName) {
     const policyName = `quarantine-${workloadName}`;
     try {
-        console.log(`[K8s]Lifting emergency quarantine for [${workloadName}]...`);
+        console.log(`[K8s] Lifting emergency quarantine for [${workloadName}]...`);
         await k8sCustomApi.deleteNamespacedCustomObject({
             group: "cilium.io",
             version: "v2",
-            namespace: NAMESPACE,
+            namespace: TARGET_NAMESPACE,
             plural: "ciliumnetworkpolicies",
             name: policyName
         });
         console.log(`[K8s] Quarantine lifted. System restored.`);
     } catch (err) {
-        console.error(`[K8s] Failed to lift quarantine:`, err.body ? err.body.message : err);
+        console.error(`[K8s] Failed to lift quarantine:`, getK8sError(err));
     }
 }
 
@@ -128,7 +135,7 @@ async function startAutoHeal() {
             const command = JSON.parse(sc.decode(msg.data));
             const workload = command.target_workload;
             
-            console.log(`\n🚨 [AutoHeal] INITIATING SOAR PIPELINE FOR: ${workload}`);
+            console.log(`\n[AutoHeal] INITIATING PIPELINE FOR: ${workload}`);
             
             await applyQuarantine(workload);
             
@@ -149,13 +156,9 @@ async function startAutoHeal() {
         process.exit(1);
     }
 }
+
 if (require.main === module) {
     startAutoHeal();
 }
 
-module.exports = {
-    applyQuarantine,
-    applyVirtualPatch,
-    cycleWorkloadPods,
-    removeQuarantine
-};
+module.exports = { applyQuarantine, applyVirtualPatch, cycleWorkloadPods, removeQuarantine };
