@@ -94,8 +94,7 @@ async function startForwarder() {
                 if (!processData || !processData.pod) return; 
 
                 const namespace = processData.pod.namespace;
-                const labels = processData.pod.labels || {};
-                const workload = labels['app'] || labels['k8s-app'] || 'unknown-workload';
+                const workload = processData.pod.workload || 'unknown-workload';
                 
                 const podName = processData.pod.name; 
                 
