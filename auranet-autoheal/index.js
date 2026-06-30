@@ -91,7 +91,21 @@ async function applyVirtualPatch(patchFileName) {
         }
     }
 }
-
+// CYCLE (restarting the pod) 
+async function cycleWorkloadPods(workloadName) {
+    try {
+        console.log(`[K8s] ♻️ Cycling compromised pods for [${workloadName}]...`);
+        
+        await k8sCoreApi.deleteCollectionNamespacedPod({
+            namespace: TARGET_NAMESPACE,
+            labelSelector: `app=${workloadName}`
+        });
+        console.log(`[K8s] ♻️ Pods eradicated. Clean replicas are spinning up.`);
+    } catch (err) {
+        const errorDetails = getK8sError(err);
+        console.error(`[K8s] Failed to cycle pods: [${errorDetails.statusCode}] ${errorDetails.message}`);
+    }
+}
 // LIFT QUARANTINE
 async function removeQuarantine(workloadName) {
     const policyName = `quarantine-${workloadName}`;
