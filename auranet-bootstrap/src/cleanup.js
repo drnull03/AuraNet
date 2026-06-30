@@ -23,7 +23,8 @@ async function wipePolicies() {
         console.error("[ERROR] wiping network policies:", trueError);
     }
 
-    //  Wipe  Tracing Policies
+    //  Wipe  Tracing PoliciesapplyRuntimePolicies
+    // because old naive policies were tracing policeis
     try {
         const tracingPolicies = await customObjectsApi.listNamespacedCustomObject(
             'cilium.io', 'v1alpha1', 'default', 'tracingpoliciesnamespaced'
@@ -35,7 +36,6 @@ async function wipePolicies() {
             console.log(`[CLEANED] Deleted Tracing Policy: ${item.metadata.name}`);
         }
     } catch (e) {
-        // NEW: This forces the raw K8s API rejection to print to the terminal
         const trueError = e.body ? JSON.stringify(e.body) : (e.cause ? e.cause.message : e.message);
         console.error("[ERROR] wiping tracing policies:", trueError);
     }

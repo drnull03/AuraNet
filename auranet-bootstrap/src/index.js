@@ -15,12 +15,11 @@ if (!fs.existsSync(configFile)) {
 const content = fs.readFileSync(configFile, 'utf-8');
 const lines = content.split('\n');
 
-// THE FIX: Dynamically load KubeConfig whether local or in a Pod
 const kc = new k8s.KubeConfig();
 if (process.env.KUBERNETES_SERVICE_HOST) {
     kc.loadFromCluster();
 } else {
-    kc.loadFromDefault(); // Loads ~/.kube/config for your local terminal test!
+    kc.loadFromDefault(); 
 }
 
 const customObjectsApi = kc.makeApiClient(k8s.CustomObjectsApi);
@@ -81,7 +80,8 @@ async function applyCiliumPolicy(source, dest, port) {
         }
     }
 }
-
+// this feature might be deprecated soon as it is not so  necessary
+//if not deprecated it should be decoupled at least
 async function applyRuntimePolicies() {
     const policiesDir = path.join(__dirname, 'policies');
     
@@ -129,7 +129,7 @@ async function applyRuntimePolicies() {
 
 async function run() {
     let appliedCount = 0;
-
+    //lines is defined at the start if the file and is populated by naive.conf
     for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed) continue;

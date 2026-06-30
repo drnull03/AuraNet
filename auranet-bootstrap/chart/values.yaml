@@ -8,7 +8,7 @@ naiveConf: |
   1.retail-dashboard -> customer-api
 
 
-  
+# this moved to the engine itself and can be ignored 
 settingsConf: |
   AI_Learning=true
   warm_start=false
