@@ -32,7 +32,7 @@ async def run_inference_pipeline(brain_a, brain_b, brain_c, benign_buffer, buffe
     rolling_mse_window = deque(maxlen=config.ai.Z_SCORE_WINDOW_SIZE)
     MIN_WARMUP_SAMPLES = 100
     
-    print("[Worker A] Dual AI Perception Layer Online. Listening for packets...\n")
+    print("[Worker A] Triple AI Perception Layer Online. Listening for packets...\n")
 
     for raw_event, feature_array in processor.stream_traffic():
         

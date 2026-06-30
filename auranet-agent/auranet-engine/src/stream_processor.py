@@ -6,7 +6,7 @@ import config
 
 class HubbleStreamProcessor:
     def __init__(self):
-        # Normalization constants (matching the monolithic processor)
+        # Normalization constants 
         self.MAX_PATH_DEPTH = 10.0
         self.MAX_QUERY_PARAMS = 10.0
         self.MAX_HEADER_SIZE = 8192.0
@@ -17,7 +17,7 @@ class HubbleStreamProcessor:
         self.read_methods = {'GET', 'OPTIONS', 'HEAD'}
         self.write_methods = {'POST', 'PUT', 'DELETE', 'PATCH'}
 
-        # Connect to the central Relay (Removed the --node flag to prevent the CLI crash)
+        # Connect to the central Relay 
         self.command = [
             "hubble", 
             "observe", 
@@ -38,7 +38,7 @@ class HubbleStreamProcessor:
         Filters and converts a single real-time packet into the 13-dim generic tensor.
         Returns None if the packet should be ignored based on our training rules.
         """
-        # --- SOFTWARE-LEVEL NODE FILTERING ---
+        #  SOFTWARE-LEVEL NODE FILTERING 
         event_node = event.get("node_name", "")
         if event_node != config.NODE_NAME:
             return None

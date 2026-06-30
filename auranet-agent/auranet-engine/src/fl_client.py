@@ -43,15 +43,15 @@ class AuraNetFlowerClient(fl.client.NumPyClient):
             return parameters, 1, {}
 
         # Standard Flow for Round 2 and beyond
-        # 1. Extract local training insights
+        # Extract local training insights
         local_parameters = self.get_parameters(config={})
-        print("[Worker C]  Local training insights extracted.")
+        print("[Worker C] Local training insights extracted.")
         
-        # 2. Hot-swap the new global brain
+        # Hot-swap the new global brain
         self.set_parameters(parameters)
-        print("[Worker C]  New global brain successfully hot-swapped.")
+        print("[Worker C] New global brain successfully hot-swapped.")
 
-        # 3. Return local weights back to aggregator
+        # Return local weights back to aggregator
         return local_parameters, 1, {}
 
 def start_fl_client(model, model_lock, global_state):

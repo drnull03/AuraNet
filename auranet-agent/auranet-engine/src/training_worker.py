@@ -11,13 +11,14 @@ async def run_local_training(model, benign_buffer, buffer_lock, global_state):
     Worker B: Wakes up every 2 minutes, locks the buffer, drains the data,
     and runs local FedProx training to adapt to new baseline traffic.
     """
-    
+    # should learn more about adam it seems ti be causing something weird
     optimizer = optim.Adam(model.parameters(), lr=config.ai.LEARNING_RATE)
     criterion = nn.MSELoss()
     
     # The 'mu' parameter for FedProx. Controls how strictly the local model 
     # is tethered to the global master weights.
-    # TODO later diaa might change this to see the best value
+    
+
     proximal_mu = 0.1 
 
     print(f"[Worker B] Local FedProx Trainer initialized. Cadence: {config.ai.LOCAL_TRAIN_INTERVAL_SEC}s\n")

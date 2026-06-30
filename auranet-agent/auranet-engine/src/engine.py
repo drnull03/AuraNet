@@ -17,7 +17,7 @@ def run_background_workers(brain_a, brain_b, brain_c, benign_buffer, buffer_lock
     # Schedule Worker A (Inference) with BOTH brains
     tasks = [loop.create_task(run_inference_pipeline(brain_a, brain_b, brain_c, benign_buffer, buffer_lock))]
     
-    # Worker B (Training) only federates Brain A (Tabular). Brain B is static.
+    # Worker B (Training) only federates Brain A (Tabular). Brain B and C is static because they already learned grammer rule and don't need any adaptation.
     if config.ai.LEARNING_ENGINE:
         tasks.append(loop.create_task(run_local_training(brain_a, benign_buffer, buffer_lock, global_state)))
     
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     # Initialize Brain C (Grammatical Body)                                                                          
     brain_c = UrlNlpAutoencoder(vocab_size=128, seq_length=512)                                                      
     if os.path.exists(config.NLP_BODY_WEIGHTS_PATH):                                                                 
-        print(f"[Engine] 🧠 Loading pre-trained Brain C (Body NLP) weights from {config.NLP_BODY_WEIGHTS_PATH}...")  
+        print(f"[Engine]LoadNLP_WEIGHTS_PATHing pre-trained Brain C (Body NLP) weights from {config.NLP_BODY_WEIGHTS_PATH}...")  
         brain_c.load_state_dict(torch.load(config.NLP_BODY_WEIGHTS_PATH, weights_only=True))                         
     else:                                                                                                            
         print(f"[Engine] ⚠️ WARNING: NLP Body weights not found at {config.NLP_BODY_WEIGHTS_PATH}.")                 
