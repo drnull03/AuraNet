@@ -22,10 +22,11 @@ const k8sCustomApi = kc.makeApiClient(k8s.CustomObjectsApi);
 
 // Helper to safely extract K8s error messages
 function getK8sError(err) {
-    return (err.body && err.body.message) ? err.body.message : (err.message || "Unknown K8s Error");
+    const statusCode = err.statusCode || (err.response && err.response.statusCode) || (err.body && err.body.code) || "UNKNOWN_CODE";
+    const message = (err.body && err.body.message) ? err.body.message : (err.message || "Unknown K8s Error");
+    return { statusCode, message };
 }
 
-// DYNAMIC QUARANTINE
 async function applyQuarantine(workloadName) {
     const policyName = `quarantine-${workloadName}`;
     const quarantineManifest = {
@@ -48,12 +49,15 @@ async function applyQuarantine(workloadName) {
             plural: "ciliumnetworkpolicies",
             body: quarantineManifest
         });
-        console.log(`[K8s]  Quarantine active: ${policyName}`);
+        console.log(`[K8s] Quarantine active: ${policyName}`);
     } catch (err) {
-        if (err.body && err.body.reason === "AlreadyExists") {
-            console.log(`[K8s]  Quarantine already active for: ${workloadName}`);
+        const errorDetails = getK8sError(err);
+        if (errorDetails.statusCode === 409) {
+            console.log(`[K8s] Quarantine is already active for: ${workloadName}. Proceeding.`);
+        } else if (errorDetails.statusCode === 403) {
+            console.error(`[K8s] FATAL 403 FORBIDDEN: Service Account lacks permissions to create CiliumNetworkPolicies!`);
         } else {
-            console.error(`[K8s] Quarantine failed:`, getK8sError(err));
+            console.error(`[K8s] Quarantine failed: [${errorDetails.statusCode}] ${errorDetails.message}`);
         }
     }
 }
@@ -79,26 +83,12 @@ async function applyVirtualPatch(patchFileName) {
         });
         console.log(`[K8s] Virtual patch applied successfully.`);
     } catch (err) {
-        if (err.body && err.body.reason === "AlreadyExists") {
-            console.log(`[K8s] Virtual patch is already active in the cluster.`);
+        const errorDetails = getK8sError(err);
+        if (errorDetails.statusCode === 409) {
+            console.log(`[K8s] 🛡️ Virtual patch '${patchFileName}' is already active. Proceeding.`);
         } else {
-            console.error(`[K8s] Patch failed:`, getK8sError(err));
+            console.error(`[K8s] Patch failed: [${errorDetails.statusCode}] ${errorDetails.message}`);
         }
-    }
-}
-
-// CYCLE (restarting the pod) 
-async function cycleWorkloadPods(workloadName) {
-    try {
-        console.log(`[K8s] ♻️ Cycling compromised pods for [${workloadName}]...`);
-        
-        await k8sCoreApi.deleteCollectionNamespacedPod({
-            namespace: TARGET_NAMESPACE,
-            labelSelector: `app=${workloadName}`
-        });
-        console.log(`[K8s] ♻️ Pods eradicated. Clean replicas are spinning up.`);
-    } catch (err) {
-        console.error(`[K8s] Failed to cycle pods:`, getK8sError(err));
     }
 }
 
@@ -116,7 +106,14 @@ async function removeQuarantine(workloadName) {
         });
         console.log(`[K8s] Quarantine lifted. System restored.`);
     } catch (err) {
-        console.error(`[K8s] Failed to lift quarantine:`, getK8sError(err));
+        const errorDetails = getK8sError(err);
+        if (errorDetails.statusCode === 404) {
+            console.log(`[K8s] Quarantine policy already removed for ${workloadName}.`);
+        } else if (errorDetails.statusCode === 403) {
+            console.error(`[K8s] FATAL 403 FORBIDDEN: Service Account lacks permissions to delete CiliumNetworkPolicies!`);
+        } else {
+            console.error(`[K8s] Failed to lift quarantine: [${errorDetails.statusCode}] ${errorDetails.message}`);
+        }
     }
 }
 

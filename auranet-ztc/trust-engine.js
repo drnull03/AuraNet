@@ -98,6 +98,7 @@ function evaluateBatch(batchedAlerts) {
                 finalScore: currentScore,
                 reasons: activeAlerts.map(a => a.threat)
             });
+            workloadHistory.delete(workload);
         }
     }
 

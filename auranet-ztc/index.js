@@ -23,7 +23,8 @@ async function startZTC() {
             await jsm.streams.add({
                 name: streamName,
                 subjects: ["auranet.events.>"], // Listen to all AI and Runtime events
-                retention: "workqueue" // Messages are deleted once ACK'd
+                retention: "workqueue", // Messages are deleted once ACK'd
+                max_age: 60 * 1000000000
             });
             console.log(`[ZTC] JetStream '${streamName}' initialized.`);
         } catch (err) {
