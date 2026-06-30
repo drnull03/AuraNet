@@ -10,7 +10,7 @@ NATS_SUBJECT_PREFIX = "auranet.events.ai."
 
 
 NLP_WEIGHTS_PATH = os.getenv("NLP_WEIGHTS_PATH", "models/nlp_ae_v1.pth")
-
+NLP_BODY_WEIGHTS_PATH = os.getenv("NLP_BODY_WEIGHTS_PATH","models/nlp_ae_v1_body.pth")
 #config map stuff
 CONFIG_FILE_PATH = "/etc/auranet/config/ai-config.json"
 
