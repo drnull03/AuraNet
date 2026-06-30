@@ -1,6 +1,6 @@
 #!/bin/bash
 # Install AuraNet Components
-
+cd ..
 COMPONENTS=("auranet-ztc" "auranet-autoheal" "auranet-agent" "auranet-controller")
 NAMESPACE="auranet-namespace"
 

@@ -1,0 +1,21 @@
+apiVersion: v2
+name: auranet-core
+description: Umbrella chart for the AuraNet Zero Trust System
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+# List your components as dependencies
+dependencies:
+  - name: auranet-ztc
+    version: 0.1.0
+    repository: file://../auranet-ztc/chart
+  - name: auranet-autoheal
+    version: 1.0.0
+    repository: file://../auranet-autoheal/chart
+  - name: auranet-agent
+    version: 0.1.0
+    repository: file://../auranet-agent/chart
+  - name: auranet-controller
+    version: 0.1.0
+    repository: file://../auranet-controller/chart

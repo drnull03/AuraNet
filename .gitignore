@@ -20,3 +20,5 @@ shadowAuraNet/
 **/data/
 **/models/
 **/tmp/
+**/charts/
+**/Chart.lock
