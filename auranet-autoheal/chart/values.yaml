@@ -19,7 +19,7 @@ threatMatrix: |-
   l7_body_anomaly=90
   network_behavior_anomaly=40
 
-  # === Tetragon Runtime Threats ===
+  # === Runtime Threats ===
   nc_execution=70
   unauthorized_file_read=60
   privilege_escalation=100
