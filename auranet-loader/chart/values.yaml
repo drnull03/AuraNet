@@ -16,6 +16,8 @@ imagePullSecrets: []
 # Tracer configuration 
 config:
   # JSON-lines output path inside the container (and on the host via hostPath)
+  #switch between these two
+  #output: /var/run/cilium/tetragon/tetragon.log
   output: /var/log/auranet/events.json
 
   # Trace only a specific PID (0 = all processes on the node)
