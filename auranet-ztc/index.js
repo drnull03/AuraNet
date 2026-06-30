@@ -41,12 +41,11 @@ async function startZTC() {
         const consumer = await js.consumers.get(streamName, consumerName);
         console.log(`[ZTC] Durable Pull Consumer '${consumerName}' ready.`);
 
-        const THROTTLE_INTERVAL_MS = 10 * 1000; 
+        const THROTTLE_INTERVAL_MS = 1000; 
         console.log(`[ZTC] Initialization complete. Entering sleep state.`);
         console.log(`[ZTC] Throttled Worker Loop set to wake up every ${THROTTLE_INTERVAL_MS / 1000} seconds.\n`);
 
         //  The Throttled Pull Loop 
-        // should remember to throttle the ai too this doesn't make any sense without throttling the ai
         setInterval(async () => {
             console.log(`[${new Date().toISOString()}] Waking up to process security alerts...`);
             

@@ -7,7 +7,6 @@ const { determineVirtualPatch } = require("./virtual-patches/rules");
 
 const NATS_URL = process.env.NATS_URL || "nats://127.0.0.1:4222";
 
-// FIX 1: Explicitly target the namespace where your workloads actually live!
 const TARGET_NAMESPACE = "default"; 
 const sc = StringCodec();
 
