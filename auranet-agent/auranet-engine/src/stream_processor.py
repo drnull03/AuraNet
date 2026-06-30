@@ -1,5 +1,4 @@
 import json
-import re
 import subprocess
 import numpy as np
 
@@ -7,34 +6,43 @@ import config
 
 class HubbleStreamProcessor:
     def __init__(self):
-        # Compile the regexes once during boot to save CPU cycles during live streaming
-        self.acc_regex = re.compile(r"^.*/api/accounts\?id=[0-9]+$")
-        self.loan_regex = re.compile(r"^.*/api/loans/export\?id=L-[0-9]+$")
-        
-        # Connect to the central Relay, but apply server-side filtering for THIS specific node
+        # Normalization constants (matching the monolithic processor)
+        self.MAX_PATH_DEPTH = 10.0
+        self.MAX_QUERY_PARAMS = 10.0
+        self.MAX_HEADER_SIZE = 8192.0
+        self.MAX_URL_LENGTH = 500.0
+
+        # Method lookup sets for fast O(1) checks during live streaming
+        self.valid_methods = {'GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS', ''}
+        self.read_methods = {'GET', 'OPTIONS', 'HEAD'}
+        self.write_methods = {'POST', 'PUT', 'DELETE', 'PATCH'}
+
+        # Connect to the central Relay (Removed the --node flag to prevent the CLI crash)
         self.command = [
             "hubble", 
             "observe", 
             "--server", config.HUBBLE_RELAY_ADDRESS,
-            "--node", config.NODE_NAME,
             "-f", 
             "-o", "json"
         ]
 
-    def extract_app_label(self, labels):
-        """Identical to monolithic dataset logic."""
-        if not labels:
-            return "unknown"
-        for label in labels:
-            if label.startswith("k8s:app="):
-                return label.split("=")[1]
-        return "unknown"
+    def is_external_ip(self, ip_str):
+        if not ip_str: 
+            return 0.0
+        if ip_str.startswith("10.") or ip_str.startswith("192.168.") or ip_str.startswith("172."):
+            return 0.0
+        return 1.0
 
     def process_event(self, event):
         """
-        Filters and converts a single real-time packet into the 13-dim tensor.
+        Filters and converts a single real-time packet into the 13-dim generic tensor.
         Returns None if the packet should be ignored based on our training rules.
         """
+        # --- SOFTWARE-LEVEL NODE FILTERING ---
+        event_node = event.get("node_name", "")
+        if event_node != config.NODE_NAME:
+            return None
+
         flow = event.get("flow", {})
         if not flow:
             return None
@@ -44,8 +52,6 @@ class HubbleStreamProcessor:
         event_type = flow.get("event_type", {}).get("type", 0)
         drop_reason = flow.get("drop_reason_desc", "")
 
-        # MONOLITHIC FILTERING RULES
-        
         if "reserved:host" in source_labels:
             return None
         
@@ -80,38 +86,59 @@ class HubbleStreamProcessor:
         if not (verdict == "DROPPED" or is_http_l7 or is_db_l4):
             return None
 
-        #  FEATURE ENGINEERING (Strict 13-Dim Match)
-        src_app = self.extract_app_label(source_labels)
-        dst_app = self.extract_app_label(flow.get("destination", {}).get("labels", []))
-        
+        traffic_direction = flow.get("traffic_direction", "UNKNOWN")
+        ip_source = flow.get("IP", {}).get("source", "")
+
         http_data = l7.get("http", {}) if l7 else {}
-        method = http_data.get("method", "NONE")
-        url = http_data.get("url", "NONE")
+        method = http_data.get("method", "")
+        url = str(http_data.get("url", ""))
+        status_code = http_data.get("code", 0)
+        
+        headers = http_data.get("headers", [])
+        header_size = sum(len(h.get("key", "")) + len(h.get("value", "")) for h in headers)
 
         features = np.zeros(13, dtype=np.float32)
 
-        # Target Label (Index 0)
-        features[0] = 1.0 if verdict == 'DROPPED' else 0.0
+        # 1. is_inbound
+        features[0] = 1.0 if traffic_direction == 'INGRESS' else 0.0
         
-        # Path Validations (Index 1, 2)
-        features[1] = 1.0 if self.acc_regex.match(str(url)) else 0.0
-        features[2] = 1.0 if self.loan_regex.match(str(url)) else 0.0
+        # 2. is_outbound
+        features[1] = 1.0 if traffic_direction == 'EGRESS' else 0.0
         
-        # Request Types (Index 3, 4)
-        features[3] = 1.0 if method == 'GET' else 0.0
-        features[4] = 1.0 if dst_port == 5432 else 0.0
+        # 3. is_external_ip
+        features[2] = self.is_external_ip(ip_source)
         
-        # Source Pod Matrix (Index 5, 6, 7, 8)
-        features[5] = 1.0 if src_app == 'frontend-ui' else 0.0
-        features[6] = 1.0 if src_app == 'api-gateway' else 0.0
-        features[7] = 1.0 if src_app == 'account-service' else 0.0
-        features[8] = 1.0 if src_app == 'loan-service' else 0.0
+        # 4. is_dropped
+        features[3] = 1.0 if verdict == 'DROPPED' else 0.0
         
-        # Destination Pod Matrix (Index 9, 10, 11, 12)
-        features[9] = 1.0 if dst_app == 'api-gateway' else 0.0
-        features[10] = 1.0 if dst_app == 'account-service' else 0.0
-        features[11] = 1.0 if dst_app == 'loan-service' else 0.0
-        features[12] = 1.0 if dst_app == 'finance-db' else 0.0
+        # 5. is_unknown_method
+        features[4] = 0.0 if method in self.valid_methods else 1.0
+        
+        # 6. is_http
+        features[5] = 1.0 if is_http_l7 else 0.0
+        
+        # 7. is_read_method
+        features[6] = 1.0 if method in self.read_methods else 0.0
+        
+        # 8. is_write_method
+        features[7] = 1.0 if method in self.write_methods else 0.0
+        
+        # 9. url_path_depth
+        path_depth = url.count('/')
+        features[8] = min(path_depth / self.MAX_PATH_DEPTH, 1.0)
+        
+        # 10. query_param_count
+        param_count = url.count('&') + 1 if '?' in url else 0
+        features[9] = min(param_count / self.MAX_QUERY_PARAMS, 1.0)
+        
+        # 11. req_header_size
+        features[10] = min(header_size / self.MAX_HEADER_SIZE, 1.0)
+        
+        # 12. url_length
+        features[11] = min(len(url) / self.MAX_URL_LENGTH, 1.0)
+        
+        # 13. is_error_status
+        features[12] = 1.0 if status_code >= 400 else 0.0
 
         return features
 
@@ -119,7 +146,7 @@ class HubbleStreamProcessor:
         """
         Continuously yields (raw_json, feature_array) for valid packets.
         """
-        print(f"[Streamer]  Connecting to Relay at {config.HUBBLE_RELAY_ADDRESS} for node {config.NODE_NAME}...")
+        print(f"[Streamer] Connecting to Relay at {config.HUBBLE_RELAY_ADDRESS}...")
         process = subprocess.Popen(
             self.command,
             stdout=subprocess.PIPE,
@@ -135,10 +162,10 @@ class HubbleStreamProcessor:
             try:
                 event = json.loads(line)
                 
-                # Apply monolithic filters and extract features
+                # Apply filters and extract generic features
                 feature_array = self.process_event(event)
                 
-                # If it passed all filters, send it to the AI for inference
+                # If it passed all filters, yield the 13-dim array
                 if feature_array is not None:
                     yield event, feature_array
                 

@@ -4,7 +4,7 @@ import time
 
 import config
 from model import ZeroTrustAutoencoder
-from nlp_model import UrlNlpAutoencoder  # <-- Import Brain B
+from nlp_model import UrlNlpAutoencoder  
 from inference_worker import run_inference_pipeline
 from training_worker import run_local_training
 from fl_client import start_fl_client
