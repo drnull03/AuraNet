@@ -9,10 +9,9 @@ const THREAT_MATRIX = getThreatMatrix();
 
 // THE MEMORY 
 const workloadHistory = new Map();
+const healingLocks = new Set(); 
 
 function calculateDeduction(data) {
-    // We now treat AI and Runtime alerts identically for scoring.
-    // The AI acts as the sensor; the Matrix dictates the exact penalty.
     const threatName = data.threat || "unknown_anomaly";
     return THREAT_MATRIX[threatName] || THREAT_MATRIX["unknown_anomaly"] || 30;
 }
@@ -20,6 +19,9 @@ function calculateDeduction(data) {
 function evaluateBatch(batchedAlerts) {
     const now = Date.now();
     const workloadsToQuarantine = new Map(); 
+    
+    const ZTC_DEDUPE_WINDOW_MS = 5000; 
+    const uniqueAlerts = new Map();
 
     for (const alert of batchedAlerts) {
         const subjectParts = alert.subject.split('.');
@@ -27,20 +29,39 @@ function evaluateBatch(batchedAlerts) {
 
         const workload = subjectParts[3]; 
         const threat = alert.data.threat || "unknown_anomaly";
-        
-        // Directly fetch the severity from the matrix
         const deduction = calculateDeduction(alert.data);
 
         if (deduction === 0) continue; 
 
-        if (!workloadHistory.has(workload)) {
-            workloadHistory.set(workload, []);
+        const dedupeKey = `${workload}:${threat}`;
+
+        let recentlyPenalized = false;
+        if (workloadHistory.has(workload)) {
+            const history = workloadHistory.get(workload);
+            recentlyPenalized = history.some(a => 
+                a.threat === threat && (now - a.timestamp) < ZTC_DEDUPE_WINDOW_MS
+            );
         }
 
-        workloadHistory.get(workload).push({
+        if (!recentlyPenalized && !uniqueAlerts.has(dedupeKey)) {
+            uniqueAlerts.set(dedupeKey, {
+                workload: workload,
+                threat: threat,
+                deduction: deduction,
+                subject: alert.subject
+            });
+        }
+    }
+
+    for (const alert of uniqueAlerts.values()) {
+        if (!workloadHistory.has(alert.workload)) {
+            workloadHistory.set(alert.workload, []);
+        }
+
+        workloadHistory.get(alert.workload).push({
             timestamp: now,
-            deduction: deduction,
-            threat: threat,
+            deduction: alert.deduction,
+            threat: alert.threat,
             source: alert.subject
         });
     }
@@ -63,15 +84,23 @@ function evaluateBatch(batchedAlerts) {
 
         // Check against Quarantine Threshold
         if (currentScore < QUARANTINE_THRESHOLD) {
-            console.log(`🚨 [Trust Engine] THRESHOLD BREACHED: ${workload} dropped to ${currentScore}! Marking for auto-healing.`);
+            // NEW: Only fire if we haven't already locked this workload for healing
+            if (!healingLocks.has(workload)) {
+                console.log(`🚨 [Trust Engine] THRESHOLD BREACHED: ${workload} dropped to ${currentScore}! Marking for auto-healing.`);
+                
+                // Lock it so we don't spam NATS
+                healingLocks.add(workload);
 
-            workloadsToQuarantine.set(workload, {
-                workload: workload,
-                finalScore: currentScore,
-                reasons: activeAlerts.map(a => a.threat)
-            });
-            // We NO LONGER delete the history here. We wait for AutoHeal to explicitly 
-            // tell us the pod has been cycled before clearing the slate.
+                workloadsToQuarantine.set(workload, {
+                    workload: workload,
+                    finalScore: currentScore,
+                    reasons: activeAlerts.map(a => a.threat)
+                });
+            } else {
+                // Optional: You can comment this out if it clutters the terminal, 
+                // but it helps visualize the lock working.
+                console.log(`[Trust Engine] ⏳ ${workload} is currently healing. Suppressing duplicate quarantine order.`);
+            }
         }
     }
 
@@ -81,6 +110,8 @@ function evaluateBatch(batchedAlerts) {
 function resetWorkload(workload) {
     console.log(`[Trust Engine] 🟢 Wiping threat history and restoring trust for [${workload}].`);
     workloadHistory.delete(workload);
+    // NEW: Release the lock so the workload can be quarantined again if a new attack occurs
+    healingLocks.delete(workload);
 }
 
 module.exports = {
