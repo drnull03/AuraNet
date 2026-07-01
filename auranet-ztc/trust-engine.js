@@ -83,8 +83,8 @@ function evaluateBatch(batchedAlerts) {
         console.log(`[Trust Engine] ${workload} | Current Score: ${currentScore} | Active Alerts: ${activeAlerts.length}`);
 
         // Check against Quarantine Threshold
-        if (currentScore < QUARANTINE_THRESHOLD) {
-            // NEW: Only fire if we haven't already locked this workload for healing
+        if (currentScore <= QUARANTINE_THRESHOLD) {
+            // Only fire if we haven't already locked this workload for healing
             if (!healingLocks.has(workload)) {
                 console.log(`🚨 [Trust Engine] THRESHOLD BREACHED: ${workload} dropped to ${currentScore}! Marking for auto-healing.`);
                 
@@ -110,7 +110,7 @@ function evaluateBatch(batchedAlerts) {
 function resetWorkload(workload) {
     console.log(`[Trust Engine] 🟢 Wiping threat history and restoring trust for [${workload}].`);
     workloadHistory.delete(workload);
-    // NEW: Release the lock so the workload can be quarantined again if a new attack occurs
+    // Release the lock so the workload can be quarantined again if a new attack occurs
     healingLocks.delete(workload);
 }
 
