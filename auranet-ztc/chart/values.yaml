@@ -15,11 +15,29 @@ threatMatrix: |-
   l7_body_anomaly=90
   network_behavior_anomaly=40
 
-  # === Runtime Threats ===
+  # === Runtime Threats (Mapped from Tetragon eBPF Agent) ===
+  # Shells & Remote Access
   nc_execution=70
-  unauthorized_file_read=60
+  reverse_shell_detected=100
+  
+  # Reconnaissance & Droppers
+  nmap_scan_detected=60
+  suspicious_binary_download=60
+  network_sniffing=90
+  
+  # Privilege & Escapes
   privilege_escalation=100
-  unexpected_outbound_traffic=50
+  container_escape_attempt=100
+  
+  # Deep System Attacks
+  kernel_module_injection=100
+  crypto_miner_execution=95
+  
+  # Sensitive Files
+  unauthorized_file_read=90
+  memory_dump_attempt=100
+  ssh_key_access=90
+  k8s_token_theft=100
 
   # === Fallback ===
   unknown_anomaly=30
