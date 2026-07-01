@@ -18,6 +18,16 @@ async function startZTC() {
         const sub = nc.subscribe("auranet.events.>");
         console.log(`[ZTC] Subscribed to 'auranet.events.>'. Listening for real-time alerts...`);
 
+        const remediationSub = nc.subscribe("auranet.remediated.>");
+        (async () => {
+            for await (const msg of remediationSub) {
+                const workload = msg.subject.split('.').pop();
+                trustEngine.resetWorkload(workload);
+            }
+        })();
+        
+
+
         // Asynchronously collect incoming alerts into the RAM buffer
         (async () => {
             for await (const msg of sub) {

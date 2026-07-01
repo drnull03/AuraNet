@@ -72,8 +72,23 @@ async function applyVirtualPatch(patchFileName) {
         }
 
         const patchObj = yaml.load(fs.readFileSync(patchPath, "utf8"));
-        console.log(`[K8s] 🛡️ Applying virtual patch: ${patchObj.metadata.name}...`);
         
+        // 1. Force wipe the old policy state to prevent 409 Conflicts
+        try {
+            await k8sCustomApi.deleteNamespacedCustomObject({
+                group: "cilium.io",
+                version: "v2",
+                namespace: TARGET_NAMESPACE,
+                plural: "ciliumnetworkpolicies",
+                name: patchObj.metadata.name
+            });
+            console.log(`[K8s] 🧹 Cleared stale virtual patch state: ${patchObj.metadata.name}`);
+        } catch (delErr) {
+            // Ignore 404s, it just means the state is already clean
+        }
+
+        // 2. Apply cleanly
+        console.log(`[K8s] 🛡️ Applying virtual patch: ${patchObj.metadata.name}...`);
         await k8sCustomApi.createNamespacedCustomObject({
             group: "cilium.io",
             version: "v2",
@@ -84,11 +99,7 @@ async function applyVirtualPatch(patchFileName) {
         console.log(`[K8s] Virtual patch applied successfully.`);
     } catch (err) {
         const errorDetails = getK8sError(err);
-        if (errorDetails.statusCode === 409) {
-            console.log(`[K8s] 🛡️ Virtual patch '${patchFileName}' is already active. Proceeding.`);
-        } else {
-            console.error(`[K8s] Patch failed: [${errorDetails.statusCode}] ${errorDetails.message}`);
-        }
+        console.error(`[K8s] Patch failed: [${errorDetails.statusCode}] ${errorDetails.message}`);
     }
 }
 // CYCLE (restarting the pod) 
@@ -131,7 +142,6 @@ async function removeQuarantine(workloadName) {
     }
 }
 
-// MAIN EXECUTION LOOP
 async function startAutoHeal() {
     try {
         console.log(`[AutoHeal] Connecting to NATS at ${NATS_URL}...`);
@@ -160,6 +170,9 @@ async function startAutoHeal() {
             await removeQuarantine(workload);
             
             console.log(`[AutoHeal] ✅ Pipeline complete. Threat neutralized for ${workload}.\n`);
+
+            // NEW: Broadcast the remediation signal back to the ZTC
+            nc.publish(`auranet.remediated.${workload}`, sc.encode(JSON.stringify({ status: "cleared" })));
         }
     } catch (err) {
         console.error("[AutoHeal] Fatal Runtime Error:", err);
