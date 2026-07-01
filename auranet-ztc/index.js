@@ -29,11 +29,23 @@ async function startZTC() {
 
 
         // Asynchronously collect incoming alerts into the RAM buffer
+        // Asynchronously collect incoming alerts into the RAM buffer
         (async () => {
             for await (const msg of sub) {
                 try {
                     const decodedData = JSON.parse(sc.decode(msg.data));
-                    console.log(`[ZTC] Real-Time Alert Received -> Subject: ${msg.subject}`);
+                    console.log(`\n[ZTC] 🔍 GHOST PACKET INTERCEPTED -> Subject: ${msg.subject}`);
+                    console.log(`[ZTC] Threat Type: ${decodedData.threat}`);
+                    
+                    // This will print the raw Hubble JSON that triggered the AI
+                    if (decodedData.raw_context) {
+                        const contextObj = JSON.parse(decodedData.raw_context);
+                        const httpData = contextObj.flow?.l7?.http || {};
+                        console.log(`[ZTC] Target URL: ${httpData.url}`);
+                        console.log(`[ZTC] Node Source: ${contextObj.node_name}`);
+                    }
+                    console.log(`---------------------------------------------------`);
+                    
                     alertBuffer.push({ subject: msg.subject, data: decodedData });
                 } catch (err) {
                     console.error("[ZTC] Failed to decode incoming message:", err);
