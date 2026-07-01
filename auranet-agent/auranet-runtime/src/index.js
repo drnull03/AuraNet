@@ -36,6 +36,7 @@ try {
     console.error(err.message);
     process.exit(1);
 }
+
 // Map to store recent alerts to prevent double-firing (Deduplication)
 // dumb solution but it is  a linux kernel thingy can't do anything about it
 // cat read the file twice once when it read the meta data and the second time when it reads the file
@@ -96,8 +97,33 @@ async function startForwarder() {
                 // Analyze Execution Events (from process_exec)
                 if (isExecEvent) {
                     const binary = processData.binary.split('/').pop();
-                    threatSignature = THREAT_MAP[binary];
-                    actionContext = `Executed binary: ${binary}`;
+                    
+                    // --- LINEAGE VERIFICATION LOGIC ---
+                    // Extract the parent process to see who triggered the shell
+                    let parentBinary = '';
+                    if (processData.parent && processData.parent.binary) {
+                        parentBinary = processData.parent.binary.split('/').pop();
+                    }
+                    
+                    // Extract execution arguments (useful for health probes)
+                    const args = processData.arguments || '';
+                    
+                    const isShell = ['sh', 'bash', 'ash', 'zsh'].includes(binary);
+                    const isSafeLifecycleWrapper = ['npm', 'yarn', 'node', 'containerd-shim', 'runc'].includes(parentBinary);
+                    const isHealthProbe = args.includes('healthz') || args.includes('healthcheck');
+
+                    if (isShell && isSafeLifecycleWrapper) {
+                        // 🟢 EXCEPTION: This is npm/node booting up the container
+                        threatSignature = null; 
+                    } else if (isHealthProbe) {
+                        // 🟢 EXCEPTION: This is Kubernetes checking pod liveness
+                        threatSignature = null;
+                    } else {
+                        // 🔴 Standard evaluation: Look it up in the THREAT_MAP
+                        threatSignature = THREAT_MAP[binary];
+                    }
+                    
+                    actionContext = `Executed binary: ${binary} (Parent: ${parentBinary || 'unknown'})`;
                 } 
                 // Analyze File Open Events (from process_kprobe)
                 else if (functionName && functionName.includes('security_file_open')) {
@@ -129,7 +155,6 @@ async function startForwarder() {
                     recentAlerts.set(alertKey, now);
                     
                     // Periodic cache cleanup to prevent memory leaks
-                    //might lower this even more
                     if (recentAlerts.size > 1000) {
                         recentAlerts.clear();
                     }
