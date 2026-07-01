@@ -1,0 +1,9 @@
+auranet-ztc:
+  replicaCount: 1
+
+auranet-autoheal:
+  replicaCount: 1
+
+# You can pass global settings here
+global:
+  natsUrl: "nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222"
