@@ -1,0 +1,51 @@
+GATEWAY_URL="http://localhost:10000" k6 run spike_load.js
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: spike_load.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 30 max VUs, 1m0s max duration (incl. graceful stop):
+              * default: Up to 30 looping VUs for 30s over 3 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS
+
+    checks
+    ✓ 'rate>0.80' rate=82.28%
+
+    http_req_duration
+    ✓ 'p(95)<10000' p(95)=1.33s
+
+
+  █ TOTAL RESULTS
+
+    checks_total.......: 525    8.798752/s
+    checks_succeeded...: 82.28% 432 out of 525
+    checks_failed......: 17.71% 93 out of 525
+
+    ✗ Benign traffic survives the spike (200 OK)
+      ↳  82% — ✓ 432 / ✗ 93
+
+    HTTP
+    http_req_duration..............: avg=448.64ms min=11.76ms  med=329.99ms max=2.59s p(90)=1.11s p(95)=1.33s
+      { expected_response:true }...: avg=424.61ms min=39.93ms  med=303.06ms max=1.6s  p(90)=1.11s p(95)=1.28s
+    http_req_failed................: 17.48% 96 out of 549
+    http_reqs......................: 549    9.200981/s
+
+    EXECUTION
+    iteration_duration.............: avg=950.14ms min=513.14ms med=831.5ms  max=3.09s p(90)=1.61s p(95)=1.83s
+    iterations.....................: 549    9.200981/s
+    vus............................: 1      min=1         max=30
+    vus_max........................: 30     min=30        max=30
+
+    NETWORK
+    data_received..................: 182 kB 3.1 kB/s
+    data_sent......................: 53 kB  888 B/s

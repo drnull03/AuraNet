@@ -1,0 +1,56 @@
+ GATEWAY_URL="http://localhost:10000" k6 run soak_test.js
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: soak_test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 5 max VUs, 2m50s max duration (incl. graceful stop):
+              * default: Up to 5 looping VUs for 2m20s over 3 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+WARN[0087] Request Failed                                error="Get \"http://localhost:10000/api/loans/export?id=123\": request timeout"
+WARN[0140] Request Failed                                error="Get \"http://localhost:10000/api/loans/export?id=123\": request timeout"
+
+
+  █ THRESHOLDS
+
+    http_req_duration
+    ✓ 'p(95)<10000' p(95)=711.93ms
+
+
+  █ TOTAL RESULTS
+
+    checks_total.......: 351    2.064693/s
+    checks_succeeded...: 83.76% 294 out of 351
+    checks_failed......: 16.23% 57 out of 351
+
+    ✗ System remains stable over time (200 OK)
+      ↳  83% — ✓ 294 / ✗ 57
+
+    HTTP
+    http_req_duration..............: avg=430.46ms min=13.43ms med=84.08ms max=1m0s  p(90)=351.5ms  p(95)=711.93ms
+      { expected_response:true }...: avg=128.97ms min=48.52ms med=79.79ms max=1.15s p(90)=135.01ms p(95)=220.05ms
+    http_req_failed................: 25.93% 118 out of 455
+    http_reqs......................: 455    2.676453/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.43s    min=1.01s   med=1.08s   max=1m1s  p(90)=1.35s    p(95)=1.71s
+    iterations.....................: 455    2.676453/s
+    vus............................: 1      min=1          max=5
+    vus_max........................: 5      min=5          max=5
+
+    NETWORK
+    data_received..................: 154 kB 906 B/s
+    data_sent......................: 46 kB  268 B/s
+
+
+
+
+running (2m50.0s), 0/5 VUs, 455 complete and 1 interrupted iterations
+default ✓ [======================================] 1/5 VUs  2m20s

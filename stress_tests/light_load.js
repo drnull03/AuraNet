@@ -10,7 +10,8 @@ export const options = {
     ],
     thresholds: {
         // Ensure 95% of requests complete in under 800ms, even with AI inspection
-        http_req_duration: ['p(95)<10000'], 
+        http_req_duration: ['p(95)<10000'],
+        'checks': ['rate>0.85'],
     },
 };
 
