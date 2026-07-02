@@ -1,18 +1,33 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
-
 OUTPUT="combined.txt"
+SCRIPT_NAME="$(basename "$0")"
 
-# Empty the output file
+IGNORE_DIRS=("node_modules" ".git" "dist" "build")
+IGNORE_FILES=("combined.txt" "$SCRIPT_NAME" "package-lock.json")
+
 > "$OUTPUT"
 
-find . -type f  ! -name "$OUTPUT" -print0 |
-while IFS= read -r -d '' file; do
-    echo "# Content of ${file#./}" >> "$OUTPUT"
-    cat "$file" >> "$OUTPUT"
-    echo "" >> "$OUTPUT"
-    echo "" >> "$OUTPUT"
+PRUNE_EXPR=()
+for dir in "${IGNORE_DIRS[@]}"; do
+  PRUNE_EXPR+=( -path "./$dir" -o )
+done
+unset 'PRUNE_EXPR[${#PRUNE_EXPR[@]}-1]'  # remove last -o
+
+FILE_EXPR=()
+for file in "${IGNORE_FILES[@]}"; do
+  FILE_EXPR+=( ! -name "$file" )
 done
 
-echo "Created $OUTPUT"
+find . \
+  \( "${PRUNE_EXPR[@]}" \) -prune -o \
+  -type f \
+  ! -name "*.sh" \
+  "${FILE_EXPR[@]}" \
+  -print | while read -r file; do
+
+  echo "# content of $file" >> "$OUTPUT"
+  cat "$file" >> "$OUTPUT"
+  echo >> "$OUTPUT"
+
+done

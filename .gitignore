@@ -32,3 +32,4 @@ shadowAuraNet/
 **/*.log
 **/.env*
 **/!.env.example
+**/combined.txt
