@@ -15,7 +15,7 @@ import {
   Hexagon
 } from 'lucide-react';
 import { ActiveView } from '../types';
-
+import logo from '../../assets/trans_logo.png';
 interface SidebarProps {
   activeView: ActiveView;
   setActiveView: (view: ActiveView) => void;
@@ -51,7 +51,11 @@ export default function Sidebar({
         <div className="flex items-center justify-between p-4 border-b border-indigo-500/30">
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="p-2 bg-indigo-600/50 rounded-lg flex-shrink-0">
-              <Hexagon className="h-6 w-6 text-[#06b6d4] animate-pulse" />
+            <img 
+                src={logo} 
+                alt="Project Alpha Logo" 
+                className="h-6 w-6 object-contain animate-pulse" 
+              />
             </div>
             {!isCollapsed && (
               <div className="flex flex-col select-none">
