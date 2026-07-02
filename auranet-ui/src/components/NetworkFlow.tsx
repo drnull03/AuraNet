@@ -47,9 +47,9 @@ const SatelliteNodeComponent = ({ data }: any) => {
   const { label, type, status, cpu } = data;
   
   const getStatusColor = () => {
-    if (status === 'offline') return 'bg-red-500 border-red-300 shadow-red-500/30';
-    if (status === 'warning') return 'bg-amber-500 border-amber-300 shadow-amber-500/30';
-    return 'bg-[#00ced1] border-cyan-200 shadow-cyan-500/30';
+    if (status === 'offline') return 'bg-red-700 border-red-500 shadow-red-700/30';
+    if (status === 'warning') return 'bg-amber-600 border-amber-500 shadow-amber-600/30';
+    return 'bg-cyan-700 border-cyan-500 shadow-cyan-700/30'; // Darker cyan (was #00ced1)
   };
 
   return (
@@ -142,14 +142,14 @@ export default function NetworkFlow({
           id: `edge-${node.id}`,
           source: 'central-hub',
           target: node.id,
-          type: 'default',
+          type: 'straight',
           animated: !isOffline,
           style: { 
             stroke: isOffline 
-              ? '#ef4444' 
+              ? '#991b1b' 
               : isWarning 
-                ? '#f59e0b' 
-                : '#cbd5e1',
+                ? '#b45309' 
+                : '#475569',
             strokeWidth: isOffline ? 1.5 : 2.5,
             opacity: isOffline ? 0.4 : 0.85
           },

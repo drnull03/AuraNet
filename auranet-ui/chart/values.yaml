@@ -1,0 +1,25 @@
+replicaCount: 1
+
+image:
+  repository: auranet/ui
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: NodePort
+  port: 80
+  targetPort: 3000
+  nodePort: 30000
+
+# The contents of naive.conf injected directly into the ConfigMap
+topologyConfig: |-
+  # frontend -> gateway
+  1. frontend-ui -> api-gateway:8080
+
+  # gateway -> backends
+  2. api-gateway -> account-service:5000
+  3. api-gateway -> loan-service:8080
+
+  # backends -> DB
+  4. account-service -> finance-db:5432
+  5. loan-service -> finance-db:5432

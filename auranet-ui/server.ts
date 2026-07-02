@@ -48,9 +48,9 @@ app.get('/api/topology', (req, res) => {
           id: `edge-${index}`,
           source: source,
           target: targetNode,
-          type: 'default',
+          type: 'straight', 
           animated: true,
-          style: { stroke: '#cbd5e1', strokeWidth: 2 }
+          style: { stroke: '#475569', strokeWidth: 2.5 } // Darker slate gray
         });
       }
     });
