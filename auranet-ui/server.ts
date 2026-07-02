@@ -50,7 +50,13 @@ app.get('/api/topology', (req, res) => {
           target: targetNode,
           type: 'straight', 
           animated: true,
-          style: { stroke: '#475569', strokeWidth: 2.5 } // Darker slate gray
+          style: { stroke: '#475569', strokeWidth: 2.5 }, // Darker slate gray
+          markerEnd: {
+            type: 'arrowclosed', // Forces a solid, closed triangle arrow
+            width: 20,           // Scale the arrow up so it is highly visible
+            height: 20,
+            color: '#475569'     // Match the dark slate edge color
+          }
         });
       }
     });

@@ -70,8 +70,19 @@ const SatelliteNodeComponent = ({ data }: any) => {
         {label}
       </div>
 
-      <Handle type="target" position={Position.Top} className="opacity-0" />
-      <Handle type="source" position={Position.Bottom} className="opacity-0" />
+      {/* Explicitly pin the handles 24px from the top (center of the 48px circle) */}
+      <Handle 
+        type="target" 
+        position={Position.Left} 
+        className="opacity-0" 
+        style={{ top: '24px' }} 
+      />
+      <Handle 
+        type="source" 
+        position={Position.Right} 
+        className="opacity-0" 
+        style={{ top: '24px' }} 
+      />
     </div>
   );
 };
