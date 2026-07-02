@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auranet-topology-config
+  namespace: auranet-namespace
+data:
+  naive.conf: |
+    # frontend -> gateway
+    1. frontend-ui -> api-gateway:8080
+
+    # gateway -> backends
+    2. api-gateway -> account-service:5000
+    3. api-gateway -> loan-service:8080
+
+    # backends -> DB
+    4. account-service -> finance-db:5432
+    5. loan-service -> finance-db:5432

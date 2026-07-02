@@ -56,10 +56,10 @@ export default function Sidebar({
             {!isCollapsed && (
               <div className="flex flex-col select-none">
                 <span className="font-display font-bold text-lg tracking-tight leading-none text-white">
-                  Project Alpha
+                  AuraNet System
                 </span>
                 <span className="font-mono text-[10px] text-indigo-200 mt-1 uppercase tracking-wider">
-                  Graduation 2024
+                  Main Dashboard
                 </span>
               </div>
             )}

@@ -163,10 +163,26 @@ export default function NetworkFlow({
   const [edges, setEdges, onEdgesChange] = useEdgesState(getInitialEdges());
 
   // Update flow elements when our parent state changes
+  // Inside NetworkFlow.tsx component
   useEffect(() => {
-    setNodes(getInitialNodes());
-    setEdges(getInitialEdges());
-  }, [systemNodes, getInitialNodes, getInitialEdges, setNodes, setEdges]);
+    const fetchTopology = async () => {
+      try {
+        const response = await fetch('/api/topology');
+        const data = await response.json();
+        
+        if (data.nodes && data.edges) {
+          setNodes(data.nodes);
+          setEdges(data.edges);
+          // Also update parent state so other views have the nodes
+          setSystemNodes(data.nodes);
+        }
+      } catch (error) {
+        console.error("Failed to fetch topology:", error);
+      }
+    };
+
+    fetchTopology();
+  }, []);
 
   // When node is clicked in React Flow
   const onNodeClick = useCallback((event: React.MouseEvent, flowNode: Node) => {

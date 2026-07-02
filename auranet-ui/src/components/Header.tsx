@@ -31,7 +31,7 @@ export default function Header({
   const getBreadcrumbTitle = () => {
     switch (activeView) {
       case 'main':
-        return 'System Node Visualizer';
+        return 'System Workload Visualizer';
       case 'stress':
         return 'Mesh Stress Test Controller';
       case 'statistics':
@@ -41,7 +41,7 @@ export default function Header({
       case 'workload':
         return 'Distributed Workload Balancer';
       default:
-        return 'System Node Visualizer';
+        return 'System Workload Visualizer';
     }
   };
 
