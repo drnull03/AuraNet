@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@500;600;700;800&display=swap');
+@import "@xyflow/react/dist/style.css";
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Manrope", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-brand-primary: #4d41df;
+  --color-brand-primary-light: #675df9;
+  --color-brand-secondary: #00696b;
+  --color-brand-secondary-light: #0891b2;
+  --color-brand-bg: #f8f9fa;
+  --color-brand-surface: #ffffff;
+  --color-brand-text: #191c1d;
+  --color-brand-text-muted: #464555;
+  --color-brand-border: #e1e3e4;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-brand-bg);
+  color: var(--color-brand-text);
+  overflow-x: hidden;
+}
+
+/* Custom styles for React Flow to match the elegant design system */
+.react-flow__node {
+  border-radius: 0.5rem;
+  font-family: var(--font-mono);
+  box-shadow: 0 4px 12px rgba(77, 65, 223, 0.08);
+}
+
+.react-flow__handle {
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-brand-primary);
+  border: 2px solid white;
+}
+
+.react-flow__edge-path {
+  stroke-width: 2.5;
+  stroke-dasharray: 4;
+  animation: dash 30s linear infinite;
+}
+
+@keyframes dash {
+  from {
+    stroke-dashoffset: 200;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
