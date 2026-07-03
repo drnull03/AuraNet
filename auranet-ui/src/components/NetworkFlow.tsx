@@ -16,7 +16,7 @@ import {
   Node,
   Edge
 } from '@xyflow/react';
-import { Play, Pause, Plus, ShieldCheck, Cpu, Database, WifiOff, AlertTriangle, Layers, Server } from 'lucide-react';
+import { Play, Pause, Plus, ShieldCheck, Cpu, Database, WifiOff, AlertTriangle, Layers, Server, Activity } from 'lucide-react';
 import { SystemNode, K8sNode, AuraNode } from '../types';
 
 // Custom Central Node component
@@ -107,6 +107,69 @@ export default function NetworkFlow({
   // View Mode State
   const [viewMode, setViewMode] = useState<'workloads' | 'nodes' | 'auranet'>('workloads');
 
+  // Reactivity State
+  const [liveEventStr, setLiveEventStr] = useState<string>('🟢 SECURE: Awaiting telemetry signals from AuraNet Engine & Runtime...');
+  const [quarantinedWorkloads, setQuarantinedWorkloads] = useState<Set<string>>(new Set());
+
+  // Set up Server-Sent Events listener for real-time reactivity
+  useEffect(() => {
+    const source = new EventSource('/api/events/stream');
+
+    source.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        const { subject, data } = msg;
+        const timeStr = new Date().toLocaleTimeString();
+        let displayStr = '';
+
+        // 1. ZTC Commands Quarantine (AutoHeal Trigger) -> Turn Red
+        if (subject.startsWith('auranet.commands.autoheal.')) {
+          const workload = subject.split('.').pop() || '';
+          const threat = data.threat_signatures ? data.threat_signatures[0] : 'Anomaly';
+          displayStr = `[${timeStr}] 🚨 ZTC QUARANTINE ORDERED FOR: ${workload.toUpperCase()} (Threat: ${threat})`;
+          
+          setQuarantinedWorkloads(prev => {
+            const next = new Set(prev);
+            next.add(workload);
+            return next;
+          });
+
+          // Immediate optimistic visual update
+          setSystemNodes(prev => prev.map(n => n.id.includes(workload) || n.label.includes(workload) ? { ...n, status: 'offline' } : n));
+        } 
+        // 2. AutoHeal Remediated -> Turn Green
+        else if (subject.startsWith('auranet.remediated.')) {
+          const workload = subject.split('.').pop() || '';
+          displayStr = `[${timeStr}] ✅ AUTOHEAL COMPLETE: ${workload.toUpperCase()} pods cycled and restored to trusted state.`;
+          
+          setQuarantinedWorkloads(prev => {
+            const next = new Set(prev);
+            next.delete(workload);
+            return next;
+          });
+
+          // Immediate optimistic visual update
+          setSystemNodes(prev => prev.map(n => n.id.includes(workload) || n.label.includes(workload) ? { ...n, status: 'active' } : n));
+        }
+        // 3. Telemetry Forwarding (Engine or Runtime event fired)
+        else if (subject.startsWith('auranet.events.')) {
+          const workload = subject.split('.').pop() || '';
+          const threat = data.threat || 'Behavioral Anomaly';
+          const sourceInfo = subject.includes('.runtime.') ? 'Runtime eBPF' : 'Shadow AI Engine';
+          displayStr = `[${timeStr}] ⚠️ ${sourceInfo} flagged [${threat}] on workload: ${workload.toUpperCase()}`;
+        }
+
+        if (displayStr) {
+          setLiveEventStr(displayStr);
+        }
+      } catch (err) {
+        console.error("SSE parse error", err);
+      }
+    };
+
+    return () => source.close();
+  }, [setSystemNodes]);
+
   // Set up React Flow elements based on View Mode
   const getInitialNodes = useCallback(() => {
     if (viewMode === 'workloads') {
@@ -137,13 +200,12 @@ export default function NetworkFlow({
         return {
           id: `k8s-${node.id}`,
           type: 'satelliteNode',
-          // Staggered horizontal layout for actual nodes
           position: { x: 200 + (index * 220), y: 250 + (index % 2 === 0 ? -50 : 50) },
           data: { label: node.name, type: 'compute', status: node.status, cpu: node.cpu, isPhysicalNode: true },
         } as Node;
       });
     } else {
-      // AURANET VIEW: Map directly from `kubectl get pods -n auranet-namespace`
+      // AURANET VIEW
       const controllers = auranetNodes.filter(n => n.name.includes('controller'));
       const ztcs = auranetNodes.filter(n => n.name.includes('ztc'));
       const autoheals = auranetNodes.filter(n => n.name.includes('autoheal'));
@@ -332,7 +394,16 @@ export default function NetworkFlow({
         const data = await response.json();
         
         if (data.systemNodes) {
-          setSystemNodes(data.systemNodes); 
+          // Merge in our active quarantine overrides so the 5sec loop doesn't erase RED states
+          const mergedWorkloads = data.systemNodes.map((n: any) => {
+            const isQuarantined = Array.from(quarantinedWorkloads).some(qw => n.id.includes(qw) || n.label.includes(qw));
+            if (isQuarantined) {
+              return { ...n, status: 'offline' };
+            }
+            return n;
+          });
+
+          setSystemNodes(mergedWorkloads); 
           setIsAuraNetHealthy(data.auranetHealth);
         }
         if (data.k8sNodes) {
@@ -349,7 +420,7 @@ export default function NetworkFlow({
     fetchTopology();
     const interval = setInterval(fetchTopology, 5000); 
     return () => clearInterval(interval);
-  }, [setSystemNodes, pulseActive]);
+  }, [setSystemNodes, pulseActive, quarantinedWorkloads]);
 
   // Handle Node Clicks based on current view
   const onNodeClick = useCallback((event: React.MouseEvent, flowNode: Node) => {
@@ -357,7 +428,6 @@ export default function NetworkFlow({
       const originalNode = systemNodes.find(n => n.id === flowNode.id);
       if (originalNode) onNodeSelect(originalNode);
     } else if (viewMode === 'nodes') {
-      // In Node View, inject the k8sNode info into a mocked SystemNode struct so the UI tray populates
       const cleanId = flowNode.id.replace('k8s-', '');
       const k8sNode = k8sNodes.find(n => n.id === cleanId);
       
@@ -505,6 +575,20 @@ export default function NetworkFlow({
 
       {/* Main flow layout */}
       <div className="flex-1 min-h-[400px] border border-slate-100 rounded-xl relative overflow-hidden bg-slate-50/50">
+        
+        {/* REACTIVE EVENT TICKER (Z-INDEX 20 OVER GRAPH) */}
+        <div className="absolute top-0 left-0 right-0 z-20 bg-slate-900/90 text-emerald-400 font-mono text-[10.5px] py-2 px-4 flex items-center gap-3 backdrop-blur-md shadow-lg border-b border-emerald-500/30 overflow-hidden">
+          <span className="flex items-center gap-1.5 text-emerald-300 font-bold tracking-widest uppercase flex-shrink-0">
+            <Activity size={14} className="animate-pulse" /> Live Security Feed
+          </span>
+          <div className="w-px h-3 bg-emerald-500/40 mx-1" />
+          <div className="flex-1 truncate font-medium tracking-wide">
+            <span className="animate-fade-in-right inline-block text-[#00ced1]">
+              {liveEventStr}
+            </span>
+          </div>
+        </div>
+
         <ReactFlow
           nodes={nodes}
           edges={edges}

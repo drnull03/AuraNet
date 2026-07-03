@@ -11,13 +11,72 @@ import fs from 'fs'
 dotenv.config();
 import util from "util";
 import { exec } from "child_process";
+import { connect, StringCodec } from "nats";
 
 const app = express();
 const PORT = 3000;
 const execPromise = util.promisify(exec);
-// Middleware
+
 app.use(express.json());
 
+// ==========================================
+// NATS -> SSE EVENT STREAMING
+// ==========================================
+const sseClients = new Set<express.Response>();
+
+app.get('/api/events/stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  sseClients.add(res);
+
+  req.on('close', () => {
+    sseClients.delete(res);
+  });
+});
+
+async function startNatsListener() {
+  try {
+    const NATS_URL = process.env.NATS_URL || 'nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222';
+    console.log("[Server] Connecting to NATS for UI SSE broadcast at:", NATS_URL);
+    
+    const nc = await connect({ servers: NATS_URL });
+    const sc = StringCodec();
+
+    // Subscribe to all AuraNet system events
+    const sub = nc.subscribe("auranet.>");
+    console.log("[Server] Subscribed to NATS 'auranet.>' telemetry stream.");
+
+    for await (const msg of sub) {
+      const subject = msg.subject;
+      let decodedData;
+      
+      try {
+        decodedData = JSON.parse(sc.decode(msg.data));
+      } catch (e) {
+        decodedData = { raw: sc.decode(msg.data) };
+      }
+      
+      const payload = JSON.stringify({ subject, data: decodedData });
+      
+      // Broadcast to all connected React clients
+      sseClients.forEach(client => {
+        client.write(`data: ${payload}\n\n`);
+      });
+    }
+  } catch (err) {
+    console.warn("[Server] WARNING: Could not connect to NATS. Live SSE feed will be unavailable.", err);
+  }
+}
+
+// Initialize the background listener
+startNatsListener();
+
+// ==========================================
+// TOPOLOGY POLLING API
+// ==========================================
 app.get('/api/topology', async (req, res) => {
   try {
     // 1. PROBE AURANET HEALTH
@@ -53,7 +112,6 @@ app.get('/api/topology', async (req, res) => {
 
     // Map actual K8s pods to UI nodes
     pods.forEach((pod: any) => {
-      // Strip random pod hashes to get the base deployment name (e.g., api-gateway-7f5b... -> api-gateway)
       const baseName = pod.metadata.labels?.app || pod.metadata.name.split('-').slice(0, -2).join('-');
       
       if (!nodeMap.has(baseName)) {
@@ -65,8 +123,8 @@ app.get('/api/topology', async (req, res) => {
           latency: 12, 
           region: 'Local Cluster',
           ip: pod.status.podIP || 'Pending',
-          cpu: 35,    // Baseline for UI rendering until Metrics Server is attached
-          memory: 45, // Baseline for UI rendering until Metrics Server is attached
+          cpu: 35,
+          memory: 45,
           connections: []
         });
       }
@@ -97,7 +155,6 @@ app.get('/api/topology', async (req, res) => {
     // 4. FETCH REAL KUBERNETES NODES
     let k8sNodes: any[] = [];
     try {
-      // Allow a larger buffer in case of large clusters
       const { stdout: nodeOut } = await execPromise('kubectl get nodes -o json', { maxBuffer: 1024 * 1024 * 10 });
       const nodesData = JSON.parse(nodeOut);
       k8sNodes = nodesData.items.map((n: any) => {
@@ -110,7 +167,6 @@ app.get('/api/topology', async (req, res) => {
           name: n.metadata.name,
           status: isReady ? 'active' : 'offline',
           ip: internalIp,
-          // Baseline UI mock stats until a metrics-server integration is provided
           cpu: Math.floor(Math.random() * 20) + 15,
           memory: Math.floor(Math.random() * 30) + 30
         };

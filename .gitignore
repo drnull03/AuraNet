@@ -33,3 +33,4 @@ shadowAuraNet/
 **/.env*
 **/!.env.example
 **/combined.txt
+**/combine.sh
