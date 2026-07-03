@@ -9,7 +9,7 @@ export interface SystemNode {
   id: string;
   label: string;
   type: 'central' | 'sensor' | 'gateway' | 'compute';
-  status: 'active' | 'warning' | 'offline';
+  status: 'active' | 'warning' | 'offline' | 'recovered'; // Added 'recovered' state for smooth transitions
   latency: number; // in ms
   region: string;
   ip: string;
