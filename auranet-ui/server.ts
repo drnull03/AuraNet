@@ -12,6 +12,7 @@ dotenv.config();
 import util from "util";
 import { exec } from "child_process";
 import { connect, StringCodec } from "nats";
+import os from "os";
 
 const app = express();
 const PORT = 3000;
@@ -19,9 +20,7 @@ const execPromise = util.promisify(exec);
 
 app.use(express.json());
 
-// ==========================================
-// NATS -> SSE EVENT STREAMING
-// ==========================================
+
 const sseClients = new Set<express.Response>();
 
 app.get('/api/events/stream', (req, res) => {
@@ -74,9 +73,7 @@ async function startNatsListener() {
 // Initialize the background listener
 startNatsListener();
 
-// ==========================================
-// TOPOLOGY POLLING API
-// ==========================================
+
 app.get('/api/topology', async (req, res) => {
   try {
     // 1. PROBE AURANET HEALTH
@@ -271,6 +268,97 @@ app.get('/api/stress-tests', (req, res) => {
   }
 
   res.json(results);
+});
+
+
+
+// ==========================================
+// SYSTEM TELEMETRY API (REAL HARDWARE METRICS)
+// ==========================================
+app.get('/api/system-stats', async (req, res) => {
+  try {
+      const cpus = os.cpus();
+      
+      // Sample CPU usage over 200ms for real-time accuracy
+      const cpuUsagePercent = await new Promise<number>(resolve => {
+          const startCpus = os.cpus();
+          setTimeout(() => {
+              const endCpus = os.cpus();
+              let totalIdle = 0;
+              let totalTick = 0;
+              for (let i = 0; i < endCpus.length; i++) {
+                  const s = startCpus[i].times;
+                  const e = endCpus[i].times;
+                  for (const type in e) {
+                      totalTick += (e[type as keyof typeof e] - s[type as keyof typeof s]);
+                  }
+                  totalIdle += (e.idle - s.idle);
+              }
+              const usage = totalTick === 0 ? 0 : 100 - Math.round(100 * totalIdle / totalTick);
+              resolve(usage);
+          }, 200);
+      });
+
+      const totalMem = os.totalmem();
+      const freeMem = os.freemem();
+      const usedMem = totalMem - freeMem;
+
+      let diskInfo: any[] = [];
+      let inodeInfo: any[] = [];
+
+      // Fetch Disk Space
+      try {
+          const { stdout: diskOut } = await execPromise('df -P -h');
+          const diskLines = diskOut.trim().split('\n').slice(1);
+          diskInfo = diskLines.map(line => {
+              const parts = line.split(/\s+/);
+              return {
+                  filesystem: parts[0],
+                  size: parts[1],
+                  used: parts[2],
+                  available: parts[3],
+                  usePercent: parseInt(parts[4]) || 0,
+                  mountedOn: parts.slice(5).join(' ')
+              };
+          });
+      } catch (e) { console.warn("df -P -h failed", e); }
+
+      // Fetch Inode Usage
+      try {
+          const { stdout: inodeOut } = await execPromise('df -P -i');
+          const inodeLines = inodeOut.trim().split('\n').slice(1);
+          inodeInfo = inodeLines.map(line => {
+              const parts = line.split(/\s+/);
+              return {
+                  filesystem: parts[0],
+                  inodes: parts[1],
+                  used: parts[2],
+                  available: parts[3],
+                  usePercent: parseInt(parts[4]) || 0,
+                  mountedOn: parts.slice(5).join(' ')
+              };
+          });
+      } catch (e) { console.warn("df -P -i failed", e); }
+
+      res.json({
+          cpu: {
+              model: cpus[0]?.model || 'Unknown CPU',
+              cores: cpus.length,
+              usagePercent: cpuUsagePercent
+          },
+          ram: {
+              totalGB: (totalMem / (1024 ** 3)).toFixed(2),
+              usedGB: (usedMem / (1024 ** 3)).toFixed(2),
+              freeGB: (freeMem / (1024 ** 3)).toFixed(2),
+              usagePercent: Math.round((usedMem / totalMem) * 100)
+          },
+          disk: diskInfo,
+          inodes: inodeInfo
+      });
+  } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to fetch system stats" });
+  }
 });
 
 
