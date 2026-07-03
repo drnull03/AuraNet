@@ -1,0 +1,229 @@
+<style>
+:root{
+  --blue-bg:#E6F1FB;--blue-bd:#185FA5;--blue-tx:#0C447C;--blue-sub:#185FA5;
+  --purple-bg:#EEEDFE;--purple-bd:#534AB7;--purple-tx:#3C3489;--purple-sub:#534AB7;
+  --teal-bg:#E1F5EE;--teal-bd:#0F6E56;--teal-tx:#085041;--teal-sub:#0F6E56;
+  --coral-bg:#FAECE7;--coral-bd:#993C1D;--coral-tx:#712B13;--coral-sub:#993C1D;
+  --amber-bg:#FAEEDA;--amber-bd:#854F0B;--amber-tx:#633806;--amber-sub:#854F0B;
+  --gray-bg:#F1EFE8;--gray-bd:#5F5E5A;--gray-tx:#444441;--gray-sub:#5F5E5A;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --blue-bg:#0C447C;--blue-bd:#85B7EB;--blue-tx:#E6F1FB;--blue-sub:#85B7EB;
+    --purple-bg:#3C3489;--purple-bd:#AFA9EC;--purple-tx:#EEEDFE;--purple-sub:#AFA9EC;
+    --teal-bg:#085041;--teal-bd:#5DCAA5;--teal-tx:#E1F5EE;--teal-sub:#5DCAA5;
+    --coral-bg:#712B13;--coral-bd:#F0997B;--coral-tx:#FAECE7;--coral-sub:#F0997B;
+    --amber-bg:#633806;--amber-bd:#EF9F27;--amber-tx:#FAEEDA;--amber-sub:#EF9F27;
+    --gray-bg:#444441;--gray-bd:#B4B2A9;--gray-tx:#F1EFE8;--gray-sub:#B4B2A9;
+  }
+}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;}
+.box{border:1px solid var(--border-strong);border-radius:8px;padding:6px 8px;background:var(--surface-1);box-sizing:border-box;}
+.lbl{font-size:12px;font-weight:500;line-height:1.25;color:var(--text-primary);}
+.sub{font-size:11px;line-height:1.2;margin-top:2px;color:var(--text-secondary);}
+.pill{font-size:11px;padding:2px 6px;border-radius:20px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-secondary);white-space:nowrap;}
+.row{display:flex;gap:8px;margin-bottom:8px;}
+.row>*{flex:1;min-width:0;}
+.cat-blue{background:var(--blue-bg);border-color:var(--blue-bd);}
+.cat-blue .lbl{color:var(--blue-tx);} .cat-blue .sub{color:var(--blue-sub);}
+.cat-purple{background:var(--purple-bg);border-color:var(--purple-bd);}
+.cat-purple .lbl{color:var(--purple-tx);} .cat-purple .sub{color:var(--purple-sub);}
+.cat-teal{background:var(--teal-bg);border-color:var(--teal-bd);}
+.cat-teal .lbl{color:var(--teal-tx);} .cat-teal .sub{color:var(--teal-sub);}
+.cat-coral{background:var(--coral-bg);border-color:var(--coral-bd);}
+.cat-coral .lbl{color:var(--coral-tx);} .cat-coral .sub{color:var(--coral-sub);}
+.cat-amber{background:var(--amber-bg);border-color:var(--amber-bd);}
+.cat-amber .lbl{color:var(--amber-tx);}
+.cat-gray{background:var(--gray-bg);border-color:var(--gray-bd);}
+.cat-gray .lbl{color:var(--gray-tx);} .cat-gray .sub{color:var(--gray-sub);}
+.clickable{cursor:pointer;transition:box-shadow .15s;}
+.clickable:hover{box-shadow:0 0 0 2px var(--border-strong) inset;}
+.nats-sq{flex:0 0 64px;display:flex;align-items:center;justify-content:center;text-align:center;}
+.node-label{font-size:13px;font-weight:500;color:var(--text-primary);margin-bottom:10px;}
+.ebpf-tag{position:absolute;font-size:10.5px;padding:2px 8px;border-radius:20px;background:var(--surface-0);border:1px dashed var(--teal-bd);color:var(--teal-tx);z-index:2;}
+.fl-flow{stroke-dasharray:5 5;animation:flow 1.4s linear infinite;}
+@media (prefers-reduced-motion: no-preference){.fl-flow{animation:flow 1.4s linear infinite;}}
+@keyframes flow{to{stroke-dashoffset:-20;}}
+</style>
+<div id="diagram-root" style="position:relative;padding:4px 0 12px;">
+<h2 class="sr-only">Architecture diagram of AuraNet: a bootstrap job seeds a Kubernetes cluster containing a control plane node (Cilium operator, SPIRE server, Hubble relay, and the AuraNet controller, zero trust controller, and autoheal components linked by NATS) and worker nodes (Cilium agent, SPIRE agent, Envoy proxy, and the nested AuraNet system running loader, runtime, and engine with inference, training, and network workers), with an animated federated learning link between the controller and the network worker, and an eBPF enforcement layer at the edge of each worker node.</h2>
+
+<div style="display:flex;justify-content:center;margin-bottom:26px;">
+  <div id="bootstrap" class="box cat-gray clickable" style="width:230px;text-align:center;" onclick="sendPrompt('Explain what auranet-bootstrap does in more detail')">
+    <div class="lbl">auranet-bootstrap</div>
+    <div class="sub">One-time job: seeds baseline zero trust policy</div>
+  </div>
+</div>
+
+<div id="cluster" style="border:1.5px dashed var(--border-strong);border-radius:16px;padding:22px 16px 16px;background:var(--surface-0);">
+  <div class="node-label" style="margin-bottom:16px;">AuraNet-protected Kubernetes cluster</div>
+
+  <div id="control-plane" class="box clickable" style="border-radius:12px;padding:14px 12px;margin-bottom:6px;" onclick="sendPrompt('Explain the role of each component in the AuraNet control plane node')">
+    <div class="node-label">Control plane node</div>
+
+    <div class="row">
+      <div id="cilium-operator" class="box cat-blue"><div class="lbl">cilium-operator</div></div>
+      <div id="spire-server" class="box cat-purple"><div class="lbl">spire-server</div></div>
+      <div id="hubble-relay-wrap" class="box cat-blue">
+        <div id="hubble-relay" class="lbl">hubble-relay</div>
+        <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;">
+          <div id="hubble-ui" class="pill">hubble-ui</div>
+          <div id="hubble-cli" class="pill">hubble-cli</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div id="auranet-ui" class="box cat-gray"><div class="lbl">auranet-ui</div><div class="sub">Observability dashboard</div></div>
+      <div id="auranet-cli" class="box cat-gray"><div class="lbl">auranet-cli</div><div class="sub">Provisioning</div></div>
+    </div>
+
+    <div class="row">
+      <div id="auranet-controller" class="box cat-coral clickable" onclick="sendPrompt('Explain how the auranet-controller and its FL aggregator work')">
+        <div class="lbl">auranet-controller</div>
+        <div id="fl-aggregator" class="pill" style="margin-top:4px;">FL aggregator</div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-bottom:0;">
+      <div id="auranet-ztc" class="box cat-coral"><div class="lbl">auranet-ztc</div><div class="sub">Zero trust controller</div></div>
+      <div id="nats-ztc-autoheal" class="box cat-amber nats-sq"><div class="lbl">NATS</div></div>
+      <div id="auranet-autoheal" class="box cat-coral"><div class="lbl">auranet-autoheal</div></div>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:center;margin:2px 0;">
+    <div id="nats-engine-ztc" class="box cat-amber nats-sq" style="flex:none;width:64px;"><div class="lbl">NATS</div></div>
+  </div>
+
+  <div style="text-align:center;margin:2px 0 8px;">
+    <span class="sub">Worker nodes ×N — one expanded below</span>
+  </div>
+
+  <div id="worker-stack" style="position:relative;padding:0 10px 10px 0;">
+    <div aria-hidden="true" style="position:absolute;top:8px;left:8px;right:-8px;bottom:0;border:1.5px dashed var(--border);border-radius:12px;opacity:.5;"></div>
+    <div aria-hidden="true" style="position:absolute;top:4px;left:4px;right:-4px;bottom:4px;border:1.5px dashed var(--border);border-radius:12px;opacity:.75;"></div>
+
+    <div id="worker-node" class="box clickable" style="position:relative;border-style:dashed;border-color:var(--teal-bd);border-radius:12px;padding:16px 12px 14px;" onclick="sendPrompt('Explain the AuraNet worker node in detail, including the eBPF enforcement layer')">
+      <span class="ebpf-tag" style="top:-10px;left:14px;">eBPF</span>
+      <span class="ebpf-tag" style="bottom:-10px;right:14px;">eBPF</span>
+      <div class="node-label">Worker node — detail view</div>
+
+      <div id="auranet-system" class="box cat-teal" style="padding:10px;margin-bottom:8px;">
+        <div class="lbl" style="margin-bottom:6px;">auranet-system</div>
+        <div id="auranet-agent" class="box" style="border-color:var(--teal-bd);background:var(--surface-1);padding:8px;">
+          <div class="lbl">auranet-agent</div>
+          <div class="row" style="margin-top:6px;margin-bottom:6px;">
+            <div id="auranet-loader" class="box cat-teal"><div class="lbl">auranet-loader</div></div>
+            <div id="auranet-runtime" class="box cat-teal"><div class="lbl">auranet-runtime</div></div>
+            <div id="auranet-engine" class="box cat-teal clickable" onclick="sendPrompt('Explain how the auranet-engine inference, training, and network workers interact')"><div class="lbl">auranet-engine</div></div>
+          </div>
+          <div class="row" style="margin-bottom:0;">
+            <div id="inference-worker" class="box cat-teal">
+              <div class="lbl">Inference worker</div>
+              <div style="display:flex;gap:3px;margin-top:3px;flex-wrap:wrap;">
+                <div class="pill">Brain A</div><div class="pill">Brain B</div><div class="pill">Brain C</div>
+              </div>
+            </div>
+            <div id="training-worker" class="box cat-teal"><div class="lbl">Training worker</div></div>
+            <div id="network-worker" class="box cat-teal"><div class="lbl">Network worker</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-bottom:8px;">
+        <div id="cilium-agent" class="box cat-blue"><div class="lbl">cilium-agent</div></div>
+        <div id="spire-agent" class="box cat-purple"><div class="lbl">spire-agent</div></div>
+        <div id="cilium-envoy" class="box cat-blue"><div class="lbl">cilium envoy proxy</div></div>
+        <div id="hubble-agent" class="box cat-blue"><div class="lbl">hubble-agent</div><div class="sub">Telemetry</div></div>
+      </div>
+
+      <div id="workload-placeholder" class="box" style="border-style:dashed;background:transparent;text-align:center;padding:14px;margin-bottom:0;">
+        <div class="sub">Your L3 workload / application runs here</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:18px;font-size:11px;color:var(--text-secondary);">
+  <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--blue-bd);margin-right:4px;"></span>Cilium / eBPF networking</span>
+  <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--purple-bd);margin-right:4px;"></span>SPIRE identity</span>
+  <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--teal-bd);margin-right:4px;"></span>AuraNet core engine</span>
+  <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--coral-bd);margin-right:4px;"></span>Zero trust control</span>
+  <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--amber-bd);margin-right:4px;"></span>NATS messaging</span>
+  <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--gray-bd);margin-right:4px;"></span>Tooling / bootstrap</span>
+</div>
+
+<svg id="connector-overlay" style="position:absolute;top:0;left:0;pointer-events:none;"></svg>
+</div>
+<script>
+(function(){
+  var root = document.getElementById('diagram-root');
+  function pt(id, side){
+    var el = document.getElementById(id);
+    var r = el.getBoundingClientRect();
+    var rr = root.getBoundingClientRect();
+    var x = r.left - rr.left, y = r.top - rr.top, w = r.width, h = r.height;
+    if(side==='top') return {x:x+w/2, y:y};
+    if(side==='bottom') return {x:x+w/2, y:y+h};
+    if(side==='left') return {x:x, y:y+h/2};
+    if(side==='right') return {x:x+w, y:y+h/2};
+    return {x:x+w/2, y:y+h/2};
+  }
+  function addLine(svg, p1, p2, opts){
+    opts = opts || {};
+    var el = document.createElementNS('http://www.w3.org/2000/svg','path');
+    el.setAttribute('d','M '+p1.x+' '+p1.y+' L '+p2.x+' '+p2.y);
+    el.setAttribute('fill','none');
+    el.setAttribute('stroke', opts.stroke || '#5F5E5A');
+    el.setAttribute('stroke-width', opts.width || 1.4);
+    if(opts.dash) el.setAttribute('stroke-dasharray', opts.dash);
+    if(opts.cls) el.setAttribute('class', opts.cls);
+    if(opts.markerEnd) el.setAttribute('marker-end','url(#arrow)');
+    if(opts.markerStart) el.setAttribute('marker-start','url(#arrow)');
+    svg.appendChild(el);
+  }
+  function addPath(svg, d, opts){
+    opts = opts || {};
+    var el = document.createElementNS('http://www.w3.org/2000/svg','path');
+    el.setAttribute('d', d);
+    el.setAttribute('fill','none');
+    el.setAttribute('stroke', opts.stroke || '#5F5E5A');
+    el.setAttribute('stroke-width', opts.width || 1.4);
+    if(opts.dash) el.setAttribute('stroke-dasharray', opts.dash);
+    if(opts.cls) el.setAttribute('class', opts.cls);
+    if(opts.markerEnd) el.setAttribute('marker-end','url(#arrow)');
+    if(opts.markerStart) el.setAttribute('marker-start','url(#arrow)');
+    svg.appendChild(el);
+  }
+  function draw(){
+    var svg = document.getElementById('connector-overlay');
+    var rr = root.getBoundingClientRect();
+    svg.setAttribute('width', rr.width);
+    svg.setAttribute('height', rr.height);
+    svg.setAttribute('viewBox', '0 0 '+rr.width+' '+rr.height);
+    svg.innerHTML = '<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>';
+
+    addLine(svg, pt('bootstrap','bottom'), pt('control-plane','top'), {stroke:'#888780', dash:'4 4', markerEnd:true});
+
+    addLine(svg, pt('auranet-ztc','bottom'), pt('nats-engine-ztc','top'), {stroke:'#993C1D', markerEnd:true, markerStart:true});
+    addLine(svg, pt('nats-engine-ztc','bottom'), pt('auranet-runtime','top'), {stroke:'#993C1D', markerEnd:true, markerStart:true});
+    addLine(svg, pt('nats-engine-ztc','bottom'), pt('auranet-engine','top'), {stroke:'#993C1D', markerEnd:true, markerStart:true});
+
+    addLine(svg, pt('auranet-ztc','right'), pt('nats-ztc-autoheal','left'), {stroke:'#854F0B', markerEnd:true, markerStart:true});
+    addLine(svg, pt('nats-ztc-autoheal','right'), pt('auranet-autoheal','left'), {stroke:'#854F0B', markerEnd:true, markerStart:true});
+
+    var clusterRect = document.getElementById('cluster').getBoundingClientRect();
+    var chanX = (clusterRect.right - rr.left) - 10;
+    var p1 = pt('fl-aggregator','right');
+    var p2 = pt('network-worker','right');
+    var d = 'M '+p1.x+' '+p1.y+' L '+chanX+' '+p1.y+' L '+chanX+' '+p2.y+' L '+p2.x+' '+p2.y;
+    addPath(svg, d, {stroke:'#BA7517', width:1.6, dash:'5 5', cls:'fl-flow', markerEnd:true, markerStart:true});
+  }
+  window.addEventListener('load', draw);
+  window.addEventListener('resize', draw);
+  setTimeout(draw, 60);
+  setTimeout(draw, 300);
+})();
+</script>
+
