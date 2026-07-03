@@ -1,0 +1,67 @@
+ k6 run light_load.js
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: light_load.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 5 max VUs, 1m20s max duration (incl. graceful stop):
+              * default: Up to 5 looping VUs for 50s over 3 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+WARN[0039] Request Failed                                error="Get \"http://localhost:10000/api/loans/export?id=123\": EOF"
+WARN[0039] Request Failed                                error="Get \"http://localhost:10000/api/loans/export?id=123\": EOF"
+WARN[0039] Request Failed                                error="Get \"http://localhost:10000/api/loans/export?id=123%20UNION%20SELECT%20username%20FROM%20users--\": EOF"
+WARN[0040] Request Failed                                error="Get \"http://localhost:10000/api/loans/export?id=123\": dial tcp 127.0.0.1:10000: connect: connection refused"
+WARN[0040] Request Failed                                error="Get \"http://localhost:10000/api/loans/export?id=123\": dial tcp 127.0.0.1:10000: connect: connection refused"
+WARN[0040] Request Failed                                error="Get \"http://localhost:10000/api/loans/export?id=123\": dial tcp 127.0.0.1:10000: connect: connection refused"
+WARN[0040] Request Failed                                error="Get \"http://localhost:10000/api/loans/export?id=123\": dial tcp 127.0.0.1:10000: connect: connection refused"
+WARN[0040] Request Failed                                error="Get \"http://localhost:10000/api/loans/export?id=123%20UNION%20SELECT%20username%20FROM%20users--\": dial tcp 127.0.0.1:10000: connect: connection refused"
+WARN[0041] Request Failed                                error="Get \"http://localhost:10000/api/loans/export?id=123\": dial tcp 127.0.0.1:10000: connect: connection refused"
+WARN[0041] Request Failed                                error="Get \"http://localhost:10000/api/loans/export?id=123\": dial tcp 127.0.0.1:10000: connect: connection refused"
+WARN[0041] Request Failed                                error="Get \"http://localhost:10000/api/loans/export?id=123\": dial tcp 127.0.0.1:10000: connect: connection refused"
+WARN[0041] Request Failed                                error="Get \"http://localhost:10000/api/loans/export?id=123\": dial tcp 127.0.0.1:10000: connect: connection refused"
+WARN[0041] Request Failed                                error="Get \"http://localhost:10000/api/loans/export?id=123\": dial tcp 127.0.0.1:10000: connect: connection refused"
+
+
+  █ THRESHOLDS
+
+    http_req_duration
+    ✓ 'p(95)<10000' p(95)=2.6s
+
+
+  █ TOTAL RESULTS
+
+    checks_total.......: 126    2.495801/s
+    checks_succeeded...: 89.68% 113 out of 126
+    checks_failed......: 10.31% 13 out of 126
+
+    ✗ Benign traffic succeeds (200 OK)
+      ↳  89% — ✓ 113 / ✗ 13
+
+    HTTP
+    http_req_duration..............: avg=313.7ms  min=0s      med=72.8ms  max=7.24s p(90)=137.74ms p(95)=2.6s
+      { expected_response:true }...: avg=274.79ms min=46.15ms med=74.67ms max=7.24s p(90)=135.95ms p(95)=252ms
+    http_req_failed................: 9.37% 15 out of 160
+    http_reqs......................: 160   3.169271/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.31s    min=1s      med=1.07s   max=8.24s p(90)=1.13s    p(95)=3.6s
+    iterations.....................: 160   3.169271/s
+    vus............................: 1     min=1         max=5
+    vus_max........................: 5     min=5         max=5
+
+    NETWORK
+    data_received..................: 45 kB 893 B/s
+    data_sent......................: 16 kB 309 B/s
+
+
+
+
+running (0m50.5s), 0/5 VUs, 160 complete and 0 interrupted iterations
+default ✓ [======================================] 0/5 VUs  50s

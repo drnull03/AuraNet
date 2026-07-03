@@ -189,6 +189,91 @@ app.get('/api/topology', async (req, res) => {
 });
 
 
+
+
+// STRESS TESTS ANALYTICS API
+function parseDuration(val: string, unit: string) {
+  const num = parseFloat(val);
+  if (unit === 's') return num * 1000;
+  if (unit === 'ms') return num;
+  if (unit === 'µs') return num / 1000;
+  if (unit === 'ns') return num / 1000000;
+  return num;
+}
+
+function parseData(val: string, unit: string) {
+  const num = parseFloat(val);
+  if (unit === 'kB' || unit === 'KB') return num;
+  if (unit === 'MB') return num * 1024;
+  if (unit === 'B') return num / 1024;
+  return num;
+}
+
+function parseK6Output(text: string, filename: string) {
+  const result: any = {
+      name: filename.replace('.txt', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      metrics: {}
+  };
+
+  // Extract Response Times
+  const durationMatch = text.match(/http_req_duration.*?avg=([\d.]+)([a-zµ]+).*?p\(95\)=([\d.]+)([a-zµ]+)/);
+  if (durationMatch) {
+      result.metrics.avgDuration = parseDuration(durationMatch[1], durationMatch[2]);
+      result.metrics.p95Duration = parseDuration(durationMatch[3], durationMatch[4]);
+  }
+
+  // Extract Requests & Iterations
+  const reqsMatch = text.match(/http_reqs.*?:\s+(\d+)/);
+  if (reqsMatch) result.metrics.httpReqs = parseInt(reqsMatch[1]);
+
+  const iterationsMatch = text.match(/iterations.*?:\s+(\d+)/);
+  if (iterationsMatch) result.metrics.iterations = parseInt(iterationsMatch[1]);
+
+  // Extract VUs
+  const vusMatch = text.match(/vus_max.*?max=(\d+)/);
+  if (vusMatch) result.metrics.vusMax = parseInt(vusMatch[1]);
+
+  // Extract Checks
+  const checksSuccessMatch = text.match(/checks_succeeded.*?:\s+([\d.]+)%/);
+  if (checksSuccessMatch) result.metrics.checksSuccessRate = parseFloat(checksSuccessMatch[1]);
+
+  const checksFailedMatch = text.match(/checks_failed.*?:\s+([\d.]+)%/);
+  if (checksFailedMatch) result.metrics.checksFailedRate = parseFloat(checksFailedMatch[1]);
+
+  // Extract Network Data
+  const dataRecvMatch = text.match(/data_received.*?:\s+([\d.]+)\s*([a-zA-Z]+)/);
+  if (dataRecvMatch) result.metrics.dataReceived = parseData(dataRecvMatch[1], dataRecvMatch[2]);
+
+  const dataSentMatch = text.match(/data_sent.*?:\s+([\d.]+)\s*([a-zA-Z]+)/);
+  if (dataSentMatch) result.metrics.dataSent = parseData(dataSentMatch[1], dataSentMatch[2]);
+
+  // Extract Run Time
+  const runTimeMatch = text.match(/running\s+\(([^)]+)\)/);
+  if (runTimeMatch) result.metrics.runTime = runTimeMatch[1];
+
+  return result;
+}
+
+app.get('/api/stress-tests', (req, res) => {
+  const stressTestsDir = path.join(process.cwd(), 'stress_tests');
+  if (!fs.existsSync(stressTestsDir)) {
+      return res.json([]);
+  }
+
+  const files = fs.readdirSync(stressTestsDir).filter(f => f.endsWith('.txt'));
+  const results = [];
+
+  for (const file of files) {
+      const filePath = path.join(stressTestsDir, file);
+      const content = fs.readFileSync(filePath, 'utf-8');
+      const parsed = parseK6Output(content, file);
+      results.push(parsed);
+  }
+
+  res.json(results);
+});
+
+
 // Serve static assets / Vite middleware
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
