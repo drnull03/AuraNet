@@ -18,10 +18,6 @@ const execPromise = util.promisify(exec);
 // Middleware
 app.use(express.json());
 
-
-
-
-
 app.get('/api/topology', async (req, res) => {
   try {
     // 1. PROBE AURANET HEALTH
@@ -84,8 +80,34 @@ app.get('/api/topology', async (req, res) => {
       });
     }
 
+    // 4. FETCH REAL KUBERNETES NODES
+    let k8sNodes: any[] = [];
+    try {
+      // Allow a larger buffer in case of large clusters
+      const { stdout: nodeOut } = await execPromise('kubectl get nodes -o json', { maxBuffer: 1024 * 1024 * 10 });
+      const nodesData = JSON.parse(nodeOut);
+      k8sNodes = nodesData.items.map((n: any) => {
+        const readyCondition = n.status?.conditions?.find((c: any) => c.type === 'Ready');
+        const isReady = readyCondition?.status === 'True';
+        const internalIp = n.status?.addresses?.find((a: any) => a.type === 'InternalIP')?.address || 'Unknown';
+
+        return {
+          id: n.metadata.uid || n.metadata.name,
+          name: n.metadata.name,
+          status: isReady ? 'active' : 'offline',
+          ip: internalIp,
+          // Baseline UI mock stats until a metrics-server integration is provided
+          cpu: Math.floor(Math.random() * 20) + 15,
+          memory: Math.floor(Math.random() * 30) + 30
+        };
+      });
+    } catch (e) {
+      console.warn("Could not fetch k8s nodes:", e);
+    }
+
     res.json({ 
       systemNodes: Array.from(nodeMap.values()),
+      k8sNodes,
       auranetHealth: isAuraNetHealthy 
     });
 

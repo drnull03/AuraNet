@@ -18,6 +18,15 @@ export interface SystemNode {
   connections: string[]; // ids of connected nodes
 }
 
+export interface K8sNode {
+  id: string;
+  name: string;
+  status: 'active' | 'warning' | 'offline';
+  ip: string;
+  cpu: number;
+  memory: number;
+}
+
 export interface MetricData {
   option1: number; // e.g. 538
   option2: number; // e.g. 485

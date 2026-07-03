@@ -3,7 +3,7 @@
 OUTPUT="combined.txt"
 SCRIPT_NAME="$(basename "$0")"
 
-IGNORE_DIRS=("node_modules" ".git" "dist" "build")
+IGNORE_DIRS=("node_modules" ".git" "dist" "build" "assets")
 IGNORE_FILES=("combined.txt" "$SCRIPT_NAME" "package-lock.json")
 
 > "$OUTPUT"
