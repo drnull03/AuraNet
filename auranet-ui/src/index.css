@@ -72,3 +72,39 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+
+/* Custom scrollbar for live feed */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 206, 209, 0.3);
+  border-radius: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 206, 209, 0.5);
+  }
+  
+  /* Auto-scroll animation */
+  @keyframes fade-in-right {
+  from {
+  opacity: 0;
+  transform: translateX(-10px);
+  }
+  to {
+  opacity: 1;
+  transform: translateX(0);
+  }
+  }
+  
+  .animate-fade-in-right {
+  animation: fade-in-right 0.3s ease-out;
+  }
