@@ -161,18 +161,6 @@ export default function NetworkFlow({
           displayStr = `[${timeStr}] ✅ AUTOHEAL COMPLETE: ${workload.toUpperCase()} pods cycled and restored to trusted state.`;
           eventType = 'healed';
           
-          setQuarantinedWorkloads(prev => {
-            const next = new Set(prev);
-            next.delete(workload);
-            return next;
-          });
-          setRecoveringWorkloads(prev => {
-            const next = new Set(prev);
-            next.add(workload);
-            return next;
-          });
-          setSystemNodes(prev => prev.map(n => n.id.includes(workload) || n.label.includes(workload) ? { ...n, status: 'recovered' } : n));
-          
           onNewAlert?.({
             id: evId,
             title: `Restored: ${workload.toUpperCase()}`,
@@ -181,19 +169,35 @@ export default function NetworkFlow({
             timestamp: new Date()
           });
 
+          // Wait randomly 2-3 seconds before shifting to Green (recovered)
+          const delayToGreen = Math.floor(Math.random() * 1000) + 1000;
           setTimeout(() => {
-            setRecoveringWorkloads(prev => {
+            setQuarantinedWorkloads(prev => {
               const next = new Set(prev);
               next.delete(workload);
               return next;
             });
-            setSystemNodes(prev => prev.map(n => n.id.includes(workload) || n.label.includes(workload) ? { ...n, status: 'active' } : n));
-          }, 6000);
+            setRecoveringWorkloads(prev => {
+              const next = new Set(prev);
+              next.add(workload);
+              return next;
+            });
+            setSystemNodes(prev => prev.map(n => n.id.includes(workload) || n.label.includes(workload) ? { ...n, status: 'recovered' } : n));
+
+            setTimeout(() => {
+              setRecoveringWorkloads(prev => {
+                const next = new Set(prev);
+                next.delete(workload);
+                return next;
+              });
+              setSystemNodes(prev => prev.map(n => n.id.includes(workload) || n.label.includes(workload) ? { ...n, status: 'active' } : n));
+            }, 6000);
+          }, delayToGreen);
         }
         // 3. Telemetry Forwarding (Engine or Runtime event fired)
         else if (subject.startsWith('auranet.events.')) {
           const threat = data.threat || 'Behavioral Anomaly';
-          const sourceInfo = subject.includes('.runtime.') ? 'Runtime eBPF' : 'Shadow AI Engine';
+          const sourceInfo = subject.includes('.runtime.') ? 'Runtime eBPF' : 'AI Engine';
           displayStr = `[${timeStr}] ⚠️ ${sourceInfo} flagged [${threat}] on workload: ${workload.toUpperCase()}`;
           eventType = 'threat';
           
