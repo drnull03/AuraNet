@@ -11,11 +11,11 @@ import {
   Sliders,
   LogOut, 
   ChevronLeft,
-  ChevronRight,
-  Hexagon
+  ChevronRight
 } from 'lucide-react';
 import { ActiveView } from '../types';
 import logo from '../../assets/trans_logo.png';
+
 interface SidebarProps {
   activeView: ActiveView;
   setActiveView: (view: ActiveView) => void;
@@ -41,42 +41,54 @@ export default function Sidebar({
 
   return (
     <div 
-      className={`relative h-screen bg-brand-primary text-white flex flex-col justify-between transition-all duration-300 ease-in-out border-r border-indigo-700/30 ${
+      className={`relative h-screen bg-brand-primary text-white flex flex-col justify-between transition-all duration-300 ease-in-out border-r border-indigo-700/30 overflow-hidden whitespace-nowrap ${
         isCollapsed ? 'w-[72px]' : 'w-[240px]'
       }`}
       id="sidebar-container"
     >
       {/* Sidebar Header */}
       <div>
-        <div className="flex items-center justify-between p-4 border-b border-indigo-500/30">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="p-2 bg-indigo-600/50 rounded-lg flex-shrink-0">
-            <img 
+        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} h-[72px] px-4 border-b border-indigo-500/30`}>
+          {!isCollapsed ? (
+            <>
+              <div className="flex items-center gap-3 overflow-hidden">
+                <div className="p-2 bg-indigo-600/50 rounded-lg flex-shrink-0">
+                  <img 
+                    src={logo} 
+                    alt="Project Alpha Logo" 
+                    className="h-6 w-6 object-contain animate-pulse" 
+                  />
+                </div>
+                <div className="flex flex-col select-none">
+                  <span className="font-display font-bold text-lg tracking-tight leading-none text-white">
+                    AuraNet System
+                  </span>
+                  <span className="font-mono text-[10px] text-indigo-200 mt-1 uppercase tracking-wider">
+                    Main Dashboard
+                  </span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsCollapsed(true)}
+                className="p-1.5 hover:bg-indigo-600/40 rounded text-indigo-200 hover:text-white transition-colors"
+                title="Collapse Sidebar"
+              >
+                <ChevronLeft size={18} />
+              </button>
+            </>
+          ) : (
+            <button 
+              onClick={() => setIsCollapsed(false)}
+              className="p-2 hover:bg-indigo-600/40 rounded-lg transition-colors flex items-center justify-center w-full"
+              title="Expand Sidebar"
+            >
+              <img 
                 src={logo} 
-                alt="Project Alpha Logo" 
+                alt="Expand" 
                 className="h-6 w-6 object-contain animate-pulse" 
               />
-            </div>
-            {!isCollapsed && (
-              <div className="flex flex-col select-none">
-                <span className="font-display font-bold text-lg tracking-tight leading-none text-white">
-                  AuraNet System
-                </span>
-                <span className="font-mono text-[10px] text-indigo-200 mt-1 uppercase tracking-wider">
-                  Main Dashboard
-                </span>
-              </div>
-            )}
-          </div>
-          
-          <button 
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1 hover:bg-indigo-600/40 rounded text-indigo-200 hover:text-white transition-colors"
-            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-            id="sidebar-toggle-btn"
-          >
-            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-          </button>
+            </button>
+          )}
         </div>
 
         {/* Navigation Items */}
@@ -89,7 +101,7 @@ export default function Sidebar({
                 key={item.id}
                 id={`sidebar-link-${item.id}`}
                 onClick={() => setActiveView(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 group relative ${
+                className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 px-3'} py-3 rounded-lg text-sm font-medium transition-all duration-200 group relative ${
                   isActive 
                     ? 'bg-indigo-900/60 text-white shadow-inner font-semibold border-l-4 border-[#06b6d4] pl-2' 
                     : 'text-indigo-100 hover:bg-indigo-600/30 hover:text-white'
@@ -123,7 +135,7 @@ export default function Sidebar({
         <button
           onClick={() => alert("Sign out successful! This resets dashboard simulated session.")}
           id="btn-sign-out"
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-indigo-200 hover:bg-red-950/40 hover:text-red-200 transition-all duration-200 group"
+          className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 px-3'} py-2.5 rounded-lg text-xs font-medium text-indigo-200 hover:bg-red-950/40 hover:text-red-200 transition-all duration-200 group`}
           title="Sign Out Session"
         >
           <LogOut size={16} className="flex-shrink-0 group-hover:translate-x-1 transition-transform text-indigo-300" />

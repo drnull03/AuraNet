@@ -9,10 +9,12 @@ import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import fs from 'fs'
 dotenv.config();
+import util from "util";
+import { exec } from "child_process";
 
 const app = express();
 const PORT = 3000;
-
+const execPromise = util.promisify(exec);
 // Middleware
 app.use(express.json());
 
@@ -20,66 +22,78 @@ app.use(express.json());
 
 
 
-app.get('/api/topology', (req, res) => {
+app.get('/api/topology', async (req, res) => {
   try {
-    // In K8s, we will mount the ConfigMap to this path
-    const configPath = process.env.CONFIG_PATH || path.join(process.cwd(), 'naive.conf');
-    const fileContent = fs.readFileSync(configPath, 'utf-8');
-    
-    const lines = fileContent.split('\n');
-    const nodeSet = new Set<string>();
-    const edges: any[] = [];
-    
-    lines.forEach((line, index) => {
-      const cleanLine = line.trim();
-      if (!cleanLine || cleanLine.startsWith('#')) return;
+    // 1. PROBE AURANET HEALTH
+    let isAuraNetHealthy = false;
+    try {
+      const { stdout: auraOut } = await execPromise('kubectl get pods -n auranet-namespace -o json');
+      const auraPods = JSON.parse(auraOut).items;
+      // It is healthy if the namespace has pods and at least one is Running
+      isAuraNetHealthy = auraPods.length > 0 && auraPods.some((p: any) => p.status.phase === 'Running');
+    } catch (e) {
+      console.warn("Could not reach auranet-namespace");
+    }
 
-      // Parse format: source -> target:port
-      const parts = cleanLine.split('->').map(s => s.trim());
-      if (parts.length === 2) {
-        const source = parts[0].replace(/^\d+\.\s*/, ''); // Strip leading numbers like "1. "
-        const targetRaw = parts[1];
-        const targetNode = targetRaw.split(':')[0]; // Strip the port for the node ID
-        
-        nodeSet.add(source);
-        nodeSet.add(targetNode);
-        
-        edges.push({
-          id: `edge-${index}`,
-          source: source,
-          target: targetNode,
-          type: 'straight', 
-          animated: true,
-          style: { stroke: '#475569', strokeWidth: 2.5 }, // Darker slate gray
-          markerEnd: {
-            type: 'arrowclosed', // Forces a solid, closed triangle arrow
-            width: 20,           // Scale the arrow up so it is highly visible
-            height: 20,
-            color: '#475569'     // Match the dark slate edge color
-          }
+    // 2. FETCH REAL WORKLOADS (from default namespace)
+    const { stdout: podOut } = await execPromise('kubectl get pods -n default -o json');
+    const pods = JSON.parse(podOut).items;
+    
+    const nodeMap = new Map<string, any>();
+
+    // Map actual K8s pods to UI nodes
+    pods.forEach((pod: any) => {
+      // Strip random pod hashes to get the base deployment name (e.g., api-gateway-7f5b... -> api-gateway)
+      const baseName = pod.metadata.labels?.app || pod.metadata.name.split('-').slice(0, -2).join('-');
+      
+      if (!nodeMap.has(baseName)) {
+        nodeMap.set(baseName, {
+          id: baseName,
+          label: baseName,
+          type: baseName.includes('gateway') ? 'gateway' : baseName.includes('db') ? 'compute' : 'sensor',
+          status: pod.status.phase === 'Running' ? 'active' : 'offline',
+          latency: 12, 
+          region: 'Local Cluster',
+          ip: pod.status.podIP || 'Pending',
+          cpu: 35,    // Baseline for UI rendering until Metrics Server is attached
+          memory: 45, // Baseline for UI rendering until Metrics Server is attached
+          connections: []
         });
       }
     });
 
-    // Format nodes for React Flow
-    const nodes = Array.from(nodeSet).map((nodeId, idx) => ({
-      id: nodeId,
-      type: 'satelliteNode', // Using the custom component from NetworkFlow.tsx
-      position: { x: 250 + (idx * 150), y: 200 + (idx % 2 === 0 ? 50 : -50) }, // Basic layout, can be improved with dagre.js later
-      data: { 
-        label: nodeId,
-        status: 'active', // Default state, can be updated via live telemetry later
-        cpu: 0 
-      }
-    }));
+    // 3. APPLY EDGES FROM NAIVE.CONF
+    const configPath = process.env.CONFIG_PATH || path.join(process.cwd(), 'naive.conf');
+    if (fs.existsSync(configPath)) {
+      const fileContent = fs.readFileSync(configPath, 'utf-8');
+      const lines = fileContent.split('\n');
+      
+      lines.forEach((line) => {
+        const cleanLine = line.trim();
+        if (!cleanLine || cleanLine.startsWith('#')) return;
 
-    res.json({ nodes, edges });
+        const parts = cleanLine.split('->').map(s => s.trim());
+        if (parts.length === 2) {
+          const sourceId = parts[0].replace(/^\d+\.\s*/, '');
+          const targetId = parts[1].split(':')[0];
+
+          if (nodeMap.has(sourceId)) {
+            nodeMap.get(sourceId).connections.push(targetId);
+          }
+        }
+      });
+    }
+
+    res.json({ 
+      systemNodes: Array.from(nodeMap.values()),
+      auranetHealth: isAuraNetHealthy 
+    });
+
   } catch (error) {
-    console.error("Failed to parse topology config:", error);
-    res.status(500).json({ error: "Failed to read topology configuration" });
+    console.error("Cluster topology fetch failed:", error);
+    res.status(500).json({ error: "Failed to read cluster state" });
   }
 });
-
 
 
 // Serve static assets / Vite middleware
