@@ -1,8 +1,8 @@
 /**
-* @license
-* SPDX-License-Identifier: Apache-2.0
-*/
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -28,8 +28,8 @@ const CentralNodeComponent = ({ data }: any) => {
         <Database size={20} className="text-white animate-pulse" />
         <span className="font-display font-extrabold text-[9px] mt-0.5 tracking-tight uppercase">Hub</span>
       </div>
-      <Handle type="source" position={Position.Right} className="opacity-0" style={{ top: '32px' }} />
-      <Handle type="target" position={Position.Left} className="opacity-0" style={{ top: '32px' }} />
+      <Handle type="source" id="right-source" position={Position.Right} className="opacity-0" style={{ top: '32px', left: 'calc(50% + 32px)' }} />
+      <Handle type="target" id="left-target" position={Position.Left} className="opacity-0" style={{ top: '32px', left: 'calc(50% - 32px)' }} />
     </div>
   );
 };
@@ -69,8 +69,19 @@ const SatelliteNodeComponent = ({ data }: any) => {
         <span>{label}</span>
         {isPhysicalNode && <span className="text-[8px] text-slate-500 font-normal">Hardware Node</span>}
       </div>
-      <Handle type="target" position={Position.Top} className="opacity-0" style={{ left: '50%', top: '24px', transform: 'translate(-50%, -50%)' }} />
-      <Handle type="source" position={Position.Bottom} className="opacity-0" style={{ left: '50%', top: '24px', transform: 'translate(-50%, -50%)' }} />
+      
+      {/* Invisible Handles positioned EXACTLY on the edges of the 48x48 icon to prevent arrows from disappearing under the node */}
+      <Handle type="target" position={Position.Top} id="top-target" className="opacity-0" style={{ top: '0px', left: '50%' }} />
+      <Handle type="source" position={Position.Top} id="top-source" className="opacity-0" style={{ top: '0px', left: '50%' }} />
+      
+      <Handle type="target" position={Position.Bottom} id="bottom-target" className="opacity-0" style={{ top: '48px', left: '50%' }} />
+      <Handle type="source" position={Position.Bottom} id="bottom-source" className="opacity-0" style={{ top: '48px', left: '50%' }} />
+
+      <Handle type="target" position={Position.Left} id="left-target" className="opacity-0" style={{ top: '24px', left: 'calc(50% - 24px)' }} />
+      <Handle type="source" position={Position.Left} id="left-source" className="opacity-0" style={{ top: '24px', left: 'calc(50% - 24px)' }} />
+
+      <Handle type="target" position={Position.Right} id="right-target" className="opacity-0" style={{ top: '24px', left: 'calc(50% + 24px)' }} />
+      <Handle type="source" position={Position.Right} id="right-source" className="opacity-0" style={{ top: '24px', left: 'calc(50% + 24px)' }} />
     </div>
   );
 };
@@ -105,6 +116,16 @@ export default function NetworkFlow({
   const [quarantinedWorkloads, setQuarantinedWorkloads] = useState<Set<string>>(new Set());
   const [recoveringWorkloads, setRecoveringWorkloads] = useState<Set<string>>(new Set());
 
+  // Ref for the global live feed to auto-scroll to bottom
+  const feedRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to the bottom of the feed whenever a new event comes in
+  useEffect(() => {
+    if (feedRef.current) {
+      feedRef.current.scrollTop = feedRef.current.scrollHeight;
+    }
+  }, [liveEvents]);
+
   // Set up Server-Sent Events listener for real-time reactivity
   useEffect(() => {
     const source = new EventSource('/api/events/stream');
@@ -138,6 +159,7 @@ export default function NetworkFlow({
             next.delete(workload);
             return next;
           });
+          
           // Transition to recovered state (Green)
           setRecoveringWorkloads(prev => {
             const next = new Set(prev);
@@ -145,7 +167,8 @@ export default function NetworkFlow({
             return next;
           });
           setSystemNodes(prev => prev.map(n => n.id.includes(workload) || n.label.includes(workload) ? { ...n, status: 'recovered' } : n));
-          // Natural Pause: Smooth transition back to active (Blue) after 5 seconds
+          
+          // Natural Pause: Smooth transition back to active (Blue) after 6 seconds (enough time for jury to see)
           setTimeout(() => {
             setRecoveringWorkloads(prev => {
               const next = new Set(prev);
@@ -153,21 +176,21 @@ export default function NetworkFlow({
               return next;
             });
             setSystemNodes(prev => prev.map(n => n.id.includes(workload) || n.label.includes(workload) ? { ...n, status: 'active' } : n));
-          }, 5000);
+          }, 6000);
         }
         // 3. Telemetry Forwarding (Engine or Runtime event fired)
         else if (subject.startsWith('auranet.events.')) {
           const threat = data.threat || 'Behavioral Anomaly';
           const sourceInfo = subject.includes('.runtime.') ? 'Runtime eBPF' : 'Shadow AI Engine';
-          displayStr = `[${timeStr}]  ${sourceInfo} flagged [${threat}] on workload: ${workload.toUpperCase()}`;
+          displayStr = `[${timeStr}] ⚠️ ${sourceInfo} flagged [${threat}] on workload: ${workload.toUpperCase()}`;
           eventType = 'threat';
         }
 
         if (displayStr) {
           const evId = Date.now().toString() + Math.random();
-          // Add to Global Banner (Persist multiple events)
-          setLiveEvents(prev => [{ id: evId, text: displayStr }, ...prev].slice(0, 8)); // Keep up to 8 in the feed stack
-          // Add to Specific Node Log View
+          // Add to Global Banner (append to end so it scrolls down naturally)
+          setLiveEvents(prev => [...prev, { id: evId, text: displayStr }].slice(-50)); // Keep up to 50 in the feed stack
+          // Add to Specific Node Log View (latest at top)
           if (workload) {
             setNodeLogs(prev => ({
               ...prev,
@@ -271,6 +294,8 @@ export default function NetworkFlow({
             id: `edge-${node.id}-${targetId}`,
             source: node.id,
             target: targetId,
+            sourceHandle: 'right-source',
+            targetHandle: 'left-target',
             type: 'straight',
             animated: !isOffline,
             style: {
@@ -294,6 +319,7 @@ export default function NetworkFlow({
           edges.push({
             id: `edge-eng-ctrl-${engine.id}-${controller.id}`,
             source: `aura-${engine.id}`, target: `aura-${controller.id}`,
+            sourceHandle: 'top-source', targetHandle: 'bottom-target',
             type: 'straight', animated: true,
             style: { stroke: '#10b981', strokeWidth: 2, opacity: 0.8 },
             markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: '#10b981' }
@@ -306,6 +332,7 @@ export default function NetworkFlow({
           edges.push({
             id: `edge-ztc-auto-${ztc.id}-${autoheal.id}`,
             source: `aura-${ztc.id}`, target: `aura-${autoheal.id}`,
+            sourceHandle: 'right-source', targetHandle: 'left-target',
             type: 'straight', animated: true,
             style: { stroke: '#0ea5e9', strokeWidth: 2, opacity: 0.8 },
             markerStart: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: '#0ea5e9' },
@@ -319,6 +346,7 @@ export default function NetworkFlow({
           edges.push({
             id: `edge-eng-ztc-${engine.id}-${ztc.id}`,
             source: `aura-${engine.id}`, target: `aura-${ztc.id}`,
+            sourceHandle: 'top-source', targetHandle: 'bottom-target',
             type: 'straight', animated: true,
             style: { stroke: '#f59e0b', strokeWidth: 2, opacity: 0.8 },
             markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: '#f59e0b' }
@@ -331,6 +359,7 @@ export default function NetworkFlow({
           edges.push({
             id: `edge-rt-ztc-${runtime.id}-${ztc.id}`,
             source: `aura-${runtime.id}`, target: `aura-${ztc.id}`,
+            sourceHandle: 'top-source', targetHandle: 'bottom-target',
             type: 'straight', animated: true,
             style: { stroke: '#8b5cf6', strokeWidth: 2, opacity: 0.8 },
             markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: '#8b5cf6' }
@@ -445,7 +474,7 @@ export default function NetworkFlow({
 
   return (
     <div className="flex flex-col h-full gap-4" id="network-flow-container">
-      {/* Main White Card */}
+      {/* Main White Card containing Graph and Node Details */}
       <div className="bg-white border border-brand-border rounded-2xl shadow-sm p-5 flex flex-col flex-1 min-h-0" id="network-topology-card">
         {/* Header section */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-brand-border mb-4">
@@ -538,9 +567,9 @@ export default function NetworkFlow({
           )}
         </div>
 
-        {/* Selected Node Details */}
+        {/* Selected Node Details - Removes rigid max-height so it doesn't clip */}
         {selectedNode && (
-          <div className="mt-4 bg-[#f8f9fa] border border-brand-border rounded-xl flex flex-col relative transition-all duration-300 overflow-hidden max-h-[220px]">
+          <div className="mt-4 bg-[#f8f9fa] border border-brand-border rounded-xl flex flex-col shrink-0 animate-in slide-in-from-bottom-2 duration-300">
             {/* Top Info Section */}
             <div className="p-3 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -602,7 +631,7 @@ export default function NetworkFlow({
 
             {/* Node Specific Log Section */}
             {viewMode === 'workloads' && (
-              <div className="bg-slate-900 border-t border-slate-800 p-3 max-h-[110px] overflow-y-auto">
+              <div className="bg-slate-900 border-t border-slate-800 p-3 max-h-[140px] overflow-y-auto rounded-b-xl">
                 <div className="flex items-center gap-2 mb-2 sticky top-0 bg-slate-900 pb-1">
                   <Terminal size={12} className="text-slate-400" />
                   <span className="font-mono text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -635,22 +664,27 @@ export default function NetworkFlow({
         )}
       </div>
 
-      {/* Global Live Feed - OUTSIDE white card */}
-      <div className="bg-slate-900 rounded-xl font-mono text-[10.5px] py-3 px-4 flex items-start gap-3 shadow-md border border-slate-800 relative overflow-hidden shrink-0 h-[140px]">
-        <div className="absolute top-0 left-0 w-1 h-full bg-[#00ced1]" />
-        <div className="flex items-center gap-1.5 text-[#00ced1] font-bold tracking-widest uppercase flex-shrink-0 mt-0.5 ml-1">
-          <Activity size={14} className="animate-pulse" /> Global Live Feed
+      {/* Enhanced Infinite Global Live Feed (OUTSIDE white card) */}
+      <div className="bg-slate-950 rounded-xl font-mono text-[11px] py-4 px-5 flex flex-col gap-2 shadow-inner border border-slate-800 shrink-0 h-[220px]">
+        {/* Feed Header */}
+        <div className="flex items-center gap-2 text-[#00ced1] font-bold tracking-widest uppercase border-b border-slate-800 pb-2 flex-shrink-0">
+          <Activity size={15} className="animate-pulse" /> Global Live Stream
         </div>
-        <div className="w-px h-4 bg-slate-700 mx-2 mt-0.5" />
-        <div className="flex-1 flex flex-col gap-1.5 h-[100px] overflow-y-auto custom-scrollbar pr-2 scroll-smooth">
+        
+        {/* Scrollable Event Content */}
+        <div 
+          ref={feedRef}
+          className="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-2 scroll-smooth"
+        >
           {liveEvents.length > 0 ? (
             liveEvents.map((ev) => (
-              <span key={ev.id} className="animate-fade-in-right text-[#00ced1] leading-tight block whitespace-nowrap">
-                {ev.text}
-              </span>
+              <div key={ev.id} className="flex gap-3 border-b border-slate-900/50 pb-1.5 shrink-0">
+                <span className="text-slate-600 shrink-0 select-none">➜</span>
+                <span className="text-[#00ced1] leading-relaxed block">{ev.text}</span>
+              </div>
             ))
           ) : (
-            <span className="text-[#00ced1]/70">¢ SECURE: Awaiting telemetry signals from AuraNet Engine & Runtime...</span>
+            <span className="text-slate-500 italic mt-2">🟢 System idle. Monitoring stream...</span>
           )}
         </div>
       </div>
