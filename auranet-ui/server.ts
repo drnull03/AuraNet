@@ -74,6 +74,32 @@ async function startNatsListener() {
 startNatsListener();
 
 
+app.delete('/api/pod/:id', async (req, res) => {
+  const target = req.params.id;
+  try {
+    const { stdout: podOut } = await execPromise('kubectl get pods -n default -o json');
+    const pods = JSON.parse(podOut).items;
+    
+    // Find the exact pod name that matches our UI base name
+    const podToDelete = pods.find((pod: any) => {
+      const baseName = pod.metadata.labels?.app || pod.metadata.name.split('-').slice(0, -2).join('-');
+      return baseName === target;
+    });
+
+    if (podToDelete) {
+      // Execute the delete without awaiting so the UI gets a fast response
+      execPromise(`kubectl delete pod ${podToDelete.metadata.name} -n default`).catch(e => console.error(e));
+      res.json({ success: true, message: `Pod ${podToDelete.metadata.name} deletion initiated.` });
+    } else {
+      res.status(404).json({ error: "Pod not found in cluster" });
+    }
+  } catch (error) {
+    console.error("Failed to process pod deletion:", error);
+    res.status(500).json({ error: "Failed to delete pod" });
+  }
+});
+
+
 app.get('/api/topology', async (req, res) => {
   try {
     // 1. PROBE AURANET HEALTH

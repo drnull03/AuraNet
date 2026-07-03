@@ -169,8 +169,8 @@ export default function NetworkFlow({
             timestamp: new Date()
           });
 
-          // Wait randomly 1-2 seconds before shifting to Green (recovered)
-          const delayToGreen = Math.floor(Math.random() * 1000) + 1000;
+          // Wait randomly 2-3 seconds before shifting to Green (recovered)
+          const delayToGreen = Math.floor(Math.random() * 1000) + 2000;
           setTimeout(() => {
             setQuarantinedWorkloads(prev => {
               const next = new Set(prev);
@@ -302,10 +302,9 @@ export default function NetworkFlow({
         node.connections.forEach(targetId => {
           const targetNode = systemNodes.find(n => n.id === targetId);
           if (!targetNode) return;
-          
           const isOffline = targetNode.status === 'offline' || node.status === 'offline';
           
-          // Completely hide the connection if either node is quarantined (Red/Offline)
+          // Hide connection lines completely when either node is offline/quarantined
           if (isOffline) return;
 
           const isWarning = targetNode.status === 'warning' || node.status === 'warning';
@@ -622,25 +621,16 @@ export default function NetworkFlow({
                 {viewMode === 'workloads' && (
                   <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
                     <button
-                      onClick={() => {
-                        setSystemNodes(prev => prev.map(n => {
-                          if (n.id === selectedNode.id) {
-                            const nextStatus = n.status === 'active' ? 'warning' : n.status === 'warning' ? 'offline' : 'active';
-                            return { ...n, status: nextStatus };
-                          }
-                          return n;
-                        }));
+                      onClick={async () => {
+                        // Optimistically set status to offline to instantly sever connections and turn it red
+                        setSystemNodes(prev => prev.map(n => n.id === selectedNode.id ? { ...n, status: 'offline' } : n));
+                        try {
+                          await fetch(`/api/pod/${selectedNode.id}`, { method: 'DELETE' });
+                        } catch (err) {
+                          console.error("Failed to delete pod:", err);
+                        }
                       }}
-                      className="px-2 py-1 text-[10px] font-mono font-bold bg-white hover:bg-slate-100 border border-slate-200 rounded text-slate-700"
-                    >
-                      Toggle State
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSystemNodes(prev => prev.filter(n => n.id !== selectedNode.id));
-                        onNodeSelect(systemNodes[0] || null);
-                      }}
-                      className="px-2 py-1 text-[10px] font-mono font-bold bg-red-50 hover:bg-red-100 border border-red-200 rounded text-red-600"
+                      className="px-3 py-1.5 text-[10px] font-mono font-bold bg-red-50 hover:bg-red-100 border border-red-200 rounded text-red-600 cursor-pointer transition-colors"
                     >
                       Delete Pod
                     </button>
