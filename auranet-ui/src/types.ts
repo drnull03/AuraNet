@@ -27,6 +27,16 @@ export interface K8sNode {
   memory: number;
 }
 
+export interface AuraNode {
+  id: string;
+  name: string;
+  status: 'active' | 'warning' | 'offline';
+  ip: string;
+  role: 'controller' | 'engine';
+  cpu: number;
+  memory: number;
+}
+
 export interface MetricData {
   option1: number; // e.g. 538
   option2: number; // e.g. 485

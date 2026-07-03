@@ -17,7 +17,7 @@ import {
   Edge
 } from '@xyflow/react';
 import { Play, Pause, Plus, ShieldCheck, Cpu, Database, WifiOff, AlertTriangle, Layers, Server } from 'lucide-react';
-import { SystemNode, K8sNode } from '../types';
+import { SystemNode, K8sNode, AuraNode } from '../types';
 
 // Custom Central Node component
 const CentralNodeComponent = ({ data }: any) => {
@@ -37,7 +37,7 @@ const CentralNodeComponent = ({ data }: any) => {
 
 // Custom Satellite Node Component
 const SatelliteNodeComponent = ({ data }: any) => {
-  const { label, type, status, isPhysicalNode } = data;
+  const { label, type, status, isPhysicalNode, isAuraNet } = data;
   
   const getStatusColor = () => {
     if (status === 'offline') return 'bg-red-700 border-red-500 shadow-red-700/30';
@@ -48,15 +48,21 @@ const SatelliteNodeComponent = ({ data }: any) => {
   return (
     <div className="flex flex-col items-center group">
       {/* Node Core */}
-      <div className={`h-12 w-12 rounded-full ${getStatusColor()} border-3 flex items-center justify-center shadow-lg transition-transform duration-200 group-hover:scale-110 z-10 ${isPhysicalNode ? 'rounded-lg' : 'rounded-full'}`}>
+      <div className={`relative h-12 w-12 rounded-full ${getStatusColor()} border-3 flex items-center justify-center shadow-lg transition-transform duration-200 group-hover:scale-110 z-10 ${isPhysicalNode ? 'rounded-lg' : 'rounded-full'}`}>
         {status === 'offline' ? (
           <WifiOff size={16} className="text-white" />
+        ) : isAuraNet ? (
+          <ShieldCheck size={16} className="text-white" />
         ) : isPhysicalNode ? (
           <Server size={16} className="text-white" />
         ) : type === 'sensor' || type === 'gateway' ? (
           <Cpu size={16} className="text-white animate-pulse" />
         ) : (
           <Database size={16} className="text-white" />
+        )}
+
+        {isAuraNet && status === 'active' && (
+          <div className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-emerald-400 rounded-full border-2 border-white animate-pulse shadow-sm" title="AuraNet Component Active" />
         )}
       </div>
 
@@ -66,8 +72,9 @@ const SatelliteNodeComponent = ({ data }: any) => {
         {isPhysicalNode && <span className="text-[8px] text-slate-500 font-normal">Hardware Node</span>}
       </div>
 
-      <Handle type="target" position={Position.Left} className="opacity-0" style={{ top: '24px' }} />
-      <Handle type="source" position={Position.Right} className="opacity-0" style={{ top: '24px' }} />
+      {/* Place handles perfectly in the center of the 48x48 icon (top: 24px) */}
+      <Handle type="target" position={Position.Top} className="opacity-0" style={{ left: '50%', top: '24px', transform: 'translate(-50%, -50%)' }} />
+      <Handle type="source" position={Position.Bottom} className="opacity-0" style={{ left: '50%', top: '24px', transform: 'translate(-50%, -50%)' }} />
     </div>
   );
 };
@@ -95,9 +102,10 @@ export default function NetworkFlow({
   
   // Real Kubernetes Node State
   const [k8sNodes, setK8sNodes] = useState<K8sNode[]>([]);
+  const [auranetNodes, setAuraNetNodes] = useState<AuraNode[]>([]);
   
   // View Mode State
-  const [viewMode, setViewMode] = useState<'workloads' | 'nodes'>('workloads');
+  const [viewMode, setViewMode] = useState<'workloads' | 'nodes' | 'auranet'>('workloads');
 
   // Set up React Flow elements based on View Mode
   const getInitialNodes = useCallback(() => {
@@ -123,7 +131,7 @@ export default function NetworkFlow({
           data: { label: node.label, type: node.type, status: node.status, cpu: node.cpu, isPhysicalNode: false },
         } as Node;
       });
-    } else {
+    } else if (viewMode === 'nodes') {
       // NODE VIEW: Map directly from `kubectl get nodes` fetch
       return k8sNodes.map((node, index) => {
         return {
@@ -134,8 +142,50 @@ export default function NetworkFlow({
           data: { label: node.name, type: 'compute', status: node.status, cpu: node.cpu, isPhysicalNode: true },
         } as Node;
       });
+    } else {
+      // AURANET VIEW: Map directly from `kubectl get pods -n auranet-namespace`
+      const controllers = auranetNodes.filter(n => n.name.includes('controller'));
+      const ztcs = auranetNodes.filter(n => n.name.includes('ztc'));
+      const autoheals = auranetNodes.filter(n => n.name.includes('autoheal'));
+      const engines = auranetNodes.filter(n => n.name.includes('engine'));
+      const runtimes = auranetNodes.filter(n => n.name.includes('runtime'));
+      const others = auranetNodes.filter(n => !n.name.includes('controller') && !n.name.includes('ztc') && !n.name.includes('autoheal') && !n.name.includes('engine') && !n.name.includes('runtime'));
+      
+      const nodes: Node[] = [];
+      
+      controllers.forEach((c, idx) => nodes.push({
+        id: `aura-${c.id}`, type: 'satelliteNode', position: { x: 400 + (idx * 200), y: 50 },
+        data: { label: c.name, type: 'compute', status: c.status, cpu: c.cpu, isPhysicalNode: false, isAuraNet: true }
+      }));
+
+      ztcs.forEach((z, idx) => nodes.push({
+        id: `aura-${z.id}`, type: 'satelliteNode', position: { x: 250 + (idx * 200), y: 200 },
+        data: { label: z.name, type: 'compute', status: z.status, cpu: z.cpu, isPhysicalNode: false, isAuraNet: true }
+      }));
+
+      autoheals.forEach((a, idx) => nodes.push({
+        id: `aura-${a.id}`, type: 'satelliteNode', position: { x: 600 + (idx * 200), y: 200 },
+        data: { label: a.name, type: 'compute', status: a.status, cpu: a.cpu, isPhysicalNode: false, isAuraNet: true }
+      }));
+
+      engines.forEach((e, idx) => nodes.push({
+        id: `aura-${e.id}`, type: 'satelliteNode', position: { x: 100 + (idx * 250), y: 350 },
+        data: { label: e.name, type: 'compute', status: e.status, cpu: e.cpu, isPhysicalNode: false, isAuraNet: true }
+      }));
+
+      runtimes.forEach((r, idx) => nodes.push({
+        id: `aura-${r.id}`, type: 'satelliteNode', position: { x: 650 + (idx * 250), y: 350 },
+        data: { label: r.name, type: 'compute', status: r.status, cpu: r.cpu, isPhysicalNode: false, isAuraNet: true }
+      }));
+
+      others.forEach((o, idx) => nodes.push({
+        id: `aura-${o.id}`, type: 'satelliteNode', position: { x: 850 + (idx * 200), y: 50 },
+        data: { label: o.name, type: 'compute', status: o.status, cpu: o.cpu, isPhysicalNode: false, isAuraNet: true }
+      }));
+      
+      return nodes;
     }
-  }, [systemNodes, k8sNodes, viewMode]);
+  }, [systemNodes, k8sNodes, auranetNodes, viewMode]);
 
   const getInitialEdges = useCallback(() => {
     const edges: Edge[] = [];
@@ -163,11 +213,76 @@ export default function NetworkFlow({
           });
         });
       });
-    } else {
-      // NODE VIEW: No connections required for the raw cluster node list
+    } else if (viewMode === 'auranet') {
+      const controllers = auranetNodes.filter(n => n.name.includes('controller'));
+      const engines = auranetNodes.filter(n => n.name.includes('engine'));
+      const ztcs = auranetNodes.filter(n => n.name.includes('ztc'));
+      const autoheals = auranetNodes.filter(n => n.name.includes('autoheal'));
+      const runtimes = auranetNodes.filter(n => n.name.includes('runtime'));
+      
+      // 1. engine -> controller
+      engines.forEach(engine => {
+        controllers.forEach(controller => {
+          edges.push({
+            id: `edge-eng-ctrl-${engine.id}-${controller.id}`,
+            source: `aura-${engine.id}`,
+            target: `aura-${controller.id}`,
+            type: 'straight',
+            animated: true,
+            style: { stroke: '#10b981', strokeWidth: 2, opacity: 0.8 },
+            markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: '#10b981' }
+          });
+        });
+      });
+
+      // 2. ztc <-> autoheal (Two-headed connection)
+      ztcs.forEach(ztc => {
+        autoheals.forEach(autoheal => {
+          edges.push({
+            id: `edge-ztc-auto-${ztc.id}-${autoheal.id}`,
+            source: `aura-${ztc.id}`,
+            target: `aura-${autoheal.id}`,
+            type: 'straight',
+            animated: true,
+            style: { stroke: '#0ea5e9', strokeWidth: 2, opacity: 0.8 },
+            markerStart: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: '#0ea5e9' },
+            markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: '#0ea5e9' }
+          });
+        });
+      });
+
+      // 3. engine -> ztc
+      engines.forEach(engine => {
+        ztcs.forEach(ztc => {
+          edges.push({
+            id: `edge-eng-ztc-${engine.id}-${ztc.id}`,
+            source: `aura-${engine.id}`,
+            target: `aura-${ztc.id}`,
+            type: 'straight',
+            animated: true,
+            style: { stroke: '#f59e0b', strokeWidth: 2, opacity: 0.8 },
+            markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: '#f59e0b' }
+          });
+        });
+      });
+
+      // 4. runtime -> ztc
+      runtimes.forEach(runtime => {
+        ztcs.forEach(ztc => {
+          edges.push({
+            id: `edge-rt-ztc-${runtime.id}-${ztc.id}`,
+            source: `aura-${runtime.id}`,
+            target: `aura-${ztc.id}`,
+            type: 'straight',
+            animated: true,
+            style: { stroke: '#8b5cf6', strokeWidth: 2, opacity: 0.8 },
+            markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: '#8b5cf6' }
+          });
+        });
+      });
     }
     return edges;
-  }, [systemNodes, viewMode]);
+  }, [systemNodes, auranetNodes, viewMode]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -184,9 +299,18 @@ export default function NetworkFlow({
     
     setNodes((currentNodes) => {
       // Prevent merging mismatching view states during rapid transitions
-      if (currentNodes.length > 0 && currentNodes[0].id.startsWith('k8s-') !== (viewMode === 'nodes')) {
-        return freshNodes; 
+      const isK8s = viewMode === 'nodes';
+      const isAura = viewMode === 'auranet';
+
+      if (currentNodes.length > 0) {
+        const firstId = currentNodes[0].id;
+        if ((firstId.startsWith('k8s-') && !isK8s) || 
+            (firstId.startsWith('aura-') && !isAura) ||
+            (!firstId.startsWith('k8s-') && !firstId.startsWith('aura-') && (isK8s || isAura))) {
+          return freshNodes; 
+        }
       }
+      
       return freshNodes.map(freshNode => {
         const existingNode = currentNodes.find(n => n.id === freshNode.id);
         if (existingNode) {
@@ -197,7 +321,7 @@ export default function NetworkFlow({
     });
 
     setEdges(getInitialEdges());
-  }, [systemNodes, k8sNodes, getInitialNodes, getInitialEdges, setNodes, setEdges, viewMode]);
+  }, [systemNodes, k8sNodes, auranetNodes, getInitialNodes, getInitialEdges, setNodes, setEdges, viewMode]);
 
   // Cluster Sync Effect
   useEffect(() => {
@@ -214,6 +338,9 @@ export default function NetworkFlow({
         if (data.k8sNodes) {
           setK8sNodes(data.k8sNodes);
         }
+        if (data.auranetNodes) {
+          setAuraNetNodes(data.auranetNodes);
+        }
       } catch (error) {
         console.error("Failed to fetch topology:", error);
       }
@@ -229,7 +356,7 @@ export default function NetworkFlow({
     if (viewMode === 'workloads') {
       const originalNode = systemNodes.find(n => n.id === flowNode.id);
       if (originalNode) onNodeSelect(originalNode);
-    } else {
+    } else if (viewMode === 'nodes') {
       // In Node View, inject the k8sNode info into a mocked SystemNode struct so the UI tray populates
       const cleanId = flowNode.id.replace('k8s-', '');
       const k8sNode = k8sNodes.find(n => n.id === cleanId);
@@ -248,8 +375,26 @@ export default function NetworkFlow({
           connections: []
         });
       }
+    } else if (viewMode === 'auranet') {
+      const cleanId = flowNode.id.replace('aura-', '');
+      const aNode = auranetNodes.find(n => n.id === cleanId);
+      
+      if (aNode) {
+        onNodeSelect({
+          id: flowNode.id,
+          label: aNode.name,
+          type: 'compute',
+          status: aNode.status,
+          latency: aNode.status === 'offline' ? 999 : 5,
+          region: 'AuraNet Namespace',
+          ip: aNode.ip,
+          cpu: aNode.cpu,
+          memory: aNode.memory,
+          connections: []
+        });
+      }
     }
-  }, [systemNodes, k8sNodes, onNodeSelect, viewMode]);
+  }, [systemNodes, k8sNodes, auranetNodes, onNodeSelect, viewMode]);
 
   const handleAddNewNode = () => {
     const labels = ['Nordic Compute', 'Oceania Beacon', 'Canada Sensor', 'S.E. Asia Gateway'];
@@ -323,6 +468,14 @@ export default function NetworkFlow({
               }`}
             >
               <Server size={14} /> Nodes
+            </button>
+            <button
+              onClick={() => setViewMode('auranet')}
+              className={`px-3 py-1.5 text-xs font-mono font-bold uppercase rounded-md transition-all flex items-center gap-1.5 ${
+                viewMode === 'auranet' ? 'bg-white text-emerald-600 shadow-xs' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <ShieldCheck size={14} /> AuraNet
             </button>
           </div>
 
