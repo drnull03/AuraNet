@@ -1,7 +1,7 @@
 /**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
+* @license
+* SPDX-License-Identifier: Apache-2.0
+*/
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   ReactFlow,
@@ -16,9 +16,22 @@ import {
   Edge
 } from '@xyflow/react';
 import { Play, Pause, Plus, ShieldCheck, Cpu, Database, WifiOff, AlertTriangle, Layers, Server, Activity, Terminal, CheckCircle } from 'lucide-react';
-import { SystemNode, K8sNode, AuraNode } from '../types';
+import { SystemNode, K8sNode, AuraNode, SystemAlert } from '../types';
 
-// Custom Central Node component
+// Helper to render 360-degree invisible connection handles seamlessly
+const renderHandles = () => (
+  <>
+    <Handle type="target" position={Position.Top} id="top-target" className="opacity-0 w-2 h-2" style={{ top: -4, left: '50%' }} />
+    <Handle type="source" position={Position.Top} id="top-source" className="opacity-0 w-2 h-2" style={{ top: -4, left: '50%' }} />
+    <Handle type="target" position={Position.Bottom} id="bottom-target" className="opacity-0 w-2 h-2" style={{ bottom: -4, top: 'auto', left: '50%' }} />
+    <Handle type="source" position={Position.Bottom} id="bottom-source" className="opacity-0 w-2 h-2" style={{ bottom: -4, top: 'auto', left: '50%' }} />
+    <Handle type="target" position={Position.Left} id="left-target" className="opacity-0 w-2 h-2" style={{ left: -4, top: '50%' }} />
+    <Handle type="source" position={Position.Left} id="left-source" className="opacity-0 w-2 h-2" style={{ left: -4, top: '50%' }} />
+    <Handle type="target" position={Position.Right} id="right-target" className="opacity-0 w-2 h-2" style={{ right: -4, left: 'auto', top: '50%' }} />
+    <Handle type="source" position={Position.Right} id="right-source" className="opacity-0 w-2 h-2" style={{ right: -4, left: 'auto', top: '50%' }} />
+  </>
+);
+
 const CentralNodeComponent = ({ data }: any) => {
   return (
     <div className="relative flex items-center justify-center">
@@ -28,13 +41,11 @@ const CentralNodeComponent = ({ data }: any) => {
         <Database size={20} className="text-white animate-pulse" />
         <span className="font-display font-extrabold text-[9px] mt-0.5 tracking-tight uppercase">Hub</span>
       </div>
-      <Handle type="source" id="right-source" position={Position.Right} className="opacity-0" style={{ top: '32px', left: 'calc(50% + 32px)' }} />
-      <Handle type="target" id="left-target" position={Position.Left} className="opacity-0" style={{ top: '32px', left: 'calc(50% - 32px)' }} />
+      {renderHandles()}
     </div>
   );
 };
 
-// Custom Satellite Node Component
 const SatelliteNodeComponent = ({ data }: any) => {
   const { label, type, status, isPhysicalNode, isAuraNet } = data;
   const getStatusColor = () => {
@@ -45,7 +56,6 @@ const SatelliteNodeComponent = ({ data }: any) => {
   };
   return (
     <div className="flex flex-col items-center group">
-      {/* Node Core */}
       <div className={`relative h-12 w-12 rounded-full ${getStatusColor()} border-3 flex items-center justify-center shadow-lg transition-transform duration-200 group-hover:scale-110 z-10 ${isPhysicalNode ? 'rounded-lg' : 'rounded-full'}`}>
         {status === 'offline' ? (
           <WifiOff size={16} className="text-white" />
@@ -64,24 +74,11 @@ const SatelliteNodeComponent = ({ data }: any) => {
           <div className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-emerald-400 rounded-full border-2 border-white animate-pulse shadow-sm" title="AuraNet Component Active" />
         )}
       </div>
-      {/* Label Box */}
       <div className="mt-1.5 bg-white/90 backdrop-blur-xs border border-brand-border px-2 py-0.5 rounded-md text-[10px] font-mono font-bold text-slate-800 shadow-xs whitespace-nowrap z-20 flex flex-col items-center">
         <span>{label}</span>
         {isPhysicalNode && <span className="text-[8px] text-slate-500 font-normal">Hardware Node</span>}
       </div>
-      
-      {/* Invisible Handles positioned EXACTLY on the edges of the 48x48 icon to prevent arrows from disappearing under the node */}
-      <Handle type="target" position={Position.Top} id="top-target" className="opacity-0" style={{ top: '0px', left: '50%' }} />
-      <Handle type="source" position={Position.Top} id="top-source" className="opacity-0" style={{ top: '0px', left: '50%' }} />
-      
-      <Handle type="target" position={Position.Bottom} id="bottom-target" className="opacity-0" style={{ top: '48px', left: '50%' }} />
-      <Handle type="source" position={Position.Bottom} id="bottom-source" className="opacity-0" style={{ top: '48px', left: '50%' }} />
-
-      <Handle type="target" position={Position.Left} id="left-target" className="opacity-0" style={{ top: '24px', left: 'calc(50% - 24px)' }} />
-      <Handle type="source" position={Position.Left} id="left-source" className="opacity-0" style={{ top: '24px', left: 'calc(50% - 24px)' }} />
-
-      <Handle type="target" position={Position.Right} id="right-target" className="opacity-0" style={{ top: '24px', left: 'calc(50% + 24px)' }} />
-      <Handle type="source" position={Position.Right} id="right-source" className="opacity-0" style={{ top: '24px', left: 'calc(50% + 24px)' }} />
+      {renderHandles()}
     </div>
   );
 };
@@ -91,6 +88,7 @@ interface NetworkFlowProps {
   setSystemNodes: React.Dispatch<React.SetStateAction<SystemNode[]>>;
   onNodeSelect: (node: SystemNode) => void;
   selectedNode: SystemNode | null;
+  onNewAlert?: (alert: SystemAlert) => void;
 }
 
 export default function NetworkFlow({
@@ -98,6 +96,7 @@ export default function NetworkFlow({
   setSystemNodes,
   onNodeSelect,
   selectedNode,
+  onNewAlert
 }: NetworkFlowProps) {
   const nodeTypes = useMemo(() => ({
     centralNode: CentralNodeComponent,
@@ -110,23 +109,19 @@ export default function NetworkFlow({
   const [auranetNodes, setAuraNetNodes] = useState<AuraNode[]>([]);
   const [viewMode, setViewMode] = useState<'workloads' | 'nodes' | 'auranet'>('workloads');
 
-  // Reactivity State
   const [liveEvents, setLiveEvents] = useState<{ id: string, text: string }[]>([]);
   const [nodeLogs, setNodeLogs] = useState<Record<string, { timeStr: string, msg: string, type: string }[]>>({});
   const [quarantinedWorkloads, setQuarantinedWorkloads] = useState<Set<string>>(new Set());
   const [recoveringWorkloads, setRecoveringWorkloads] = useState<Set<string>>(new Set());
 
-  // Ref for the global live feed to auto-scroll to bottom
   const feedRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to the bottom of the feed whenever a new event comes in
   useEffect(() => {
     if (feedRef.current) {
       feedRef.current.scrollTop = feedRef.current.scrollHeight;
     }
   }, [liveEvents]);
 
-  // Set up Server-Sent Events listener for real-time reactivity
   useEffect(() => {
     const source = new EventSource('/api/events/stream');
     source.onmessage = (event) => {
@@ -137,30 +132,40 @@ export default function NetworkFlow({
         let displayStr = '';
         let eventType = 'threat';
         const workload = subject.split('.').pop() || '';
+        const evId = Date.now().toString() + Math.random();
 
         // 1. ZTC Commands Quarantine (AutoHeal Trigger) -> Turn Red
         if (subject.startsWith('auranet.commands.autoheal.')) {
           const threat = data.threat_signatures ? data.threat_signatures[0] : 'Anomaly';
           displayStr = `[${timeStr}] 🔒 ZTC QUARANTINE ORDERED FOR: ${workload.toUpperCase()} (Threat: ${threat})`;
           eventType = 'quarantine';
+          
           setQuarantinedWorkloads(prev => {
             const next = new Set(prev);
             next.add(workload);
             return next;
           });
           setSystemNodes(prev => prev.map(n => n.id.includes(workload) || n.label.includes(workload) ? { ...n, status: 'offline' } : n));
+          
+          // Trigger Global Persistent Header Alert
+          onNewAlert?.({
+            id: evId,
+            title: `Quarantine Active: ${workload.toUpperCase()}`,
+            message: `Threat: ${threat}. Pods have been isolated by Zero Trust Controller.`,
+            type: 'critical',
+            timestamp: new Date()
+          });
         }
         // 2. AutoHeal Remediated -> Turn Green (Recovered)
         else if (subject.startsWith('auranet.remediated.')) {
           displayStr = `[${timeStr}] ✅ AUTOHEAL COMPLETE: ${workload.toUpperCase()} pods cycled and restored to trusted state.`;
           eventType = 'healed';
+          
           setQuarantinedWorkloads(prev => {
             const next = new Set(prev);
             next.delete(workload);
             return next;
           });
-          
-          // Transition to recovered state (Green)
           setRecoveringWorkloads(prev => {
             const next = new Set(prev);
             next.add(workload);
@@ -168,7 +173,14 @@ export default function NetworkFlow({
           });
           setSystemNodes(prev => prev.map(n => n.id.includes(workload) || n.label.includes(workload) ? { ...n, status: 'recovered' } : n));
           
-          // Natural Pause: Smooth transition back to active (Blue) after 6 seconds (enough time for jury to see)
+          onNewAlert?.({
+            id: evId,
+            title: `Restored: ${workload.toUpperCase()}`,
+            message: `AutoHeal pipeline eradicated the threat. Standard operations resumed.`,
+            type: 'success',
+            timestamp: new Date()
+          });
+
           setTimeout(() => {
             setRecoveringWorkloads(prev => {
               const next = new Set(prev);
@@ -184,13 +196,18 @@ export default function NetworkFlow({
           const sourceInfo = subject.includes('.runtime.') ? 'Runtime eBPF' : 'Shadow AI Engine';
           displayStr = `[${timeStr}] ⚠️ ${sourceInfo} flagged [${threat}] on workload: ${workload.toUpperCase()}`;
           eventType = 'threat';
+          
+          onNewAlert?.({
+            id: evId,
+            title: `Anomaly Flagged: ${workload.toUpperCase()}`,
+            message: `Signature: ${threat} | Source: ${sourceInfo}`,
+            type: 'warning',
+            timestamp: new Date()
+          });
         }
 
         if (displayStr) {
-          const evId = Date.now().toString() + Math.random();
-          // Add to Global Banner (append to end so it scrolls down naturally)
-          setLiveEvents(prev => [...prev, { id: evId, text: displayStr }].slice(-50)); // Keep up to 50 in the feed stack
-          // Add to Specific Node Log View (latest at top)
+          setLiveEvents(prev => [...prev, { id: evId, text: displayStr }].slice(-50));
           if (workload) {
             setNodeLogs(prev => ({
               ...prev,
@@ -203,7 +220,7 @@ export default function NetworkFlow({
       }
     };
     return () => source.close();
-  }, [setSystemNodes]);
+  }, [setSystemNodes, onNewAlert]);
 
   const getInitialNodes = useCallback(() => {
     if (viewMode === 'workloads') {
@@ -474,9 +491,8 @@ export default function NetworkFlow({
 
   return (
     <div className="flex flex-col h-full gap-4" id="network-flow-container">
-      {/* Main White Card containing Graph and Node Details */}
       <div className="bg-white border border-brand-border rounded-2xl shadow-sm p-5 flex flex-col flex-1 min-h-0" id="network-topology-card">
-        {/* Header section */}
+        
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-brand-border mb-4">
           <div>
             <span className="font-mono text-xs font-bold text-slate-400 tracking-wider uppercase block select-none">
@@ -537,7 +553,6 @@ export default function NetworkFlow({
           </div>
         </div>
 
-        {/* ReactFlow Area */}
         <div className="flex-1 min-h-[350px] border border-slate-100 rounded-xl relative overflow-hidden bg-slate-50/50">
           <ReactFlow
             nodes={nodes}
@@ -567,10 +582,8 @@ export default function NetworkFlow({
           )}
         </div>
 
-        {/* Selected Node Details - Removes rigid max-height so it doesn't clip */}
         {selectedNode && (
           <div className="mt-4 bg-[#f8f9fa] border border-brand-border rounded-xl flex flex-col shrink-0 animate-in slide-in-from-bottom-2 duration-300">
-            {/* Top Info Section */}
             <div className="p-3 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className={`h-8 w-8 rounded-full flex items-center justify-center text-white ${
@@ -598,7 +611,6 @@ export default function NetworkFlow({
                     {selectedNode.latency}ms
                   </span>
                 </div>
-                {/* Contextual Actions */}
                 {viewMode === 'workloads' && (
                   <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
                     <button
@@ -629,7 +641,6 @@ export default function NetworkFlow({
               </div>
             </div>
 
-            {/* Node Specific Log Section */}
             {viewMode === 'workloads' && (
               <div className="bg-slate-900 border-t border-slate-800 p-3 max-h-[140px] overflow-y-auto rounded-b-xl">
                 <div className="flex items-center gap-2 mb-2 sticky top-0 bg-slate-900 pb-1">
@@ -664,14 +675,11 @@ export default function NetworkFlow({
         )}
       </div>
 
-      {/* Enhanced Infinite Global Live Feed (OUTSIDE white card) */}
       <div className="bg-slate-950 rounded-xl font-mono text-[11px] py-4 px-5 flex flex-col gap-2 shadow-inner border border-slate-800 shrink-0 h-[220px]">
-        {/* Feed Header */}
         <div className="flex items-center gap-2 text-[#00ced1] font-bold tracking-widest uppercase border-b border-slate-800 pb-2 flex-shrink-0">
           <Activity size={15} className="animate-pulse" /> Global Live Stream
         </div>
         
-        {/* Scrollable Event Content */}
         <div 
           ref={feedRef}
           className="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-2 scroll-smooth"

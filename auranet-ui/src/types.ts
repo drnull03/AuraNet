@@ -5,17 +5,25 @@
 
 export type ActiveView = 'main' | 'stress' | 'statistics' | 'attack' | 'workload';
 
+export interface SystemAlert {
+  id: string;
+  title: string;
+  message: string;
+  type: 'critical' | 'warning' | 'success';
+  timestamp: Date;
+}
+
 export interface SystemNode {
   id: string;
   label: string;
   type: 'central' | 'sensor' | 'gateway' | 'compute';
-  status: 'active' | 'warning' | 'offline' | 'recovered'; // Added 'recovered' state for smooth transitions
-  latency: number; // in ms
+  status: 'active' | 'warning' | 'offline' | 'recovered';
+  latency: number; 
   region: string;
   ip: string;
-  cpu: number; // percentage
-  memory: number; // percentage
-  connections: string[]; // ids of connected nodes
+  cpu: number; 
+  memory: number; 
+  connections: string[]; 
 }
 
 export interface K8sNode {
@@ -38,11 +46,11 @@ export interface AuraNode {
 }
 
 export interface MetricData {
-  option1: number; // e.g. 538
-  option2: number; // e.g. 485
-  option3: number; // e.g. 45
-  option1Percent: number; // e.g. 75
-  option2Percent: number; // e.g. 40
+  option1: number; 
+  option2: number; 
+  option3: number; 
+  option1Percent: number; 
+  option2Percent: number; 
 }
 
 export interface CommitLog {
