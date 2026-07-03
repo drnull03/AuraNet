@@ -169,7 +169,7 @@ export default function NetworkFlow({
             timestamp: new Date()
           });
 
-          // Wait randomly 2-3 seconds before shifting to Green (recovered)
+          // Wait randomly 1-2 seconds before shifting to Green (recovered)
           const delayToGreen = Math.floor(Math.random() * 1000) + 1000;
           setTimeout(() => {
             setQuarantinedWorkloads(prev => {
@@ -302,13 +302,17 @@ export default function NetworkFlow({
         node.connections.forEach(targetId => {
           const targetNode = systemNodes.find(n => n.id === targetId);
           if (!targetNode) return;
+          
           const isOffline = targetNode.status === 'offline' || node.status === 'offline';
+          
+          // Completely hide the connection if either node is quarantined (Red/Offline)
+          if (isOffline) return;
+
           const isWarning = targetNode.status === 'warning' || node.status === 'warning';
           const isRecovered = targetNode.status === 'recovered' || node.status === 'recovered';
 
           let color = '#475569';
-          if (isOffline) color = '#991b1b';
-          else if (isWarning) color = '#b45309';
+          if (isWarning) color = '#b45309';
           else if (isRecovered) color = '#10b981';
 
           edges.push({
@@ -318,11 +322,11 @@ export default function NetworkFlow({
             sourceHandle: 'right-source',
             targetHandle: 'left-target',
             type: 'straight',
-            animated: !isOffline,
+            animated: true,
             style: {
               stroke: color,
-              strokeWidth: isOffline ? 1.5 : 2.5,
-              opacity: isOffline ? 0.6 : 0.95
+              strokeWidth: 2.5,
+              opacity: 0.95
             },
             markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: color }
           });
