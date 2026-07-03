@@ -24,6 +24,8 @@ spec:
               value: "production"
             - name: CONFIG_PATH
               value: "/app/config/naive.conf"
+            - name: NATS_URL
+              value: {{ .Values.nats.url | quote }}
           volumeMounts:
             - name: config-volume
               mountPath: /app/config
