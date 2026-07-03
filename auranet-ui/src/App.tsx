@@ -106,16 +106,16 @@ export default function App() {
 
         {/* Scrollable Workspace */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-100/50" id="scrollable-workspace">
-          {activeView === 'main' && (
-            <div className="h-[calc(100vh-140px)] w-full rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-xs" id="topology-full-viewport">
-              <NetworkFlow 
-                systemNodes={systemNodes}
-                setSystemNodes={setSystemNodes}
-                onNodeSelect={setSelectedNode}
-                selectedNode={selectedNode}
-              />
-            </div>
-          )}
+        {activeView === 'main' && (
+  <div className="h-[calc(100vh-120px)] w-full rounded-2xl overflow-hidden flex flex-col" id="topology-full-viewport">
+    <NetworkFlow
+      systemNodes={systemNodes}
+      setSystemNodes={setSystemNodes}
+      onNodeSelect={setSelectedNode}
+      selectedNode={selectedNode}
+    />
+  </div>
+)}
 
           {activeView === 'stress' && (
             <StressView systemNodes={systemNodes} setSystemNodes={setSystemNodes} />
