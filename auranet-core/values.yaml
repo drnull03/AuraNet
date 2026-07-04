@@ -1,9 +1,25 @@
-auranet-ztc:
+# Inject values into the auranet-agent subchart (Ai engine & runtime)
+auranet-agent:
+  engine:
+    aiConfig:
+      inputDim: 13
+      tripwireThreshold: 0.05
+      localTrainIntervalSec: 120
+      maxBufferSize: 5000
+      localEpochs: 5
+      learningRate: 0.001
+
+# Inject values into the autoheal subchart
+autoheal:
+  replicaCount: 1
+  namespace: auranet-namespace
+
+# Inject values into the controller subchart
+auranet-controller:
   replicaCount: 1
 
-auranet-autoheal:
-  replicaCount: 1
-
-# You can pass global settings here
-global:
-  natsUrl: "nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222"
+# Inject values into the loader subchart (eBPF builder/loader)
+auranet-loader:
+  config:
+    logLevel: INFO
+    rotateMb: 100
