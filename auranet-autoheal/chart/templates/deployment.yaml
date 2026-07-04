@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}
+  name: {{ .Release.Name }}-{{ .Chart.Name }}
   namespace: {{ .Values.namespace }}
   labels:
     app: {{ .Release.Name }}
@@ -36,7 +36,7 @@ spec:
       volumes:
       - name: threat-matrix-volume
         configMap:
-          name: {{ .Release.Name }}-threat-matrix
+          name: {{ .Release.Name }}-{{ .Chart.Name }}-threat-matrix
           items:
             - key: threat_matrix.conf
               path: threat_matrix.conf

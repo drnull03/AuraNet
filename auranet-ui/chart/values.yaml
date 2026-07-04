@@ -23,3 +23,8 @@ topologyConfig: |-
   # backends -> DB
   4. account-service -> finance-db:5432
   5. loan-service -> finance-db:5432
+
+
+
+nats:
+  url: "nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222"
