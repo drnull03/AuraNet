@@ -96,6 +96,7 @@ cilium_release = k8s.helm.v3.Release(
 )
 
 
+# this is can be removed safely and is left for testing purposes
 tetragon_release = k8s.helm.v3.Release(
     "tetragon-security-observability",
     k8s.helm.v3.ReleaseArgs(
