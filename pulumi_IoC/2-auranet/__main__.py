@@ -2,7 +2,7 @@ import pulumi
 import pulumi_kubernetes as k8s
 
 print(f"🐝 Pulumi is configuring AuraNet Layer 2")
-
+AURANET_CHART_PATH = "../../auranet-core/chart"
 #  Pull the Kubeconfig from Layer 1 (StackReference)
 
 infra_reference = pulumi.StackReference("dev") 
@@ -57,8 +57,29 @@ nats_release = k8s.helm.v3.Release(
     )
 )
 
+# Deploy the local AuraNet Core Helm Package
+auranet_core_release = k8s.helm.v3.Release(
+    "auranet-core-release",
+    k8s.helm.v3.ReleaseArgs(
+        name="auranet", # Matches the release name from your install.sh
+        chart=AURANET_CHART_PATH, # Points to the local directory
+        namespace=app_namespace.metadata.name,
+        # No repository_opts needed for local charts
+    ),
+    opts=pulumi.ResourceOptions(
+        provider=k8s_provider,
+        # Ensures the core doesn't start until NATS is fully up and routing
+        depends_on=[app_namespace, nats_release] 
+    )
+)
+
+
+
+
+
 # Export layer outputs for layer 3 or validation checking
 pulumi.export("app_namespace", app_namespace.metadata.name)
 pulumi.export("nats_namespace", nats_namespace.metadata.name)
 pulumi.export("nats_status", nats_release.status.name)
 pulumi.export("nats_connection_string", "nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222")
+pulumi.export("auranet_core_status", auranet_core_release.status.name)
