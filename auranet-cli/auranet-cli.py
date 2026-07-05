@@ -6,9 +6,6 @@ import sys
 from kubernetes import client, config
 
 
-# ---------------------------------------------------------------------------
-# Existing trust-matrix commands
-# ---------------------------------------------------------------------------
 
 def inject_trusted_label(label: str, namespace: str = "auranet-namespace"):
     """
