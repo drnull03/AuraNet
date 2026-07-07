@@ -215,3 +215,12 @@ if __name__ == "__main__":
         )
     else:
         parser.print_help()
+
+
+
+
+
+# add version option
+# add config option
+# add stress test option 
+# add restart option 

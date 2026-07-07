@@ -171,7 +171,6 @@ async function startAutoHeal() {
             
             console.log(`[AutoHeal] ✅ Pipeline complete. Threat neutralized for ${workload}.\n`);
 
-            // NEW: Broadcast the remediation signal back to the ZTC
             nc.publish(`auranet.remediated.${workload}`, sc.encode(JSON.stringify({ status: "cleared" })));
         }
     } catch (err) {
