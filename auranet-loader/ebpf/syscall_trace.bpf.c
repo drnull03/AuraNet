@@ -9,6 +9,8 @@
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
 #include <bpf/bpf_core_read.h>
+//this version only detect two syscalls and that is enough for the demo 
+//for more syscalls one can refer a different version of this file 
 
 #define TASK_COMM_LEN   16
 #define MAX_ARGS        6
