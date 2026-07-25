@@ -10,7 +10,6 @@ class GenesisAutoencoder(nn.Module):
     def __init__(self, input_dim):
         super(GenesisAutoencoder, self).__init__()
         
-        # FIXED: Deep Architecture (13 -> 16 -> 8 -> 4)
         self.encoder = nn.Sequential(
             nn.Linear(input_dim, 16),
             nn.ReLU(True),

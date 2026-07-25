@@ -50,7 +50,6 @@ class SymbolicSupervisor:
             if method in ["TRACE", "TRACK", "CONNECT"]:
                 return "symbolic_banned_method"
 
-            # NEW: Anomalous Method Length
             # Valid HTTP methods (GET, POST, OPTIONS) are short. 
             # Fuzzers try to overflow method parsers by sending 50+ byte strings.
             if len(method) > 15:
@@ -62,7 +61,6 @@ class SymbolicSupervisor:
             header_counts = {}
             content_length = 0
 
-            # NEW: Excessive Header Count (Memory Exhaustion / Slowloris)
             # Instead of one massive header, attackers send hundreds of tiny ones 
             # to exhaust backend dictionary allocations.
             if len(headers) > 50:

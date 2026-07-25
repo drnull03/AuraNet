@@ -27,7 +27,7 @@ class DynamicConfig:
             "localTrainIntervalSec": 120,
             "maxBufferSize": 5000,
             "localEpochs": 5,
-            "learningRate": 0.001,
+            "learningRate": 0.01,
             "trustedIdentities": [],
             "learningEngine": True,
             "thirdBrain": False
