@@ -40,7 +40,6 @@ class SymbolicSupervisor:
             if url.count("%") > 20:
                 return "symbolic_excessive_url_encoding"
 
-            # NEW: Non-ASCII / Binary Payload in URL
             # Standard URIs should be printable ASCII. Raw binary bytes indicate 
             # shellcode injection or memory corruption attempts.
             if any(ord(c) > 127 for c in url):

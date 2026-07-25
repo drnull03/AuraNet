@@ -3,6 +3,8 @@ const { connect, StringCodec } = require('nats');
 const fs = require('fs');
 
 // kept the name to tetragon.log for legacy purposes
+//is should update this code to read from the ringbuff directly 
+//TODO:
 // this file is present on every node 
 const LOG_PATH = process.env.LOG_PATH || '/var/run/cilium/tetragon/tetragon.log';
 // the same nat url
@@ -98,7 +100,7 @@ async function startForwarder() {
                 if (isExecEvent) {
                     const binary = processData.binary.split('/').pop();
                     
-                    // --- LINEAGE VERIFICATION LOGIC ---
+                    // LINEAGE VERIFICATION LOGIC 
                     // Extract the parent process to see who triggered the shell
                     let parentBinary = '';
                     if (processData.parent && processData.parent.binary) {

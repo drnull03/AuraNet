@@ -14,7 +14,7 @@ def run_background_workers(brain_a, brain_b, brain_c, benign_buffer, buffer_lock
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     
-    # Schedule Worker A (Inference) with BOTH brains
+    # Schedule Worker A (Inference) with triple brains
     tasks = [loop.create_task(run_inference_pipeline(brain_a, brain_b, brain_c, benign_buffer, buffer_lock))]
     
     # Worker B (Training) only federates Brain A (Tabular). Brain B and C is static because they already learned grammer rule and don't need any adaptation.
