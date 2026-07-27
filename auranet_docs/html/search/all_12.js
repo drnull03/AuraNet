@@ -1,0 +1,28 @@
+var searchData=
+[
+  ['last_5fmodified_0',['last_modified',['../classsrc_1_1config_1_1DynamicConfig.html#ab6ad0c58b48eb69859ff4e13e245b28f',1,'src::config::DynamicConfig']]],
+  ['learning_20with_20pytorch_20and_20flower_20quickstart_20example_1',['Federated Learning with PyTorch and Flower (Quickstart Example)',['..//home/diaa/AuraNet/tests/flower-venv/quickstart-pytorch/README.md#autotoc_md52',1,'']]],
+  ['learning_5fengine_2',['learning_engine',['../classsrc_1_1config_1_1DynamicConfig.html#a3ec99d824562a559d5acf6792a67007a',1,'src.config.DynamicConfig.LEARNING_ENGINE()'],['../classtest__short__circuit_1_1MockAIConfig.html#ad8bf9d7077cab5b2f87c815e791a0515',1,'test_short_circuit.MockAIConfig.LEARNING_ENGINE']]],
+  ['learning_5frate_3',['learning_rate',['../namespacesrc_1_1config.html#a297ecd81d6247dbb944ba368af292746',1,'src.config.LEARNING_RATE'],['../classsrc_1_1config_1_1DynamicConfig.html#af1856d206e5df92863a3257fbfd37f09',1,'src.config.DynamicConfig.LEARNING_RATE()']]],
+  ['level_20security_4',['Prohibition of Application-Level Security',['../md_workload__dev__guide_2AuraNet__Developer__Guide.html#autotoc_md72',1,'']]],
+  ['license_5',['License',['../index.html#autotoc_md35',1,'']]],
+  ['light_5fload_2ejs_6',['light_load.js',['../light__load_8js.html',1,'']]],
+  ['linux_20headers_205_2015_200_201034_20aws_20include_7',['[auranet-builder] Using kernel headers: /usr/src/linux-headers-5.15.0-1034-aws/include',['../index.html#autotoc_md23',1,'']]],
+  ['live_2dtester_2ejs_8',['live-tester.js',['../live-tester_8js.html',1,'']]],
+  ['load_5fand_5ffilter_9',['load_and_filter',['../classsrc_1_1dataset_1_1HubbleDataProcessor.html#ac48f661c286224b942ee0a63f1f8319d',1,'src.dataset.HubbleDataProcessor.load_and_filter()'],['../namespacesrc_1_1dataset__general.html#ace44869c67e16495fcf015757dd82be0',1,'src.dataset_general.load_and_filter()'],['../namespacesrc_1_1dataset__specific.html#aa4b1c2163a454edee13eb4a461b143a3',1,'src.dataset_specific.load_and_filter()']]],
+  ['load_5fand_5ftokenize_10',['load_and_tokenize',['../classnlp__dataset_1_1NlpDataProcessor.html#ae4229d2588605488853d8765a1c4bf06',1,'nlp_dataset.NlpDataProcessor.load_and_tokenize(self)'],['../classnlp__dataset_1_1NlpDataProcessor.html#ae4229d2588605488853d8765a1c4bf06',1,'nlp_dataset.NlpDataProcessor.load_and_tokenize(self)']]],
+  ['load_5fauranet_5fimages_11',['load_auranet_images',['../namespace____main____.html#aa20a42e8016c844e6898c131898e4527',1,'__main__']]],
+  ['load_5fcentralized_5fdataset_12',['load_centralized_dataset',['../namespacepytorchexample_1_1task.html#a3051bfd283a991c7678c349d0ec16d7e',1,'pytorchexample::task']]],
+  ['load_5fdata_13',['load_data',['../namespacepytorchexample_1_1task.html#a9976cc626cee09b96b7dc2badf1aee10',1,'pytorchexample::task']]],
+  ['load_5ffederated_5fdatasets_14',['load_federated_datasets',['../namespacefederated__sim.html#a90a202d3fe6ba4d9d1f9b70d55a93a8c',1,'federated_sim']]],
+  ['loader_15',['loader',['../index.html',1,'auranet-loader'],['../namespaceloader.html',1,'loader']]],
+  ['loader_20container_20can_20now_20start_16',['[auranet-builder] Build complete. Loader container can now start.',['../index.html#autotoc_md27',1,'']]],
+  ['loader_20is_20running_17',['3. Check the loader is running',['../index.html#autotoc_md28',1,'']]],
+  ['loader_3a_3aevent_18',['event',['../namespaceloader_1_1event.html',1,'loader']]],
+  ['loader_3a_3amain_19',['main',['../namespaceloader_1_1main.html',1,'loader']]],
+  ['loader_3a_3asyscall_5fnames_20',['syscall_names',['../namespaceloader_1_1syscall__names.html',1,'loader']]],
+  ['local_5fepochs_21',['LOCAL_EPOCHS',['../classsrc_1_1config_1_1DynamicConfig.html#a775798731371e07a4af660aa4db8eb40',1,'src::config::DynamicConfig']]],
+  ['local_5ftrain_5finterval_5fsec_22',['LOCAL_TRAIN_INTERVAL_SEC',['../classsrc_1_1config_1_1DynamicConfig.html#a21bcda7716125767bfca40801b86b70b',1,'src::config::DynamicConfig']]],
+  ['log_5ffilename_23',['log_filename',['../namespaceexec__logger.html#a85de549750124f0e5a7391ac6d36ef7a',1,'exec_logger']]],
+  ['loss_24',['loss',['../namespacetest__monolith.html#ac18eb03ea4bd92746a4e4bd7db462d07',1,'test_monolith']]]
+];

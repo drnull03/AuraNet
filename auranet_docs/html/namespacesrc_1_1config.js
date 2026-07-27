@@ -1,0 +1,28 @@
+var namespacesrc_1_1config =
+[
+    [ "DynamicConfig", "classsrc_1_1config_1_1DynamicConfig.html", "classsrc_1_1config_1_1DynamicConfig" ],
+    [ "ai", "namespacesrc_1_1config.html#ae397d160e36814b7ae194b1080057865", null ],
+    [ "BASE_DIR", "namespacesrc_1_1config.html#a371a629caa526e7cbc3a025840bc1b50", null ],
+    [ "BATCH_SIZE", "namespacesrc_1_1config.html#a2d9549f620c3f2ac8b93b0360a0da990", null ],
+    [ "CONFIG_FILE_PATH", "namespacesrc_1_1config.html#a875ce6a7820d89507c8d18fe8253ca6a", null ],
+    [ "EPOCHS", "namespacesrc_1_1config.html#ab1c4b519efc5e463c2c6eedb53730a58", null ],
+    [ "FL_ROUNDS", "namespacesrc_1_1config.html#a19a4a633a73cb3d1f5a258d5e27b03ce", null ],
+    [ "FL_SERVER_ADDRESS", "namespacesrc_1_1config.html#a3c89e45b756a9e85b0160cd237161f1b", null ],
+    [ "FRACTION_FIT", "namespacesrc_1_1config.html#af810734684cb0704321f436cfc525514", null ],
+    [ "GENESIS_WEIGHTS_PATH", "namespacesrc_1_1config.html#ab89815829309adbbb57d64984db27f6e", null ],
+    [ "HUBBLE_RELAY_ADDRESS", "namespacesrc_1_1config.html#a9a8b467d22f085edc76d5c2289a74ab4", null ],
+    [ "LEARNING_RATE", "namespacesrc_1_1config.html#a297ecd81d6247dbb944ba368af292746", null ],
+    [ "MIN_AVAILABLE_CLIENTS", "namespacesrc_1_1config.html#aabb479a870bdc6cd6a7977da814ef317", null ],
+    [ "MODEL_DIR", "namespacesrc_1_1config.html#af0e7f7dc6351496cd961dcdbc259c28f", null ],
+    [ "MODEL_WEIGHTS_PATH", "namespacesrc_1_1config.html#a7d4d084373f36c9448e38be28d32bbdf", null ],
+    [ "NATS_SUBJECT_PREFIX", "namespacesrc_1_1config.html#a5394ca72b22afb0fc9d64e7a062261cb", null ],
+    [ "NATS_URL", "namespacesrc_1_1config.html#a2b97f4d8a83d9052b6307beb8e1a4558", null ],
+    [ "NLP_BODY_WEIGHTS_PATH", "namespacesrc_1_1config.html#ae5f3884357976deedb6a13b93ec887e1", null ],
+    [ "NLP_WEIGHTS_PATH", "namespacesrc_1_1config.html#aa7c2e5581923d09dbf6d53909b8813c0", null ],
+    [ "NODE_NAME", "namespacesrc_1_1config.html#a8f775f22a8ee3b817d158c7d90b33295", null ],
+    [ "PROCESSED_TENSOR_PATH", "namespacesrc_1_1config.html#a11f832a01d472990915fa0b07c397256", null ],
+    [ "ROUND_TIMEOUT_SECONDS", "namespacesrc_1_1config.html#ae7e003d1174037949adccbda41465b5b", null ],
+    [ "TEST_DATA_PATH", "namespacesrc_1_1config.html#a1246ca6d60f6627e257a73aeadc6968d", null ],
+    [ "TRAIN_DATA_PATH", "namespacesrc_1_1config.html#ad8866bc33c269f1826f66f184752604a", null ],
+    [ "TRIPWIRE_THRESHOLD", "namespacesrc_1_1config.html#a102a4c0fa9bbf4a15eaf15a1eba001b6", null ]
+];

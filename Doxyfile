@@ -38,7 +38,9 @@ EXCLUDE_PATTERNS = */node_modules/* \
                    */.venv/* \
                    */venv/* \
                    */.next/* \
-                   */out/*
+                   */out/* \
+                   */lib/*
+
 
 # ---------------------------------------------------------------------------
 # Python support

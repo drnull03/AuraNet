@@ -1,0 +1,7 @@
+<map id="sample_workload_layer/OmniFinance" name="sample_workload_layer/OmniFinance">
+<area shape="rect" id="node2" href="dir_7570aae03b4f2c68ca7a7a9cd09a4215.html" title="account&#45;service" alt="" coords="292,63,417,88"/>
+<area shape="rect" id="node3" href="dir_750aa1bc15c6e358cc90616507759ef4.html" title="api&#45;gateway" alt="" coords="165,63,267,88"/>
+<area shape="rect" id="node4" href="dir_cca5ad0a1b6a505200a382b5fb9060cd.html" title="loan&#45;service" alt="" coords="38,63,141,88"/>
+<area shape="rect" id="clust2" href="dir_cecd4bfabe88e43caa709faa091cc956.html" alt="" coords="27,52,559,99"/>
+<area shape="rect" id="clust1" href="dir_75a2a8b037001a06e6b692c2814a8152.html" title="sample_workload_layer" alt="" coords="16,16,569,109"/>
+</map>

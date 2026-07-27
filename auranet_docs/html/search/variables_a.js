@@ -1,0 +1,7 @@
+var searchData=
+[
+  ['json_5ffile_0',['json_file',['../namespacesrc_1_1dataset__general.html#af8c19967e1d740e0920004484abdd1d0',1,'src.dataset_general.json_file'],['../namespacesrc_1_1dataset__specific.html#ab675a6be5aeb271616b9399b0b8f9c7b',1,'src.dataset_specific.json_file'],['../namespacesrc_1_1dataset.html#aa5719915551cb2e8f4d878b2115ab880',1,'src.dataset.json_file']]],
+  ['json_5fpath_1',['json_path',['../classsrc_1_1dataset__general_1_1HubbleDataProcessor.html#a880557b69bda5a17448acfd218291143',1,'src.dataset_general.HubbleDataProcessor.json_path'],['../classsrc_1_1dataset__specific_1_1HubbleDataProcessor.html#acd821e9d243797ea3140c4e8d135d9ab',1,'src.dataset_specific.HubbleDataProcessor.json_path'],['../classnlp__dataset_1_1NlpDataProcessor.html#a2e32b11f17407962367e58e39523ae39',1,'nlp_dataset.NlpDataProcessor.json_path'],['../classsrc_1_1dataset_1_1HubbleDataProcessor.html#ab2faa85a7a9dfb10b960edce1ec424a2',1,'src.dataset.HubbleDataProcessor.json_path'],['../namespacesrc_1_1dataset__general.html#ad2bc1357ef537179cba51dc89436bebc',1,'src.dataset_general.json_path'],['../namespacesrc_1_1dataset__specific.html#a7e20f8cbcdff9f84d07de24d9bbba5d1',1,'src.dataset_specific.json_path']]],
+  ['json_5ftest_2',['json_test',['../namespacenlp__dataset.html#ac0e1c75254519512c64b8e3f53016fb6',1,'nlp_dataset']]],
+  ['json_5ftrain_3',['json_train',['../namespacenlp__dataset.html#a19306f6ed59f90b23b7e7c39eb7f13f9',1,'nlp_dataset']]]
+];

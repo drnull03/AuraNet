@@ -1,0 +1,11 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="Node000000" title=" " alt="" coords="5,84,79,109"/>
+<area shape="rect" id="Node000001" href="$classnlp__dataset_1_1NlpDataset.html" title=" " alt="" coords="139,5,314,31"/>
+<area shape="poly" id="edge2_Node000000_Node000001" title=" " alt="" coords="69,73,96,55,126,40,159,28,160,33,128,44,98,60,72,78"/>
+<area shape="rect" id="Node000002" href="$classsrc_1_1dataset_1_1HubbleDataset.html" title=" " alt="" coords="129,55,324,80"/>
+<area shape="poly" id="edge3_Node000000_Node000002" title=" " alt="" coords="92,86,146,77,147,83,93,91"/>
+<area shape="rect" id="Node000003" href="$classsrc_1_1dataset__general_1_1HubbleDataset.html" title="Initializes PyTorch tensor dataset." alt="" coords="127,105,327,145"/>
+<area shape="poly" id="edge4_Node000000_Node000003" title=" " alt="" coords="93,102,127,107,126,112,92,107"/>
+<area shape="rect" id="Node000004" href="$classsrc_1_1dataset__specific_1_1HubbleDataset.html" title=" " alt="" coords="127,169,327,209"/>
+<area shape="poly" id="edge5_Node000000_Node000004" title=" " alt="" coords="70,116,97,136,128,154,155,166,153,171,125,159,94,140,67,120"/>
+</map>
