@@ -60,6 +60,7 @@ k8s_provider = k8s.Provider(
 )
 
 #  Install Cilium via Helm Release
+#  Install Cilium via Helm Release
 cilium_release = k8s.helm.v3.Release(
     "cilium-ebpf-datapath",
     k8s.helm.v3.ReleaseArgs(
@@ -84,8 +85,53 @@ cilium_release = k8s.helm.v3.Release(
                     "spire": {
                         "enabled": True,
                         "install": {
+                            "enabled": True, 
                             
-                            "enabled": True 
+                            # --- START OF COMMENTED TPM & ATTESTATION CONFIG ---
+                            # "server": {
+                            #     "spireConfig": {
+                            #         # 1 & 2. Enable TPM node attestation and PCR validation on the server
+                            #         "node_attestor": {
+                            #             "tpm_devid": {
+                            #                 "plugin_data": {
+                            #                     "ca_path": "/opt/spire/conf/server/tpm_cas",
+                            #                     "expected_pcrs": {
+                            #                         "0": "7a5f25ab254c7d9f7831d683a483abcc134eb90b243468cc8012659e4ab25fc9",
+                            #                         "4": "b4e28c7c98034c442ab11b332454b5ba98782a1727771239843644a83321526d"
+                            #                     }
+                            #                 }
+                            #             }
+                            #         }
+                            #     }
+                            # },
+                            # "agent": {
+                            #     # Mount the physical TPM device from the host into the SPIRE agent container
+                            #     "extraVolumeMounts": [
+                            #         {"name": "tpm", "mountPath": "/dev/tpmrm0"}
+                            #     ],
+                            #     "extraVolumes": [
+                            #         {"name": "tpm", "hostPath": {"path": "/dev/tpmrm0", "type": "CharDevice"}}
+                            #     ],
+                            #     "spireConfig": {
+                            #         # Instruct the agent to use the mounted TPM for attestation
+                            #         "node_attestor": {
+                            #             "tpm_devid": {
+                            #                 "plugin_data": {
+                            #                     "dev_path": "/dev/tpmrm0"
+                            #                 }
+                            #             }
+                            #         },
+                            #         # 3. Enable workload attestation via K8s metadata to allow image hash verification
+                            #         "workload_attestor": {
+                            #             "k8s": {
+                            #                 "plugin_data": {
+                            #                     "kubelet_read_only_port": "10255"
+                            #                 }
+                            #             }
+                            #         }
+                            #     }
+                            # }
+                            # --- END OF COMMENTED TPM & ATTESTATION CONFIG ---
                         }
                     }
                 }
