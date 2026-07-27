@@ -1,3 +1,39 @@
+/**
+ * @file __init__.py
+ * @brief AuraNet userspace eBPF ring-buffer consumer.
+ *
+ * This module implements the userspace loader component of AuraNet's
+ * kernel telemetry pipeline.
+ *
+ * The loader is responsible for:
+ * - Loading a pre-compiled eBPF ELF object generated during node initialization.
+ * - Attaching raw kernel tracepoints for syscall monitoring.
+ * - Receiving kernel events through a high-performance BPF ring buffer.
+ * - Decoding binary syscall events into structured JSON records.
+ * - Persisting telemetry events using JSON Lines format.
+ *
+ * The component runs as a node-level daemon and acts as the bridge between
+ * kernel-space eBPF programs and userspace security analysis components.
+ *
+ * Data flow:
+ *
+ * Kernel Syscalls
+ *        |
+ *        v
+ * eBPF Raw Tracepoints
+ *        |
+ *        v
+ * BPF Ring Buffer
+ *        |
+ *        v
+ * AuraNet Loader
+ *        |
+ *        v
+ * JSON Event Stream
+ *
+ * @note The eBPF object is expected to be pre-compiled by an initContainer.
+ *       The loader does not compile eBPF source code at runtime.
+ */
 #!/usr/bin/env python3
 """
 auranet-loader – userspace ring-buffer consumer.
@@ -33,6 +69,20 @@ log = logging.getLogger("auranet")
 #     u8  _pad[7];               +105 (7)
 # }                              = 112 bytes total
 
+/**
+ * @brief Binary layout of syscall events exchanged between eBPF and userspace.
+ *
+ * This structure must exactly match the C structure defined inside the
+ * eBPF kernel program.
+ *
+ * The format uses:
+ * - Little endian encoding.
+ * - Fixed-size fields.
+ * - Explicit padding for kernel alignment compatibility.
+ *
+ * Total size:
+ * 112 bytes
+ */
 _STRUCT = struct.Struct(
     "<"         # little-endian
     "Q"         # timestamp_ns  u64
@@ -47,15 +97,52 @@ _STRUCT = struct.Struct(
     "B"         # is_exit       u8
     "7x"        # _pad[7]
 )
+/**
+ * @brief Size of a single syscall event structure in bytes.
+ *
+ * Used to validate received ring-buffer events before decoding.
+ */
 EVENT_SIZE = _STRUCT.size   # 112
 
 
 
 from .syscall_names import SYSCALL_NAMES
 
-
-
+/**
+ * @class AuranetLoader
+ * @brief Main userspace controller for AuraNet eBPF telemetry collection.
+ *
+ * This class manages the complete lifecycle of the loader:
+ *
+ * Initialization:
+ * - Validates eBPF object availability.
+ * - Loads the compiled eBPF program.
+ *
+ * Runtime:
+ * - Attaches syscall tracepoints.
+ * - Opens the ring buffer.
+ * - Continuously consumes kernel events.
+ * - Converts binary events into JSON telemetry.
+ *
+ * Shutdown:
+ * - Handles termination signals.
+ * - Flushes output streams.
+ * - Releases resources.
+ *
+ * @note This component runs with elevated privileges because eBPF programs
+ *       require kernel-level access.
+ */
 class AuranetLoader:
+    /**
+ * @brief Initializes the AuraNet loader instance.
+ *
+ * @param cfg Runtime configuration object containing:
+ * - eBPF object path.
+ * - Output path.
+ * - PID filtering options.
+ * - Syscall filtering options.
+ * - Logging preferences.
+ */
     def __init__(self, cfg):
         self.cfg = cfg
         self._bpf = None
@@ -63,8 +150,18 @@ class AuranetLoader:
         self._out = None
         self._n = 0         # events written counter
 
-    # ── public ────────────────────────────────────────────────────────────────
-
+/**
+ * @brief Starts the eBPF telemetry collection pipeline.
+ *
+ * Performs:
+ * - eBPF object validation.
+ * - Kernel program loading.
+ * - Output file initialization.
+ * - Signal handler registration.
+ * - Ring-buffer polling startup.
+ *
+ * @return None
+ */
     def start(self):
         bpf_obj = Path(self.cfg.bpf_obj)
         if not bpf_obj.exists():
@@ -87,7 +184,15 @@ class AuranetLoader:
 
         log.info("auranet-loader active (pid=%d). Ctrl-C or SIGTERM to stop.", os.getpid())
         self._poll_loop()
-
+/**
+ * @brief Stops the loader gracefully.
+ *
+ * Performs:
+ * - Stops polling loop.
+ * - Flushes pending events.
+ * - Closes output streams.
+ * - Reports total collected events.
+ */
     def stop(self):
         self._running = False
         if self._out:
@@ -95,11 +200,23 @@ class AuranetLoader:
             self._out.close()
         log.info("Stopped. Total events written: %d", self._n)
 
-    # ── internal ──────────────────────────────────────────────────────────────
 
     def _on_signal(self, *_):
         self.stop()
-
+/**
+ * @brief Loads and attaches the precompiled eBPF program.
+ *
+ * Operations:
+ * - Loads ELF eBPF object using BCC.
+ * - Applies optional PID filtering.
+ * - Attaches syscall entry and exit tracepoints.
+ * - Registers the ring-buffer callback.
+ *
+ * @param obj_path Path to compiled eBPF object file.
+ *
+ * @exception ImportError
+ * Raised when BCC userspace bindings are unavailable.
+ */
     def _load_bpf(self, obj_path: Path):
         """Load the compiled .o and attach raw tracepoints."""
         try:
@@ -138,6 +255,14 @@ class AuranetLoader:
 
         self._bpf["events"].open_ring_buffer(self._on_event)
 
+/**
+ * @brief Continuously consumes events from the BPF ring buffer.
+ *
+ * The polling loop:
+ * - Waits for kernel events.
+ * - Dispatches events to the decoder callback.
+ * - Performs optional output rotation.
+ */
     def _poll_loop(self):
         while self._running:
             try:
@@ -147,13 +272,22 @@ class AuranetLoader:
             except KeyboardInterrupt:
                 break
         self.stop()
-
+/**
+ * @brief Checks whether output rotation is required.
+ *
+ * @return True if current log size exceeds configured limit.
+ */
     def _should_rotate(self) -> bool:
         try:
             return os.path.getsize(self.cfg.output) > self.cfg.rotate_mb * 1_048_576
         except FileNotFoundError:
             return False
-
+/**
+ * @brief Rotates the telemetry output file.
+ *
+ * Creates a timestamped archive and continues writing into
+ * a fresh JSON-lines file.
+ */
     def _rotate(self):
         ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         rotated = f"{self.cfg.output}.{ts}"
@@ -161,7 +295,22 @@ class AuranetLoader:
         self._out.close()
         self._out = open(self.cfg.output, "a", buffering=1)
         log.info("Rotated → %s", rotated)
-
+/**
+ * @brief Decodes and processes a single ring-buffer event.
+ *
+ * Converts raw binary kernel data into a structured JSON object.
+ *
+ * Processing steps:
+ * - Validate event size.
+ * - Deserialize binary structure.
+ * - Resolve syscall number to syscall name.
+ * - Apply syscall filtering.
+ * - Serialize event as JSON.
+ *
+ * @param ctx BPF callback context.
+ * @param data Raw event memory pointer.
+ * @param size Received event size.
+ */
     def _on_event(self, ctx, data, size):
         if size < EVENT_SIZE:
             log.debug("Short event ignored (%d < %d bytes)", size, EVENT_SIZE)

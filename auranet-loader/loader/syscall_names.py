@@ -1,8 +1,36 @@
+/**
+ * @file syscall_names.py
+ * @brief Linux x86_64 syscall number mapping.
+ *
+ * Provides translation between Linux syscall numbers and human-readable
+ * syscall names.
+ *
+ * The mapping is generated from Linux kernel syscall tables and is used
+ * during event decoding to make kernel telemetry understandable for
+ * higher-level AuraNet components.
+ *
+ * Example:
+ *
+ * syscall number:
+ * 59
+ *
+ * becomes:
+ * execve
+ */
+
 """
 x86_64 syscall number → name mapping.
 Generated from Linux 6.x kernel headers (arch/x86/entry/syscalls/syscall_64.tbl).
 """
-
+/**
+ * @brief Mapping between syscall identifiers and syscall names.
+ *
+ * Key:
+ * Linux x86_64 syscall number.
+ *
+ * Value:
+ * Human-readable syscall name.
+ */
 SYSCALL_NAMES: dict[int, str] = {
     0:   "read",
     1:   "write",

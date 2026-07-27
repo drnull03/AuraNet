@@ -1,3 +1,17 @@
+/**
+ * @file main.py
+ * @brief Command-line interface for AuraNet loader.
+ *
+ * Provides runtime configuration through:
+ *
+ * - Command-line arguments.
+ * - Environment variables.
+ *
+ * Responsible for:
+ * - Validating execution privileges.
+ * - Building runtime configuration.
+ * - Starting the AuranetLoader service.
+ */
 #!/usr/bin/env python3
 """auranet-loader CLI – configurable via flags or env vars."""
 
@@ -6,7 +20,20 @@ import logging
 import os
 import sys
 
-
+/**
+ * @brief Parses command-line arguments.
+ *
+ * Supported configuration:
+ *
+ * - eBPF object location.
+ * - Output telemetry path.
+ * - PID filtering.
+ * - Syscall filtering.
+ * - Log rotation.
+ * - Logging verbosity.
+ *
+ * @return Parsed command configuration.
+ */
 def parse_args():
     p = argparse.ArgumentParser(
         prog="auranet-loader",
@@ -39,7 +66,18 @@ def parse_args():
         help="Print events to stderr as they arrive")
     return p.parse_args()
 
-
+/**
+ * @brief Application entry point.
+ *
+ * Performs:
+ *
+ * - Argument parsing.
+ * - Logger initialization.
+ * - Root privilege validation.
+ * - Loader startup.
+ *
+ * @return None
+ */
 def main():
     args = parse_args()
 
