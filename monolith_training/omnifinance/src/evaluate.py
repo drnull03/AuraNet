@@ -1,3 +1,11 @@
+##
+# @file evaluate.py
+# @brief General anomaly discovery evaluation pipeline.
+#
+# @details
+# Evaluates unknown network traffic against the trained
+# Zero Trust Autoencoder and analyzes reconstruction errors.
+#
 import os
 import torch
 import torch.nn as nn
@@ -6,7 +14,13 @@ import numpy as np
 import config
 from dataset_general import HubbleDataProcessor
 from model import ZeroTrustAutoencoder
-
+##
+# @brief Evaluates network traffic anomaly scores.
+#
+# @details
+# Calculates MSE reconstruction errors and provides
+# statistical threshold discovery information.
+#
 def evaluate_pipeline():
     print("[SOC] Initializing AuraNet Threat Evaluation Engine (Discovery Mode)...")
 

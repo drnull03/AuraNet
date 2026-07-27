@@ -1,3 +1,11 @@
+##
+# @file train.py
+# @brief AuraNet Zero Trust Autoencoder training pipeline.
+#
+# @details
+# Handles telemetry preprocessing, dataset creation,
+# model optimization, and saving trained weights.
+#
 import os
 import torch
 import torch.nn as nn
@@ -9,7 +17,13 @@ from model import ZeroTrustAutoencoder
 
 # left it to this could be swaped with specific model with not so generalized features
 from dataset_general import HubbleDataProcessor, HubbleDataset
-
+##
+# @brief Executes the complete model training workflow.
+#
+# @details
+# Loads telemetry, generates features, trains the autoencoder,
+# and stores the resulting model weights.
+#
 def train_pipeline():
     print("🐝 [MLOps] Initializing OmniFinance Training Pipeline...")
 
@@ -59,6 +73,8 @@ def train_pipeline():
     os.makedirs(os.path.dirname(config.MODEL_WEIGHTS_PATH), exist_ok=True)
     torch.save(model.state_dict(), config.MODEL_WEIGHTS_PATH)
     print(f"\n💾 [MLOps] Training complete! Weights saved to {config.MODEL_WEIGHTS_PATH}")
-
+##
+# @brief Training pipeline execution entry point.
+#
 if __name__ == "__main__":
     train_pipeline()

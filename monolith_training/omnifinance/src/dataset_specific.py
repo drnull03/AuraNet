@@ -1,3 +1,13 @@
+##
+# @file dataset_specific.py
+# @brief Application-aware Hubble telemetry preprocessing pipeline.
+#
+# @details
+# Converts network telemetry into ML features while preserving
+# application identity relationships between Kubernetes services.
+#
+# Used for specialized Zero Trust anomaly detection models.
+#
 import json
 import re
 import pandas as pd
@@ -5,13 +15,27 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+##
+# @class HubbleDataProcessor
+# @brief Processes application-specific Hubble network events.
+#
+# @details
+# Extracts Kubernetes application relationships,
+# request paths, services, and communication patterns.
+#
 class HubbleDataProcessor:
     def __init__(self, json_path):
         self.json_path = json_path
         self.raw_data = []
         self.raw_json_events = []
         self.dataframe = None
-
+##
+# @brief Extracts Kubernetes application identity from labels.
+#
+# @param labels Kubernetes metadata labels.
+#
+# @return Application name if available.
+#
     def extract_app_label(self, labels):
         if not labels:
             return "unknown"

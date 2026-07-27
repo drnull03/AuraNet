@@ -1,10 +1,34 @@
+##
+# @file dataset_general.py
+# @brief Universal Hubble telemetry preprocessing pipeline.
+#
+# @details
+# Provides functionality for transforming raw Cilium Hubble network
+# events into normalized numerical feature vectors suitable for
+# Zero Trust Autoencoder training.
+#
+# The dataset focuses on generalized behavioral features instead of
+# application-specific identities.
+#
 import json
 import pandas as pd
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-
+##
+# @class HubbleDataProcessor
+# @brief Processes raw Hubble events into ML-ready feature representations.
+#
+# @details
+# Responsible for loading telemetry, filtering irrelevant events,
+# extracting network attributes, and performing feature engineering.
+#
 class HubbleDataProcessor:
+    ##
+# @brief Initializes the telemetry processor.
+#
+# @param json_path Path to the raw Hubble telemetry dataset.
+#
     def __init__(self, json_path):
         self.json_path = json_path
         self.raw_data = []
@@ -16,6 +40,13 @@ class HubbleDataProcessor:
         self.MAX_HEADER_SIZE = 8192.0 
         self.MAX_URL_LENGTH = 500.0   
 
+##
+# @brief Loads Hubble logs and filters relevant security events.
+#
+# @details
+# Removes irrelevant traffic and keeps events related to forwarded,
+# dropped, HTTP, and database connection behaviour.
+#
     def load_and_filter(self):
         print(f"🐝 Loading raw Hubble logs from {self.json_path}...")
         
@@ -92,13 +123,26 @@ class HubbleDataProcessor:
 
         print(f"✅ Filtered down to {len(filtered_events)} pure, relevant network events.")
         self.raw_data = filtered_events
-
+##
+# @brief Determines whether an IP address belongs to external traffic.
+#
+# @param ip_str Source IP address.
+#
+# @return 1.0 if external, otherwise 0.0.
+#
     def is_external_ip(self, ip_str):
         if not ip_str: return 0.0
         if ip_str.startswith("10.") or ip_str.startswith("192.168.") or ip_str.startswith("172."):
             return 0.0
         return 1.0
 
+##
+# @brief Converts filtered telemetry into numerical ML features.
+#
+# @details
+# Performs feature extraction, normalization, and encoding of
+# network behaviour into a universal feature matrix.
+#
     def engineer_features(self):
         df = pd.DataFrame(self.raw_data)
         
@@ -136,26 +180,62 @@ class HubbleDataProcessor:
         self.dataframe = df.drop(columns=cols_to_drop)
         
         print(f"🧠 Engineered Universal Feature Matrix: {self.dataframe.shape[1]} dimensions.")
-
+##
+# @brief Returns the generated feature dataframe.
+#
+# @return Pandas dataframe containing engineered features.
+#
     def get_dataframe(self):
         return self.dataframe
-
+##
+# @brief Stores filtered raw telemetry events.
+#
+# @param output_path Destination path for exported JSON events.
+#
     def save_raw_events(self, output_path):
         with open(output_path, 'w') as f:
             json.dump(self.raw_json_events, f, indent=4)
         print(f"💾 Saved {len(self.raw_json_events)} unique raw Hubble events to {output_path}")
 
+##
+# @class HubbleDataset
+# @brief PyTorch dataset wrapper for AuraNet training samples.
+#
+# @details
+# Converts processed dataframe values into tensors consumed
+# by the neural network training pipeline.
+#
 class HubbleDataset(Dataset):
+##
+# @brief Initializes PyTorch tensor dataset.
+#
+# @param dataframe Processed feature dataframe.
+#
     def __init__(self, dataframe):
         self.data = torch.FloatTensor(dataframe.values)
-
+##
+# @brief Returns number of available samples.
+#
+# @return Dataset size.
+#
     def __len__(self):
         return len(self.data)
-
+##
+# @brief Retrieves one training sample.
+#
+# @param idx Sample index.
+#
+# @return Input tensor and reconstruction target tensor.
+#
     def __getitem__(self, idx):
         x = self.data[idx]
         return x, x
-
+##
+# @brief Standalone execution entry point.
+#
+# Executes dataset preprocessing and tensor generation
+# when this module is run directly.
+#
 if __name__ == "__main__":
     import os
     

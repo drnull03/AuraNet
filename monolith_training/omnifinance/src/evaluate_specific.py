@@ -1,3 +1,12 @@
+##
+# @file evaluate_specific.py
+# @brief Application-specific SOC threat evaluation pipeline.
+#
+# @details
+# Performs anomaly detection using specialized features
+# and triggers security responses when suspicious behaviour
+# exceeds configured thresholds.
+#
 import os
 import torch
 import torch.nn as nn
@@ -6,6 +15,13 @@ import config
 from dataset_specific import HubbleDataProcessor
 from model import ZeroTrustAutoencoder
 
+##
+# @brief Executes SOC anomaly evaluation workflow.
+#
+# @details
+# Loads the trained model, evaluates incoming traffic,
+# detects abnormal behaviour, and reports detected threats.
+#
 def evaluate_pipeline():
     print("[SOC] Initializing AuraNet Threat Evaluation Engine...")
 
