@@ -1,6 +1,30 @@
-import config
+"""
+@file symbolic_supervisor.py
+@brief Deterministic Zero Trust rule engine.
 
+Provides rule-based security validation before AI analysis.
+Detects obvious protocol violations and trusted identity overrides.
+"""
+import config
+"""
+@brief Symbolic security decision engine.
+
+Applies deterministic Zero Trust rules to network events before
+allowing traffic to continue through AI-based detection.
+"""
 class SymbolicSupervisor:
+    """
+@brief Evaluates a network event against security rules.
+
+Checks trusted identities, HTTP protocol violations, malformed
+requests, and structural attack indicators.
+
+@param raw_event Raw Hubble flow event.
+@return Security decision:
+        - Safe
+        - Unknown
+        - Specific symbolic threat signature
+"""
     def evaluate(self, raw_event):
         """
         Evaluates the raw Hubble packet against strict, deterministic Zero Trust rules.

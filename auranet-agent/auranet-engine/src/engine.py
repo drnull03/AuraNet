@@ -1,3 +1,11 @@
+"""
+@file engine.py
+@brief AuraNet AI Engine main process.
+
+Initializes the Zero Trust AI detection engine, loads anomaly detection
+models, starts inference and training workers, and connects the local
+node to the AuraNet Federated Learning controller.
+"""
 import asyncio
 import threading
 import time
@@ -9,6 +17,21 @@ from inference_worker import run_inference_pipeline
 from training_worker import run_local_training
 from fl_client import start_fl_client
 
+"""
+@brief Starts asynchronous background AI workers.
+
+Creates an isolated asyncio event loop and launches:
+- Real-time packet inference pipeline.
+- Local federated learning training worker.
+
+@param brain_a Behavioral anomaly detection model.
+@param brain_b URL NLP anomaly detection model.
+@param brain_c HTTP body NLP anomaly detection model.
+@param benign_buffer Shared benign traffic training buffer.
+@param buffer_lock Thread synchronization lock.
+@param global_state Shared federated learning state.
+@returns None
+"""
 def run_background_workers(brain_a, brain_b, brain_c, benign_buffer, buffer_lock, global_state):
     """Creates an isolated asyncio event loop for background workers."""
     loop = asyncio.new_event_loop()

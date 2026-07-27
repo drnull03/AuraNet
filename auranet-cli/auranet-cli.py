@@ -1,3 +1,12 @@
+"""
+@file auranet-cli.py
+@brief AuraNet Command Line Interface.
+
+Provides administrative commands for managing AuraNet deployments,
+including installing and uninstalling core components, managing trusted
+eBPF identities, and updating Zero Trust configuration through the
+Kubernetes API.
+"""
 #!/usr/bin/env python3
 import argparse
 import json
@@ -6,7 +15,16 @@ import sys
 from kubernetes import client, config
 
 
+"""
+Injects a trusted eBPF identity into the AuraNet trust matrix.
 
+Updates the AuraNet ConfigMap and triggers propagation of the new
+trusted identity configuration to edge agents.
+
+@param label Kubernetes/eBPF identity label to trust.
+@param namespace Kubernetes namespace containing AuraNet resources.
+@returns None
+"""
 def inject_trusted_label(label: str, namespace: str = "auranet-namespace"):
     """
     Connects to the K8s API, modifies the AuraNet ConfigMap in memory,
@@ -43,6 +61,16 @@ def inject_trusted_label(label: str, namespace: str = "auranet-namespace"):
         sys.exit(1)
 
 
+"""
+Removes a trusted eBPF identity from the AuraNet trust matrix.
+
+Revokes previously granted trust permissions by updating the
+AuraNet configuration stored in Kubernetes.
+
+@param label Kubernetes/eBPF identity label to revoke.
+@param namespace Kubernetes namespace containing AuraNet resources.
+@returns None
+"""
 def remove_trusted_label(label: str, namespace: str = "auranet-namespace"):
     """
     Removes an existing eBPF label from the ConfigMap trust matrix to revoke immunity.
@@ -77,7 +105,15 @@ def remove_trusted_label(label: str, namespace: str = "auranet-namespace"):
 
 
 
+"""
+Executes a system command and streams its output.
 
+Used internally by the CLI to invoke external tools such as
+kubectl and helm.
+
+@param cmd Command arguments as a list of strings.
+@returns None
+"""
 def _run(cmd: list[str]):
     """Run a subprocess command, streaming output, and exit on failure."""
     print(f"$ {' '.join(cmd)}")
@@ -86,7 +122,16 @@ def _run(cmd: list[str]):
         print(f"❌ Command failed with exit code {result.returncode}: {' '.join(cmd)}")
         sys.exit(result.returncode)
 
+"""
+Applies AuraNet encryption Kubernetes manifests.
 
+Deploys the encryption component using kubectl because it is managed
+as raw Kubernetes manifests rather than a Helm chart.
+
+@param chart_path Path to the Kubernetes manifest directory.
+@param namespace Target Kubernetes namespace.
+@returns None
+"""
 def apply_encryption_chart(chart_path: str, namespace: str):
     """
     Applies the auranet-encryption chart directly via kubectl, since it is a
@@ -97,7 +142,15 @@ def apply_encryption_chart(chart_path: str, namespace: str):
     _run(cmd)
     print("✅ auranet-encryption manifests applied.")
 
+"""
+Removes AuraNet encryption Kubernetes manifests.
 
+Deletes previously deployed encryption resources from the cluster.
+
+@param chart_path Path to the Kubernetes manifest directory.
+@param namespace Target Kubernetes namespace.
+@returns None
+"""
 def delete_encryption_chart(chart_path: str, namespace: str):
     """
     Removes the auranet-encryption manifests via kubectl delete.
@@ -108,6 +161,21 @@ def delete_encryption_chart(chart_path: str, namespace: str):
     print("✅ auranet-encryption manifests removed.")
 
 
+"""
+Installs the AuraNet core Helm deployment.
+
+Creates the Helm release, optionally creates the namespace,
+applies custom values, and optionally deploys encryption resources.
+
+@param release_name Helm release name.
+@param chart_path Local Helm chart path.
+@param namespace Target Kubernetes namespace.
+@param create_namespace Whether to create the namespace automatically.
+@param values_file Optional Helm values override file.
+@param encryption Whether to deploy encryption manifests.
+@param encryption_path Path to encryption manifests.
+@returns None
+"""
 def install_core(release_name: str, chart_path: str, namespace: str,
                   create_namespace: bool, values_file: str | None,
                   encryption: bool, encryption_path: str):
@@ -129,7 +197,17 @@ def install_core(release_name: str, chart_path: str, namespace: str,
     if encryption:
         apply_encryption_chart(encryption_path, namespace)
 
+"""
+Uninstalls the AuraNet core Helm deployment.
 
+Removes the Helm release and optionally removes encryption resources.
+
+@param release_name Helm release name.
+@param namespace Kubernetes namespace containing the release.
+@param encryption Whether to remove encryption manifests.
+@param encryption_path Path to encryption manifests.
+@returns None
+"""
 def uninstall_core(release_name: str, namespace: str, encryption: bool, encryption_path: str):
     """
     Uninstalls the auranet-core Helm release.

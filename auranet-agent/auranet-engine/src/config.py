@@ -1,3 +1,11 @@
+"""
+@file config.py
+@brief AuraNet Engine configuration management.
+
+Defines static deployment parameters and provides dynamic configuration
+loading from Kubernetes ConfigMaps. Supports runtime hot-reloading of
+AI detection thresholds, learning parameters, and Zero Trust policies.
+"""
 import os
 import json
 
@@ -13,7 +21,15 @@ NLP_WEIGHTS_PATH = os.getenv("NLP_WEIGHTS_PATH", "models/nlp_ae_v1.pth")
 NLP_BODY_WEIGHTS_PATH = os.getenv("NLP_BODY_WEIGHTS_PATH","models/nlp_ae_v1_body.pth")
 #config map stuff
 CONFIG_FILE_PATH = "/etc/auranet/config/ai-config.json"
+"""
+@brief Runtime configuration manager for AuraNet Engine.
 
+Maintains a cached configuration loaded from Kubernetes ConfigMap data
+and automatically reloads changes when the configuration file is updated.
+
+Provides dynamic access to AI model parameters, anomaly thresholds,
+federated learning settings, and trusted workload identities.
+"""
 class DynamicConfig:
     def __init__(self):
         self.last_modified = 0
@@ -33,7 +49,14 @@ class DynamicConfig:
             "thirdBrain": False
         }
         self._reload_if_changed()
+    """
+@brief Reloads configuration when the ConfigMap file changes.
 
+Checks the modification timestamp of the configuration file and updates
+the internal cache when Kubernetes propagates a new configuration.
+
+@returns None
+"""
     def _reload_if_changed(self):
         """Silently reloads the JSON file if Kubernetes has updated the ConfigMap."""
         if os.path.exists(CONFIG_FILE_PATH):

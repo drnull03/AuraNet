@@ -1,3 +1,14 @@
+/**
+ * @file index.js
+ * @brief AuraNet Zero Trust Controller (ZTC) microservice.
+ *
+ * Receives security events from the AuraNet ecosystem, evaluates workload
+ * trust levels, and coordinates automated remediation actions through the
+ * AutoHeal microservice.
+ *
+ * Implements real-time event processing using NATS messaging and an
+ * in-memory alert buffering mechanism.
+ */
 const { connect, StringCodec } = require("nats");
 const trustEngine = require("./trust-engine"); 
 
@@ -5,6 +16,17 @@ const trustEngine = require("./trust-engine");
 const NATS_URL = process.env.NATS_URL || "nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222";
 const sc = StringCodec();
 
+/**
+ * Starts the AuraNet Zero Trust Controller.
+ *
+ * Establishes communication with the NATS broker, subscribes to security
+ * events and remediation notifications, processes incoming alerts using
+ * the trust engine, and publishes quarantine commands for compromised
+ * workloads.
+ *
+ * @async
+ * @returns {Promise<void>}
+ */
 async function startZTC() {
     try {
         console.log(`[ZTC] Connecting to NATS at ${NATS_URL}...`);
@@ -94,7 +116,15 @@ async function startZTC() {
                 console.log("\n");
             }
         }, THROTTLE_INTERVAL_MS);
-
+        /**
+ * Registers graceful shutdown handlers for the ZTC service.
+ *
+ * Closes the NATS connection cleanly when the Kubernetes pod receives
+ * termination signals.
+ *
+ * @param {string} signal Operating system signal name.
+ * @returns {void}
+ */
         const setupShutdown = (signal) => {
             process.on(signal, async () => {
                 console.log(`\n[ZTC] Received ${signal}. Closing NATS connection cleanly...`);

@@ -1,6 +1,18 @@
+"""
+@file nlp_model.py
+@brief URL and HTTP payload NLP anomaly detection models.
+
+Defines an LSTM-based autoencoder architecture used to detect
+malicious URL structures and HTTP payload anomalies.
+"""
 import torch
 import torch.nn as nn
+"""
+@brief LSTM autoencoder for sequence anomaly detection.
 
+Uses character-level embeddings and LSTM encoder-decoder layers
+to learn normal URL or HTTP body structures.
+"""
 class UrlNlpAutoencoder(nn.Module):
     def __init__(self, vocab_size=128, embedding_dim=16, hidden_dim=32, seq_length=150):
         super(UrlNlpAutoencoder, self).__init__()
@@ -17,7 +29,15 @@ class UrlNlpAutoencoder(nn.Module):
         
         # 4. OUTPUT MAPPER
         self.fc_out = nn.Linear(hidden_dim, vocab_size)
+"""
+@brief Performs sequence reconstruction.
 
+Encodes the input sequence, reconstructs it through the decoder,
+and returns raw logits for CrossEntropy-based anomaly scoring.
+
+@param x Input token sequence.
+@return Reconstructed sequence logits.
+"""
     def forward(self, x):
         embedded = self.embedding(x)
         _, (hidden, _) = self.encoder_lstm(embedded) 

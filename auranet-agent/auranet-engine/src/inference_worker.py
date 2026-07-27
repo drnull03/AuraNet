@@ -1,3 +1,15 @@
+"""
+@file inference_worker.py
+@brief AuraNet AI inference pipeline.
+
+Implements the multi-stage AI detection cascade:
+1. Symbolic Zero Trust supervisor.
+2. Behavioral autoencoder anomaly detection.
+3. URL NLP anomaly detection.
+4. HTTP body NLP anomaly detection.
+
+Publishes detected threats to the AuraNet Zero Trust Controller.
+"""
 import json
 import torch
 import torch.nn as nn
@@ -8,7 +20,23 @@ import config
 from stream_processor import HubbleStreamProcessor
 from collections import deque
 import numpy as np
+"""
+@brief Runs the AuraNet multi-brain inference pipeline.
 
+Consumes Hubble network events, evaluates traffic through the
+cascade detection architecture, performs early-exit decisions,
+and publishes detected threats through NATS.
+
+The pipeline prioritizes lightweight detection before expensive
+NLP analysis to reduce computational overhead.
+
+@param brain_a Behavioral autoencoder.
+@param brain_b URL NLP autoencoder.
+@param brain_c HTTP body NLP autoencoder.
+@param benign_buffer Buffer containing normal traffic samples.
+@param buffer_lock Synchronization lock.
+@returns None
+"""
 async def run_inference_pipeline(brain_a, brain_b, brain_c, benign_buffer, buffer_lock):
     """
     Worker A: The Cascade Funnel. Evaluates lightweight behavior first,

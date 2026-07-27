@@ -1,3 +1,10 @@
+"""
+@file training_worker.py
+@brief AuraNet local federated training worker.
+
+Performs periodic local adaptation of the behavioral model using
+benign traffic samples and FedProx regularization.
+"""
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -5,7 +12,19 @@ import asyncio
 import copy
 
 import config
+"""
+@brief Executes local FedProx training.
 
+Periodically consumes benign traffic samples, trains the local
+autoencoder, and keeps the model synchronized with the global
+federated learning model.
+
+@param model Local anomaly detection model.
+@param benign_buffer Buffer of normal traffic samples.
+@param buffer_lock Synchronization lock.
+@param global_state Shared global model state.
+@returns None
+"""
 async def run_local_training(model, benign_buffer, buffer_lock, global_state):
     """
     Worker B: Wakes up every 2 minutes, locks the buffer, drains the data,

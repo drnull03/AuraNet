@@ -1,4 +1,11 @@
-// config 
+/**
+ * @file trust-engine.js
+ * @brief AuraNet workload trust evaluation engine.
+ *
+ * Maintains workload security context, calculates trust score deductions,
+ * evaluates accumulated security events, and determines when a workload
+ * should be quarantined.
+ */
 const CONTEXT_WINDOW_MS = 5 * 60 * 1000; // 5 minutes 
 const QUARANTINE_THRESHOLD = 10;         
 const MAX_TRUST = 100;
@@ -10,12 +17,29 @@ const THREAT_MATRIX = getThreatMatrix();
 // THE MEMORY 
 const workloadHistory = new Map();
 const healingLocks = new Set(); 
-
+/**
+ * Calculates the trust score deduction caused by a security event.
+ *
+ * Uses the configured threat matrix to determine the severity impact
+ * of the detected threat.
+ *
+ * @param {Object} data Security event data.
+ * @returns {number} Trust score deduction value.
+ */
 function calculateDeduction(data) {
     const threatName = data.threat || "unknown_anomaly";
     return THREAT_MATRIX[threatName] || THREAT_MATRIX["unknown_anomaly"] || 30;
 }
-
+/**
+ * Evaluates a batch of security alerts and identifies workloads requiring
+ * automated remediation.
+ *
+ * Applies context window analysis, duplicate alert suppression, threat
+ * severity scoring, and quarantine threshold evaluation.
+ *
+ * @param {Array<Object>} batchedAlerts Collection of security alerts.
+ * @returns {Array<Object>} Workloads that exceeded the quarantine threshold.
+ */
 function evaluateBatch(batchedAlerts) {
     const now = Date.now();
     const workloadsToQuarantine = new Map(); 
@@ -106,7 +130,15 @@ function evaluateBatch(batchedAlerts) {
 
     return Array.from(workloadsToQuarantine.values());
 }
-
+/**
+ * Resets the trust state of a workload after successful remediation.
+ *
+ * Removes historical threat events and releases the healing lock,
+ * allowing future security events to trigger remediation again.
+ *
+ * @param {string} workload Workload identifier.
+ * @returns {void}
+ */
 function resetWorkload(workload) {
     console.log(`[Trust Engine] 🟢 Wiping threat history and restoring trust for [${workload}].`);
     workloadHistory.delete(workload);

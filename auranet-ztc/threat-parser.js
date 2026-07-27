@@ -1,8 +1,24 @@
+/**
+ * @file threat-parser.js
+ * @brief Threat severity matrix loader.
+ *
+ * Loads the configured threat severity mapping used by the AuraNet
+ * Trust Engine to calculate workload trust deductions.
+ */
 const fs = require('fs');
 const path = require('path');
 
 const CONFIG_PATH = process.env.THREAT_MATRIX_PATH || "/etc/auranet/config/threat_matrix.conf";
-
+/**
+ * Loads the threat severity matrix configuration.
+ *
+ * Parses threat signatures and their corresponding severity scores
+ * from the configured matrix file. If loading fails, a fallback
+ * unknown threat severity is applied.
+ *
+ * @returns {Object.<string, number>} Mapping between threat names
+ * and severity scores.
+ */
 function getThreatMatrix() {
     const matrix = {};
     try {
