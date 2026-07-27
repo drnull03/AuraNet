@@ -1,7 +1,9 @@
 apiVersion: v2
 name: auranet-loader
 description: >
-  loads the eBPF program on everynode 
+  Lightweight eBPF syscall tracer. Deploys a DaemonSet where an initContainer
+  compiles the eBPF program against each node's own kernel headers, then the
+  main container loads it and streams syscall events as JSON.
 type: application
 version: 0.2.0
 appVersion: "0.2.0"

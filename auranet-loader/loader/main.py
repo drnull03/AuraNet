@@ -1,51 +1,14 @@
-/**
- * @file main.py
- * @brief Command-line interface for AuraNet loader.
- *
- * Provides runtime configuration through:
- *
- * - Command-line arguments.
- * - Environment variables.
- *
- * Responsible for:
- * - Validating execution privileges.
- * - Building runtime configuration.
- * - Starting the AuranetLoader service.
- */
 #!/usr/bin/env python3
-"""auranet-loader CLI – configurable via flags or env vars."""
-
 import argparse
 import logging
 import os
 import sys
 
-/**
- * @brief Parses command-line arguments.
- *
- * Supported configuration:
- *
- * - eBPF object location.
- * - Output telemetry path.
- * - PID filtering.
- * - Syscall filtering.
- * - Log rotation.
- * - Logging verbosity.
- *
- * @return Parsed command configuration.
- */
 def parse_args():
-    p = argparse.ArgumentParser(
-        prog="auranet-loader",
-        description="Lightweight eBPF syscall tracer (loads pre-compiled BPF object)",
-    )
-    p.add_argument("--bpf-obj", "-b",
-        default=os.environ.get("AURANET_BPF_OBJ", "/ebpf/syscall_trace.bpf.o"),
-        help="Path to the compiled eBPF .o file (written by the builder initContainer)")
-    # this gonna change to the same tetragon path to make it switchable 
-    p.add_argument("--output", "-o",
-        default=os.environ.get("AURANET_OUTPUT", "/var/log/auranet/events.json"),
-        help="Output JSON-lines file")
+    p = argparse.ArgumentParser(prog="auranet-loader")
+    p.add_argument("--bpf-src", "-b",
+        default=os.environ.get("AURANET_BPF_SRC", "/app/ebpf/syscall_trace.bpf.c"),
+        help="Path to the eBPF .c source file")
     p.add_argument("--pid", "-p",
         type=int,
         default=int(os.environ.get("AURANET_PID", "0")) or None,
@@ -53,31 +16,11 @@ def parse_args():
     p.add_argument("--syscalls", "-s",
         default=os.environ.get("AURANET_SYSCALLS", ""),
         help="Comma-separated syscall names to capture (empty = all)")
-    p.add_argument("--rotate-mb",
-        type=float,
-        default=float(os.environ.get("AURANET_ROTATE_MB", "0")) or None,
-        help="Rotate output file at this size in MB")
     p.add_argument("--log-level",
         default=os.environ.get("AURANET_LOG_LEVEL", "INFO"),
         choices=["DEBUG", "INFO", "WARNING", "ERROR"])
-    p.add_argument("--verbose", "-v",
-        action="store_true",
-        default=os.environ.get("AURANET_VERBOSE", "").lower() in ("1","true","yes"),
-        help="Print events to stderr as they arrive")
     return p.parse_args()
 
-/**
- * @brief Application entry point.
- *
- * Performs:
- *
- * - Argument parsing.
- * - Logger initialization.
- * - Root privilege validation.
- * - Loader startup.
- *
- * @return None
- */
 def main():
     args = parse_args()
 
@@ -92,16 +35,12 @@ def main():
         sys.exit(1)
 
     class Cfg:
-        bpf_obj         = args.bpf_obj
-        output          = args.output
+        bpf_src         = args.bpf_src
         pid             = args.pid
         filter_syscalls = {s.strip() for s in args.syscalls.split(",") if s.strip()} or None
-        rotate_mb       = args.rotate_mb
-        verbose         = args.verbose
 
     from loader import AuranetLoader
     AuranetLoader(Cfg()).start()
-
 
 if __name__ == "__main__":
     main()
