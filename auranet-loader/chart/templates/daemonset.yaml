@@ -1,71 +1,32 @@
-{{- $fullName := include "auranet-loader.fullname" . -}}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: {{ $fullName }}
-  namespace: {{ .Release.Namespace | quote }}
-  labels:
-    {{- include "auranet-loader.labels" . | nindent 4 }}
+  name: auranet-loader
+  namespace: auranet-namespace
 spec:
   selector:
     matchLabels:
-      {{- include "auranet-loader.selectorLabels" . | nindent 6 }}
+      app: auranet-loader
   template:
     metadata:
       labels:
-        {{- include "auranet-loader.selectorLabels" . | nindent 8 }}
+        app: auranet-loader
     spec:
-      serviceAccountName: {{ include "auranet-loader.serviceAccountName" . }}
-      hostPID: {{ .Values.hostPID }}
-      hostNetwork: {{ .Values.hostNetwork }}
-      
+      hostPID: true
       tolerations:
-        {{- toYaml .Values.tolerations | nindent 8 }}
-
-      volumes:
-        - name: sys
-          hostPath:
-            path: /sys
-        - name: lib-modules
-          hostPath:
-            path: {{ .Values.kernelHeaders.libModules.hostPath }}
-        - name: usr-src
-          hostPath:
-            path: {{ .Values.kernelHeaders.usrSrc.hostPath }}
-        {{- if .Values.btf.enabled }}
-        - name: btf-vmlinux
-          hostPath:
-            path: {{ .Values.btf.hostPath }}
-            type: File
-        {{- end }}
-
+        - operator: Exists
       containers:
-        - name: auranet-loader
-          image: {{ .Values.loader.image.repository }}:{{ .Values.loader.image.tag | default .Chart.AppVersion }}
-          imagePullPolicy: {{ .Values.loader.image.pullPolicy }}
+        - name: loader
+          image: auranet-loader:latest
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          env:
-            - name: AURANET_BPF_SRC
-              value: /app/ebpf/syscall_trace.bpf.c
-            - name: AURANET_PID
-              value: {{ .Values.config.pid | quote }}
-            - name: AURANET_SYSCALLS
-              value: {{ .Values.config.filterSyscalls | quote }}
-            - name: AURANET_LOG_LEVEL
-              value: {{ .Values.config.logLevel | quote }}
+            privileged: true
           volumeMounts:
-            - name: sys
-              mountPath: /sys
-            # Kernel headers mounted so BCC can compile on the fly
-            - name: lib-modules
-              mountPath: {{ .Values.kernelHeaders.libModules.mountPath }}
-              readOnly: true
-            - name: usr-src
-              mountPath: {{ .Values.kernelHeaders.usrSrc.mountPath }}
-              readOnly: true
-            {{- if .Values.btf.enabled }}
-            - name: btf-vmlinux
-              mountPath: {{ .Values.btf.mountPath }}
-              readOnly: true
-            {{- end }}
+            # Crucial: Bidirectional mount allows pinning to persist on the host
+            - name: bpf-fs
+              mountPath: /sys/fs/bpf
+              mountPropagation: Bidirectional
+      volumes:
+        - name: bpf-fs
+          hostPath:
+            path: /sys/fs/bpf
+            type: DirectoryOrCreate

@@ -1,27 +1,27 @@
-# ── auranet-loader Dockerfile ─────────────────────────────────────────────────
-# Single-stage image: Compiles and runs the eBPF program at runtime via BCC.
-FROM ubuntu:22.04
+# Stage 1: Build Environment
+FROM ubuntu:22.04 AS builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3 \
-        python3-bpfcc \
-        bpfcc-tools \
-        clang \
-        llvm \
-        libbpf-dev \
-        make \
-        kmod \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    clang \
+    llvm \
+    libbpf-dev \
+    make \
+    linux-tools-common \
+    linux-tools-generic \
+    bpftool
 
-WORKDIR /app
-
-# Copy the eBPF C source (no pre-compilation)
+WORKDIR /build
 COPY ebpf/ ./ebpf/
 
-# Copy the Python loader
-COPY loader/ ./loader/
+WORKDIR /build/ebpf
+# Generate vmlinux and build the installer
+RUN make all
 
-ENV AURANET_LOG_LEVEL=INFO \
-    AURANET_BPF_SRC=/app/ebpf/syscall_trace.bpf.c
+# Stage 2: Minimal Runtime
+FROM ubuntu:22.04
 
-ENTRYPOINT ["python3", "-m", "loader.main"]
+WORKDIR /app
+COPY --from=builder /build/ebpf/auranet-installer .
+
+# Run the installer, then sleep infinity so the DaemonSet pod stays "Running"
+ENTRYPOINT ["/bin/sh", "-c", "rm -f /sys/fs/bpf/auranet* && ./auranet-installer && echo 'Monitoring active...' && sleep infinity"]

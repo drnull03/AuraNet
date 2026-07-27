@@ -1,31 +1,28 @@
-# auranet-loader eBPF build
-# Requires: clang >= 12, libbpf-dev, linux-headers
-# we default to this only for debugging
-CLANG      ?= clang
-BPF_CFLAGS := -O2 -g -Wall -Wno-unused-value -Wno-pointer-sign \
-               -Wno-compare-distinct-pointer-types \
-               -target bpf \
-               -D__TARGET_ARCH_x86
+CLANG := clang
+BPFTOOL := bpftool
+CFLAGS := -g -O2 -Wall
 
-VMLINUX    ?= /sys/kernel/btf/vmlinux
-LIBBPF_INC ?= /usr/include
-
-SRC  = syscall_trace.bpf.c
-OBJ  = syscall_trace.bpf.o
-SKEL = syscall_trace.skel.h
+ARCH := $(shell uname -m | sed 's/x86_64/x86/' | sed 's/aarch64/arm64/')
 
 .PHONY: all clean
 
-all: $(OBJ)
+all: auranet-installer
 
-$(OBJ): $(SRC)
-	$(CLANG) $(BPF_CFLAGS) \
-		-I$(LIBBPF_INC) \
-		-c $< -o $@
+# Generate vmlinux.h from the host kernel
+vmlinux.h:
+	$(BPFTOOL) btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
 
-# generate skeleton header (requires bpftool)
-$(SKEL): $(OBJ)
-	bpftool gen skeleton $< > $@
+# Compile eBPF source into object file
+syscall_trace.bpf.o: syscall_trace.bpf.c vmlinux.h
+	$(CLANG) -g -O2 -target bpf -D__TARGET_ARCH_$(ARCH) -c syscall_trace.bpf.c -o $@
+
+# Generate the C skeleton header
+syscall_trace.skel.h: syscall_trace.bpf.o
+	$(BPFTOOL) gen skeleton $< > $@
+
+# Compile the C loader binary
+auranet-installer: loader.c syscall_trace.skel.h
+	$(CLANG) $(CFLAGS) -o $@ loader.c -lbpf -lelf -lz
 
 clean:
-	rm -f $(OBJ) $(SKEL)
+	rm -f *.o *.skel.h vmlinux.h auranet-installer
