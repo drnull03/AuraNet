@@ -1,9 +1,11 @@
+"""
+@file strategy.py
+@brief Federated learning aggregation strategies for the AuraNet Controller.
 
-
-
-
-
-
+Defines the aggregation strategy used by the AuraNet Federated Learning
+Controller. The current implementation extends Flower's FedProx strategy
+to introduce controlled aggregation intervals between training rounds.
+"""
 import time
 import flwr as fl
 from typing import List, Tuple, Union, Optional, Dict
@@ -12,6 +14,14 @@ from flwr.server.client_proxy import ClientProxy
 
 import config
 
+"""
+@brief Custom FedProx aggregation strategy for AuraNet.
+
+Extends Flower's built-in FedProx strategy by introducing a configurable
+delay between federated learning rounds. This allows edge agents
+sufficient time to perform local training before the next global model
+distribution.
+"""
 class AuraNetFedProxStrategy(fl.server.strategy.FedProx):
     def __init__(self, *args, **kwargs):
         # We inherit all the heavy mathematical lifting from Flower's FedProx strategy

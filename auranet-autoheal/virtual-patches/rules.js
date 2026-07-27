@@ -1,4 +1,10 @@
-// virtual-patches/rules.js
+/**
+ * @file rules.js
+ * @brief Virtual patch selection engine.
+ *
+ * Determines the most appropriate virtual patch to deploy based on
+ * detected threat signatures and the configured threat severity matrix.
+ */
 const fs = require('fs');
 const path = require('path');
 const { getThreatMatrix } = require('./threat-parser');
@@ -16,7 +22,16 @@ const { getThreatMatrix } = require('./threat-parser');
 
 
 
-
+/**
+ * Determines the virtual patch to apply for a detected attack.
+ *
+ * The current implementation selects the threat with the highest
+ * configured severity and returns the corresponding patch file.
+ * If no matching patch exists, a fallback patch is returned.
+ *
+ * @param {string[]} threatSignatures Array of detected threat signatures.
+ * @returns {string} Name of the virtual patch YAML file to deploy.
+ */
 function determineVirtualPatch(threatSignatures) {
     const THREAT_MATRIX = getThreatMatrix();
     

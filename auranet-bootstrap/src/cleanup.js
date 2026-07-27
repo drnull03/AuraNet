@@ -1,9 +1,25 @@
+/**
+ * @file cleanup.js
+ * @brief AuraNet Bootstrap cleanup utility.
+ *
+ * Removes all network and runtime security policies previously
+ * deployed by the AuraNet Bootstrap microservice.
+ */
 const k8s = require('@kubernetes/client-node');
 
 const kc = new k8s.KubeConfig();
 kc.loadFromCluster();
 const customObjectsApi = kc.makeApiClient(k8s.CustomObjectsApi);
-
+/**
+ * Deletes all AuraNet-managed Cilium network policies and
+ * tracing policies from the Kubernetes cluster.
+ *
+ * Intended for development, testing, or complete environment
+ * teardown prior to redeployment.
+ *
+ * @async
+ * @returns {Promise<void>}
+ */
 async function wipePolicies() {
     console.log("Starting AuraNet Teardown Sequence...");
 

@@ -26,24 +26,25 @@ FILE_PATTERNS          = *.py \
                          *.cjs \
                          *.ts \
                          *.go \
-                         *.md \
-                         *.txt
+                         *.md 
 
 # Directories to skip — adjust to match your project layout
-EXCLUDE_PATTERNS       = */node_modules/* \
-                         */vendor/* \
-                         */.git/* \
-                         */dist/* \
-                         */build/* \
-                         */__pycache__/* \
-                         */.venv/* \
-                         */venv/*
+EXCLUDE_PATTERNS = */node_modules/* \
+                   */dist/* \
+                   */build/* \
+                   */coverage/* \
+                   */.git/* \
+                   */__pycache__/* \
+                   */.venv/* \
+                   */venv/* \
+                   */.next/* \
+                   */out/*
 
 # ---------------------------------------------------------------------------
 # Python support
 # ---------------------------------------------------------------------------
 # Tell Doxygen to treat Python docstrings as Doxygen comments.
-OPTIMIZE_OUTPUT_JAVA   = NO
+
 OPTIMIZE_FOR_FORTRAN   = NO
 PYTHON_DOCSTRING       = YES      # Doxygen 1.9.5+ — converts Python docstrings
 
@@ -109,8 +110,8 @@ GENERATE_XML           = NO       # flip to YES for Sphinx / Breathe integration
 # ---------------------------------------------------------------------------
 HAVE_DOT               = YES
 DOT_NUM_THREADS        = 0        # auto-detect CPU count
-CALL_GRAPH             = YES
-CALLER_GRAPH           = YES
+CALL_GRAPH             = NO
+CALLER_GRAPH           = NO
 CLASS_DIAGRAMS         = YES
 CLASS_GRAPH            = YES
 INCLUDE_GRAPH          = YES
@@ -150,3 +151,15 @@ USE_MDFILE_AS_MAINPAGE = README.md   # remove if you don't have one
 
 # Alphabetical index of all symbols
 ALPHABETICAL_INDEX     = YES
+
+
+GENERATE_TREEVIEW = YES
+DISABLE_INDEX = NO
+FULL_SIDEBAR = YES
+
+SORT_MEMBER_DOCS = YES
+SORT_BRIEF_DOCS = YES
+
+SHOW_USED_FILES = YES
+SHOW_FILES = YES
+SHOW_NAMESPACES = YES

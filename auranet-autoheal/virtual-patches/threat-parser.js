@@ -1,8 +1,25 @@
+/**
+ * @file threat-parser.js
+ * @brief Loads the AuraNet threat severity matrix.
+ *
+ * Reads the configured threat matrix from disk and converts it into
+ * an in-memory lookup table used by the virtual patch rules engine.
+ */
+
 const fs = require('fs');
 const path = require('path');
 
 const CONFIG_PATH = process.env.THREAT_MATRIX_PATH || "/etc/auranet/config/threat_matrix.conf";
 
+/**
+ * Loads the threat severity matrix from the configured file.
+ *
+ * The matrix maps threat signatures to numerical severity scores.
+ * If the configuration cannot be loaded, a default fallback entry
+ * is created to ensure the system remains operational.
+ *
+ * @returns {Object.<string, number>} Mapping of threat names to severity scores.
+ */
 function getThreatMatrix() {
     const matrix = {};
     try {

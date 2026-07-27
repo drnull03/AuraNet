@@ -1,3 +1,11 @@
+"""
+@file config.py
+@brief Global configuration for the AuraNet Federated Learning Controller.
+
+Defines the federated learning parameters, aggregation timing,
+client participation requirements, and model file locations used
+by the AuraNet Controller.
+"""
 import os
 
 # Federated Learning Global Parameters

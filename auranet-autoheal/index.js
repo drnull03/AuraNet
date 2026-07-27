@@ -1,3 +1,22 @@
+/**
+ * @file autoheal.js
+ * @brief AuraNet AutoHeal service.
+ *
+ * Listens for remediation commands from the AuraNet Controller via NATS and
+ * executes the self-healing pipeline on Kubernetes.
+ *
+ * Pipeline:
+ * 1. Apply emergency network quarantine.
+ * 2. Deploy a virtual patch.
+ * 3. Restart compromised workload pods.
+ * 4. Remove quarantine after remediation.
+ *
+ * @author AuraNet
+ * @version 1.0.0
+ */
+
+
+
 const fs = require("fs");
 const path = require("path");
 const { connect, StringCodec } = require("nats");
@@ -21,12 +40,26 @@ const k8sCoreApi = kc.makeApiClient(k8s.CoreV1Api);
 const k8sCustomApi = kc.makeApiClient(k8s.CustomObjectsApi);
 
 // Helper to safely extract K8s error messages
+/**
+ * Extracts a human-readable Kubernetes API error.
+ *
+ * @param {Error} err Kubernetes API error object.
+ * @returns {{statusCode: number|string, message: string}}
+ * An object containing the HTTP status code and error message.
+ */
 function getK8sError(err) {
     const statusCode = err.statusCode || (err.response && err.response.statusCode) || (err.body && err.body.code) || "UNKNOWN_CODE";
     const message = (err.body && err.body.message) ? err.body.message : (err.message || "Unknown K8s Error");
     return { statusCode, message };
 }
-
+/**
+ * Applies an emergency Cilium network policy that isolates the target workload
+ * by denying all ingress and egress traffic.
+ *
+ * @async
+ * @param {string} workloadName Name of the Kubernetes workload.
+ * @returns {Promise<void>}
+ */
 async function applyQuarantine(workloadName) {
     const policyName = `quarantine-${workloadName}`;
     const quarantineManifest = {
@@ -63,6 +96,17 @@ async function applyQuarantine(workloadName) {
 }
 
 // VIRTUAL PATCH
+/**
+ * Applies a virtual patch by deploying a predefined
+ * CiliumNetworkPolicy manifest.
+ *
+ * Existing policies with the same name are removed before deployment
+ * to prevent resource conflicts.
+ *
+ * @async
+ * @param {string} patchFileName Name of the YAML patch file.
+ * @returns {Promise<void>}
+ */
 async function applyVirtualPatch(patchFileName) {
     try {
         const patchPath = path.join(__dirname, "virtual-patches", patchFileName);
@@ -103,6 +147,16 @@ async function applyVirtualPatch(patchFileName) {
     }
 }
 // CYCLE (restarting the pod) 
+/**
+ * Deletes all pods belonging to a compromised workload.
+ *
+ * Kubernetes automatically recreates healthy replacement pods through
+ * the owning Deployment or ReplicaSet.
+ *
+ * @async
+ * @param {string} workloadName Name of the compromised workload.
+ * @returns {Promise<void>}
+ */
 async function cycleWorkloadPods(workloadName) {
     try {
         console.log(`[K8s] ♻️ Cycling compromised pods for [${workloadName}]...`);
@@ -118,6 +172,13 @@ async function cycleWorkloadPods(workloadName) {
     }
 }
 // LIFT QUARANTINE
+/**
+ * Removes the emergency quarantine network policy from a workload.
+ *
+ * @async
+ * @param {string} workloadName Name of the Kubernetes workload.
+ * @returns {Promise<void>}
+ */
 async function removeQuarantine(workloadName) {
     const policyName = `quarantine-${workloadName}`;
     try {
@@ -142,6 +203,26 @@ async function removeQuarantine(workloadName) {
     }
 }
 
+
+/**
+ * Starts the AuraNet AutoHeal service.
+ *
+ * Establishes a connection to the NATS broker and continuously listens
+ * for remediation commands. For each received command, the complete
+ * self-healing pipeline is executed.
+ *
+ * Pipeline:
+ * 1. Apply quarantine.
+ * 2. Determine the required virtual patch.
+ * 3. Apply the virtual patch.
+ * 4. Restart compromised pods.
+ * 5. Wait for propagation.
+ * 6. Remove quarantine.
+ * 7. Notify the controller that remediation has completed.
+ *
+ * @async
+ * @returns {Promise<void>}
+ */
 async function startAutoHeal() {
     try {
         console.log(`[AutoHeal] Connecting to NATS at ${NATS_URL}...`);
@@ -183,4 +264,13 @@ if (require.main === module) {
     startAutoHeal();
 }
 
+
+/**
+ * @module AutoHeal
+ *
+ * @exports applyQuarantine
+ * @exports applyVirtualPatch
+ * @exports cycleWorkloadPods
+ * @exports removeQuarantine
+ */
 module.exports = { applyQuarantine, applyVirtualPatch, cycleWorkloadPods, removeQuarantine };

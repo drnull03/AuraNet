@@ -1,3 +1,11 @@
+/**
+ * @file index.js
+ * @brief AuraNet Bootstrap microservice.
+ *
+ * Initializes the AuraNet Zero Trust environment by reading the
+ * bootstrap configuration and deploying the required Cilium network
+ * and runtime security policies into the Kubernetes cluster.
+ */
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
@@ -23,7 +31,19 @@ if (process.env.KUBERNETES_SERVICE_HOST) {
 }
 
 const customObjectsApi = kc.makeApiClient(k8s.CustomObjectsApi);
-
+/**
+ * Creates and deploys a Cilium L7 network policy for a permitted
+ * service-to-service communication path.
+ *
+ * The generated policy enforces mutual authentication and routes
+ * traffic through the Envoy L7 proxy for observability.
+ *
+ * @async
+ * @param {string} source Source workload name.
+ * @param {string} dest Destination workload name.
+ * @param {string|number} port Destination TCP port.
+ * @returns {Promise<void>}
+ */
 async function applyCiliumPolicy(source, dest, port) {
     const policyName = `bootstrap-allow-${source}-to-${dest}`;
     
@@ -82,6 +102,16 @@ async function applyCiliumPolicy(source, dest, port) {
 }
 // this feature might be deprecated soon as it is not so  necessary
 //if not deprecated it should be decoupled at least
+/**
+ * Applies all predefined runtime security policies found in the
+ * local policies directory.
+ *
+ * Each YAML manifest is parsed and deployed as a Cilium
+ * TracingPolicyNamespaced resource.
+ *
+ * @async
+ * @returns {Promise<void>}
+ */
 async function applyRuntimePolicies() {
     const policiesDir = path.join(__dirname, 'policies');
     
@@ -127,6 +157,17 @@ async function applyRuntimePolicies() {
     }
 }
 
+/**
+ * Executes the AuraNet bootstrap process.
+ *
+ * Reads the bootstrap configuration, parses all permitted service
+ * communication rules, deploys the corresponding network policies,
+ * applies runtime security policies, and reports the deployment
+ * summary.
+ *
+ * @async
+ * @returns {Promise<void>}
+ */
 async function run() {
     let appliedCount = 0;
     //lines is defined at the start if the file and is populated by naive.conf
