@@ -22,6 +22,7 @@
 x86_64 syscall number → name mapping.
 Generated from Linux 6.x kernel headers (arch/x86/entry/syscalls/syscall_64.tbl).
 """
+
 /**
  * @brief Mapping between syscall identifiers and syscall names.
  *
