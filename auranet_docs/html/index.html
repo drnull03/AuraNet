@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Auranet: auranet-loader</title>
+<title>Auranet: Main Page</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -24,7 +24,6 @@
 <table cellspacing="0" cellpadding="0">
  <tbody>
  <tr id="projectrow">
-  <td id="projectlogo"><img alt="Logo" src="logo.png"/></td>
   <td id="projectalign">
    <div id="projectname">Auranet<span id="projectnumber">&#160;1.0.0</span>
    </div>
@@ -90,148 +89,10 @@ $(document).ready(function(){initNavTree('index.html',''); initResizable(); });
 </div>
 </div>
 
-<div><div class="header">
-  <div class="headertitle"><div class="title">auranet-loader </div></div>
+<div class="header">
+  <div class="headertitle"><div class="title">Auranet Documentation</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="md_auranet-loader_2README"></a> </p><blockquote class="doxtable">
-<p>&zwj;Lightweight eBPF syscall tracer — compiles and loads on every Kubernetes node, dumps structured JSON events to the host filesystem. </p>
-</blockquote>
-<h1><a class="anchor" id="autotoc_md7"></a>
-&lt;/blockquote&gt;</h1>
-<h2><a class="anchor" id="autotoc_md8"></a>
-Why compile on-node?</h2>
-<p>The eBPF bytecode depends on the running kernel version and its BTF (BPF Type Format) layout. Compiling against the node's own headers avoids shipping a pre-built <code>.o</code> that might mismatch the actual kernel — no CO-RE (Compile Once – Run Everywhere) infrastructure required.</p>
-<hr  />
-<h1><a class="anchor" id="autotoc_md10"></a>
-Output format</h1>
-<p>Each line is a compact JSON object:</p>
-<p><b>sys_enter</b> </p><div class="fragment"><div class="line">{&quot;ts&quot;:&quot;2025-06-01T12:34:56.789012+00:00&quot;,&quot;ts_ns&quot;:1748779496789012345,&quot;type&quot;:&quot;enter&quot;,&quot;pid&quot;:4242,&quot;tgid&quot;:4242,&quot;uid&quot;:1000,&quot;gid&quot;:1000,&quot;comm&quot;:&quot;curl&quot;,&quot;syscall_nr&quot;:42,&quot;syscall&quot;:&quot;connect&quot;,&quot;args&quot;:[3,140234567890,16,0,0,0]}</div>
-</div><!-- fragment --><p><b>sys_exit</b> </p><div class="fragment"><div class="line">{&quot;ts&quot;:&quot;2025-06-01T12:34:56.789099+00:00&quot;,&quot;ts_ns&quot;:1748779496789099000,&quot;type&quot;:&quot;exit&quot;,&quot;pid&quot;:4242,&quot;tgid&quot;:4242,&quot;uid&quot;:1000,&quot;gid&quot;:1000,&quot;comm&quot;:&quot;curl&quot;,&quot;syscall_nr&quot;:42,&quot;syscall&quot;:&quot;connect&quot;,&quot;ret&quot;:0}</div>
-</div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md12"></a>
-Prerequisites</h1>
-<h2><a class="anchor" id="autotoc_md13"></a>
-Node requirements</h2>
-<ul>
-<li>Linux kernel <b>≥ 5.8</b> (BPF ring buffer)</li>
-<li>Kernel headers installed on each node: <code>linux-headers-$(uname -r)</code><ul>
-<li>Ubuntu/Debian: <code>apt-get install linux-headers-$(uname -r)</code></li>
-<li>Amazon Linux 2/RHEL: <code>yum install kernel-devel</code></li>
-</ul>
-</li>
-<li><code>/sys/kernel/btf/vmlinux</code> present (<code>CONFIG_DEBUG_INFO_BTF=y</code>)</li>
-</ul>
-<h2><a class="anchor" id="autotoc_md14"></a>
-Helm</h2>
-<ul>
-<li>Helm <b>3.x</b></li>
-<li>Cluster nodes with kernel headers at <code>/usr/src</code> or <code>/lib/modules/&lt;kver&gt;/build</code> <img src="image.png" alt="alt text" class="inline"/></li>
-</ul>
-<hr  />
-<h1><a class="anchor" id="autotoc_md16"></a>
-Build the images</h1>
-<div class="fragment"><div class="line"># Builder image (clang + build script)</div>
-<div class="line">docker build -f Dockerfile.builder -t auranet-builder:0.2.0 .</div>
-<div class="line"> </div>
-<div class="line"> </div>
-<div class="line"># Loader image (python3 + BCC)</div>
-<div class="line">docker build -f Dockerfile.loader -t auranet-loader:0.2.0 .</div>
-</div><!-- fragment --><hr  />
-<h1><a class="anchor" id="autotoc_md18"></a>
-Deploy with Helm</h1>
-<div class="fragment"><div class="line"># Install – traces ALL syscalls on every node</div>
-<div class="line">helm install auranet-loader ./helm/auranet-loader \</div>
-<div class="line">  --namespace auranet-namespace --create-namespace \</div>
-<div class="line">  --set builder.image.repository=ghcr.io/your-org/auranet-builder \</div>
-<div class="line">  --set loader.image.repository=ghcr.io/your-org/auranet-loader</div>
-<div class="line"> </div>
-<div class="line"># Trace only security-relevant syscalls</div>
-<div class="line">helm install auranet-loader ./chart/auranet-loader \</div>
-<div class="line">  --namespace auranet-namespace --create-namespace \</div>
-<div class="line">  --set config.filterSyscalls=&quot;execve,execveat,connect,openat,unlink,rename,kill,ptrace&quot;</div>
-<div class="line"> </div>
-<div class="line"> </div>
-<div class="line"> </div>
-<div class="line"> </div>
-<div class="line"> </div>
-<div class="line">---</div>
-<div class="line"> </div>
-<div class="line">## Verify it works</div>
-</div><!-- fragment --><p> bash </p>
-<h1><a class="anchor" id="autotoc_md19"></a>
-1. Check DaemonSet rollout</h1>
-<p>kubectl -n auranet-namespace rollout status daemonset/auranet</p>
-<h1><a class="anchor" id="autotoc_md20"></a>
-2. Check the builder initContainer finished OK on a node</h1>
-<p>kubectl -n auranet-namespace logs \ -l app.kubernetes.io/name=auranet-loader \ -c auranet-builder</p>
-<h1><a class="anchor" id="autotoc_md21"></a>
-Expected output:</h1>
-<h1><a class="anchor" id="autotoc_md22"></a>
-[auranet-builder] Kernel version: 5.15.0-1034-aws</h1>
-<h1><a class="anchor" id="autotoc_md23"></a>
-[auranet-builder] Using kernel headers: /usr/src/linux-headers-5.15.0-1034-aws/include</h1>
-<h1><a class="anchor" id="autotoc_md24"></a>
-[auranet-builder] Running clang...</h1>
-<h1><a class="anchor" id="autotoc_md25"></a>
-[auranet-builder] Compiled: /ebpf/syscall_trace.bpf.o</h1>
-<h1><a class="anchor" id="autotoc_md26"></a>
-[auranet-builder] Verified: valid ELF object</h1>
-<h1><a class="anchor" id="autotoc_md27"></a>
-[auranet-builder] Build complete. Loader container can now start.</h1>
-<h1><a class="anchor" id="autotoc_md28"></a>
-3. Check the loader is running</h1>
-<p>kubectl -n auranet-namespace logs \ -l app.kubernetes.io/name=auranet-loader \ -c auranet-loader</p>
-<h1><a class="anchor" id="autotoc_md29"></a>
-4. Read events from a node</h1>
-<p>NODE=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}') kubectl debug node/$NODE -it &ndash;image=busybox &ndash; \ sh -c 'tail -f /var/log/auranet/events.json' | head -20 ```</p>
-<hr  />
-<h2><a class="anchor" id="autotoc_md31"></a>
-Troubleshooting</h2>
-<table class="markdownTable">
-<tr class="markdownTableHead">
-<th class="markdownTableHeadNone">Symptom   </th><th class="markdownTableHeadNone">Likely cause   </th><th class="markdownTableHeadNone">Fix    </th></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">Builder exits non-zero   </td><td class="markdownTableBodyNone">Kernel headers missing on node   </td><td class="markdownTableBodyNone"><code>apt-get install linux-headers-$(uname -r)</code> on the node, or use a node image that includes them    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone"><code>clang: command not found</code>   </td><td class="markdownTableBodyNone">Builder image issue   </td><td class="markdownTableBodyNone">Rebuild <code>Dockerfile.builder</code>    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">Loader pod <code>CrashLoopBackOff</code>   </td><td class="markdownTableBodyNone"><code>.o</code> not present / BCC not installed   </td><td class="markdownTableBodyNone">Check builder logs first; verify BCC in loader image    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">No events in output file   </td><td class="markdownTableBodyNone">Wrong <code>/sys</code> mount or missing <code>hostPID: true</code>   </td><td class="markdownTableBodyNone">Check <code>securityContext.privileged: true</code> and <code>hostPID: true</code> in values    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">Events file missing   </td><td class="markdownTableBodyNone">Host path not writable   </td><td class="markdownTableBodyNone">Ensure <code>output.hostPath</code> exists or <code>type: DirectoryOrCreate</code> works   </td></tr>
-</table>
-<hr  />
-<h2><a class="anchor" id="autotoc_md33"></a>
-Configuration reference</h2>
-<table class="markdownTable">
-<tr class="markdownTableHead">
-<th class="markdownTableHeadNone">Helm key   </th><th class="markdownTableHeadNone">Env var   </th><th class="markdownTableHeadNone">Default   </th><th class="markdownTableHeadNone">Description    </th></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><code>config.output</code>   </td><td class="markdownTableBodyNone"><code>AURANET_OUTPUT</code>   </td><td class="markdownTableBodyNone"><code>/var/log/auranet/events.json</code>   </td><td class="markdownTableBodyNone">Output file    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone"><code>config.pid</code>   </td><td class="markdownTableBodyNone"><code>AURANET_PID</code>   </td><td class="markdownTableBodyNone"><code>0</code> (all)   </td><td class="markdownTableBodyNone">Single PID filter    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><code>config.filterSyscalls</code>   </td><td class="markdownTableBodyNone"><code>AURANET_SYSCALLS</code>   </td><td class="markdownTableBodyNone"><code>""</code> (all)   </td><td class="markdownTableBodyNone">Comma-sep syscall names    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone"><code>config.rotateMb</code>   </td><td class="markdownTableBodyNone"><code>AURANET_ROTATE_MB</code>   </td><td class="markdownTableBodyNone"><code>100</code>   </td><td class="markdownTableBodyNone">Rotate at N MiB    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><code>config.verbose</code>   </td><td class="markdownTableBodyNone"><code>AURANET_VERBOSE</code>   </td><td class="markdownTableBodyNone"><code>false</code>   </td><td class="markdownTableBodyNone">Print to stderr    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone"><code>config.logLevel</code>   </td><td class="markdownTableBodyNone"><code>AURANET_LOG_LEVEL</code>   </td><td class="markdownTableBodyNone"><code>INFO</code>   </td><td class="markdownTableBodyNone">Python log level    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><code>builder.extraCflags</code>   </td><td class="markdownTableBodyNone"><code>EXTRA_CFLAGS</code>   </td><td class="markdownTableBodyNone"><code>""</code>   </td><td class="markdownTableBodyNone">Extra clang flags    </td></tr>
-<tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone"><code>kernelHeaders.libModules.hostPath</code>   </td><td class="markdownTableBodyNone">—   </td><td class="markdownTableBodyNone"><code>/lib/modules</code>   </td><td class="markdownTableBodyNone">Host kernel modules path    </td></tr>
-<tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><code>kernelHeaders.usrSrc.hostPath</code>   </td><td class="markdownTableBodyNone">—   </td><td class="markdownTableBodyNone"><code>/usr/src</code>   </td><td class="markdownTableBodyNone">Host kernel source path   </td></tr>
-</table>
-<hr  />
-<h2><a class="anchor" id="autotoc_md35"></a>
-License</h2>
-<p>Apache 2.0 </p>
-</div></div><!-- PageDoc -->
 </div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

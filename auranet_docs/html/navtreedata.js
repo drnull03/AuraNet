@@ -25,43 +25,6 @@
 var NAVTREE =
 [
   [ "Auranet", "index.html", [
-    [ "auranet-loader", "index.html", "index" ],
-    [ "AuraNet Threat Protection Profile", "md_attacks_2AuraNet__Success__v2.html", [
-      [ "Successfully Mitigated Attack Vectors", "md_attacks_2AuraNet__Success__v2.html#autotoc_md1", null ]
-    ] ],
-    [ "Packaging and Installation", "md_auranet-core_2How__To__Install.html", [
-      [ "Modifying Arguments During Installation", "md_auranet-core_2How__To__Install.html#autotoc_md4", null ],
-      [ "Injecting via a Custom Values File", "md_auranet-core_2How__To__Install.html#autotoc_md5", null ]
-    ] ],
-    [ "Community Code of Conduct", "md_CODE__OF__CONDUCT.html", null ],
-    [ "scratch1", "md_docs_2mermaid_2scratch1.html", null ],
-    [ "AuraNet - Project Context", "md_GEMINI.html", [
-      [ "Overview", "md_GEMINI.html#autotoc_md38", null ],
-      [ "Boundaries (ignore these files)", "md_GEMINI.html#autotoc_md39", null ],
-      [ "Architucture of the project so far", "md_GEMINI.html#autotoc_md40", null ],
-      [ "Notes For the AI", "md_GEMINI.html#autotoc_md41", null ],
-      [ "What We are Building", "md_GEMINI.html#autotoc_md42", null ]
-    ] ],
-    [ "System Requirements", "md_system-requirements.html", [
-      [ "Minimum Hardware Requirements", "md_system-requirements.html#autotoc_md44", [
-        [ "Memory (RAM)", "md_system-requirements.html#autotoc_md45", null ],
-        [ "Processor (CPU)", "md_system-requirements.html#autotoc_md46", null ],
-        [ "Storage", "md_system-requirements.html#autotoc_md47", null ],
-        [ "Graphics Processing Unit (GPU)", "md_system-requirements.html#autotoc_md48", null ]
-      ] ],
-      [ "Notes", "md_system-requirements.html#autotoc_md49", null ]
-    ] ],
-    [ "AuraNet Developer Guide", "md_workload__dev__guide_2AuraNet__Developer__Guide.html", [
-      [ "1. Kubernetes Workload Standards", "md_workload__dev__guide_2AuraNet__Developer__Guide.html#autotoc_md68", [
-        [ "Stateless Applications", "md_workload__dev__guide_2AuraNet__Developer__Guide.html#autotoc_md69", null ],
-        [ "Stateful Applications", "md_workload__dev__guide_2AuraNet__Developer__Guide.html#autotoc_md70", null ]
-      ] ],
-      [ "2. Security and Authentication Policy", "md_workload__dev__guide_2AuraNet__Developer__Guide.html#autotoc_md71", [
-        [ "Prohibition of Application-Level Security", "md_workload__dev__guide_2AuraNet__Developer__Guide.html#autotoc_md72", null ],
-        [ "Rationale", "md_workload__dev__guide_2AuraNet__Developer__Guide.html#autotoc_md73", null ]
-      ] ],
-      [ "3. Summary of Compliance", "md_workload__dev__guide_2AuraNet__Developer__Guide.html#autotoc_md74", null ]
-    ] ],
     [ "Packages", "namespaces.html", [
       [ "Package List", "namespaces.html", "namespaces_dup" ],
       [ "Package Members", "namespacemembers.html", [
@@ -89,13 +52,15 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "1-base-platform_2____main_____8py.html",
-"classnlp__dataset_1_1NlpDataset.html#ac03e09fe397652c20070f7ac0a08039b",
-"classsrc_1_1stream__processor_1_1HubbleStreamProcessor.html#ac4d2c5c7e3005d650a4e23e3a1f1209f",
-"dataset__specific_8py.html#a392d86868669760aab366577baf4a50e",
-"monolith__training_2omnifinance_2src_2config_8py.html#a297ecd81d6247dbb944ba368af292746",
-"namespacenlp__evaluate.html#a596f4dee782914189af5575fa34cc184",
-"namespacetraffic__simulator.html#a262b010ee4d8bc0e4ab5e937d9f311c0",
-"triple__brain_2nlp__evaluate_8py_source.html"
+"classapp_1_1ReportRequest.html",
+"classsrc_1_1dataset__general_1_1HubbleDataProcessor.html#a096e229f7e752690eb409943ecc9b5aa",
+"classtest__short__circuit_1_1DummyBrainA.html#ad7dee551aec02314fa7fa2f99801b3fa",
+"dir_750aa1bc15c6e358cc90616507759ef4.html",
+"federated__sim_8py.html#a67963e915c875da3a5bee074224711ea",
+"namespaceapp.html#a15dc4c5da28787638b509ad0c978f76e",
+"namespaces__b_8js.html",
+"namespacetests_1_1conftest.html#ae6e022cd62b345ab0ca09c46c750f453",
+"temp_8py.html#aad2e7a3d4f56a24cb651a407755c707a"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

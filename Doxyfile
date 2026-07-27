@@ -9,7 +9,7 @@
 PROJECT_NAME           = "Auranet"
 PROJECT_NUMBER         = 1.0.0
 PROJECT_BRIEF          = "Autonomous Self-Healing Zero Trust Architecture using eBPF and Federated Learning"
-PROJECT_LOGO           = "./assets/logo.png"
+#PROJECT_LOGO           = "./assets/logo.png"
 OUTPUT_DIRECTORY       = auranet_docs/
 
 # ---------------------------------------------------------------------------
@@ -25,8 +25,7 @@ FILE_PATTERNS          = *.py \
                          *.mjs \
                          *.cjs \
                          *.ts \
-                         *.go \
-                         *.md 
+                         *.go 
 
 # Directories to skip — adjust to match your project layout
 EXCLUDE_PATTERNS = */node_modules/* \
@@ -165,3 +164,5 @@ SORT_BRIEF_DOCS = YES
 SHOW_USED_FILES = YES
 SHOW_FILES = YES
 SHOW_NAMESPACES = YES
+
+LAYOUT_FILE = DoxygenLayout.xml

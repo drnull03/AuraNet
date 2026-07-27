@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['pid_5fmatch_5ftest_2ego_0',['pid_match_test.go',['../pid__match__test_8go.html',1,'']]],
-  ['prepend_5fname_5ftest_2ego_1',['prepend_name_test.go',['../prepend__name__test_8go.html',1,'']]]
+  ['light_5fload_2ejs_0',['light_load.js',['../light__load_8js.html',1,'']]],
+  ['live_2dtester_2ejs_1',['live-tester.js',['../live-tester_8js.html',1,'']]]
 ];

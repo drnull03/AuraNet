@@ -1,9 +1,5 @@
 var searchData=
 [
-  ['cleanup_2ejs_0',['cleanup.js',['../cleanup_8js.html',1,'']]],
-  ['client_5fapp_2epy_1',['client_app.py',['../client__app_8py.html',1,'']]],
-  ['code_5fof_5fconduct_2emd_2',['CODE_OF_CONDUCT.md',['../CODE__OF__CONDUCT_8md.html',1,'']]],
-  ['config_2epy_3',['config.py',['../auranet-agent_2auranet-engine_2src_2config_8py.html',1,'(Global Namespace)'],['../auranet-controller_2src_2config_8py.html',1,'(Global Namespace)'],['../monolith__training_2omnifinance_2src_2config_8py.html',1,'(Global Namespace)'],['../monolith__training_2src_2config_8py.html',1,'(Global Namespace)']]],
-  ['conftest_2epy_4',['conftest.py',['../conftest_8py.html',1,'']]],
-  ['controller_2epy_5',['controller.py',['../controller_8py.html',1,'']]]
+  ['_5f_5finit_5f_5f_2epy_0',['__init__.py',['../auranet-agent_2auranet-engine_2src_2____init_____8py.html',1,'(Global Namespace)'],['../auranet-controller_2src_2____init_____8py.html',1,'(Global Namespace)'],['../auranet-controller_2tests_2____init_____8py.html',1,'(Global Namespace)'],['../auranet-loader_2loader_2____init_____8py.html',1,'(Global Namespace)'],['../monolith__training_2omnifinance_2src_2____init_____8py.html',1,'(Global Namespace)'],['../monolith__training_2src_2____init_____8py.html',1,'(Global Namespace)'],['../pulumi__IoC_2tests_2____init_____8py.html',1,'(Global Namespace)'],['../tests_2flower-venv_2quickstart-pytorch_2pytorchexample_2____init_____8py.html',1,'(Global Namespace)']]],
+  ['_5f_5fmain_5f_5f_2epy_1',['__main__.py',['../1-base-platform_2____main_____8py.html',1,'(Global Namespace)'],['../2-auranet_2____main_____8py.html',1,'(Global Namespace)'],['../3-workload_2____main_____8py.html',1,'(Global Namespace)'],['../archive_22-identity_2____main_____8py.html',1,'(Global Namespace)']]]
 ];
