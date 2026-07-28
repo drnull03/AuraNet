@@ -72,7 +72,7 @@ async function applyCiliumPolicy(source, dest, port) {
                         protocol: "TCP"
                     }],
                     rules: {
-                        http: [{}] // Trigger the Envoy L7 proxy for Hubble
+                        http: [{}] // L7 EN
                     }
                 }],
                 authentication: {
@@ -159,6 +159,44 @@ async function applyRuntimePolicies() {
     }
 }
 
+
+/**
+ * Compares the desired state (from naive.conf) against the cluster's
+ * current state and deletes any orphaned policies managed by AuraNet.
+ *
+ * @async
+ * @param {Set<string>} desiredPolicies A set of policy names that should exist.
+ * @returns {Promise<void>}
+ */
+async function cleanupOrphanedPolicies(desiredPolicies) {
+    try {
+        console.log("\n[INFO] Reconciling state: Checking for orphaned policies...");
+        
+        // Fetch all current Cilium policies in the default namespace
+        const cnps = await customObjectsApi.listNamespacedCustomObject(
+            'cilium.io', 'v2', 'default', 'ciliumnetworkpolicies'
+        );
+
+        for (const item of cnps.body.items) {
+            // Check if the policy belongs to our bootstrap script
+            const isManaged = item.metadata.labels && 
+                              item.metadata.labels["app.kubernetes.io/managed-by"] === "auranet-bootstrap";
+
+            // If it belongs to us but is NOT in the desired list, delete it
+            if (isManaged && !desiredPolicies.has(item.metadata.name)) {
+                console.log(`[CLEANUP] Orphaned policy detected: ${item.metadata.name}. Deleting...`);
+                await customObjectsApi.deleteNamespacedCustomObject(
+                    'cilium.io', 'v2', 'default', 'ciliumnetworkpolicies', item.metadata.name
+                );
+                console.log(`[SUCCESS] Deleted orphaned policy: ${item.metadata.name}`);
+            }
+        }
+    } catch (err) {
+        const errorMsg = err.cause ? err.cause.message : (err.body ? err.body.message : err.message);
+        console.error("[ERROR] Failed during state reconciliation:", errorMsg);
+    }
+}
+
 /**
  * Executes the AuraNet bootstrap process.
  *
@@ -170,14 +208,19 @@ async function applyRuntimePolicies() {
  * @async
  * @returns {Promise<void>}
  */
+/**
+ * Executes the AuraNet bootstrap process.
+ */
 async function run() {
     let appliedCount = 0;
-    //lines is defined at the start if the file and is populated by naive.conf
+    
+    // Initialize a Set to track the exact names of the policies we want to exist
+    const desiredPolicies = new Set();
+
     for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed) continue;
 
-        // Regex capturing: 1. Source -> 2. Destination : 3. Port
         const match = trimmed.match(/^\d+\.\s*([a-zA-Z0-9-]+)\s*->\s*([a-zA-Z0-9-]+):(\d+)$/);
         
         if (match) {
@@ -186,6 +229,10 @@ async function run() {
             const port = match[3];
             console.log(`Parsed rule: Allow traffic from [${source}] to [${destination}] on port ${port}`);
             
+            // Calculate the policy name exactly as applyCiliumPolicy formats it
+            const expectedPolicyName = `bootstrap-allow-${source}-to-${destination}`;
+            desiredPolicies.add(expectedPolicyName); // Add to our tracking list
+            
             await applyCiliumPolicy(source, destination, port);
             appliedCount++;
         } else {
@@ -193,8 +240,13 @@ async function run() {
         }
     }
     
-    //await applyRuntimePolicies();
+    // Execute the diffing cleanup using our tracked policies
+    await cleanupOrphanedPolicies(desiredPolicies);
+    
+    await applyRuntimePolicies();
     console.log(`AuraNet Bootstrap complete. Processed ${appliedCount} network configurations.`);
 }
+
+run();
 
 run();
