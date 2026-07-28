@@ -19,6 +19,9 @@ spec:
           ports:
             - containerPort: 8080
               name: grpc
+          env:
+            - name: GENESIS_WEIGHTS_PATH
+              value: {{ .Values.genesisWeightsPath | quote }}
           volumeMounts:
             - name: config-volume
               mountPath: /app/config  # Mount the entire directory

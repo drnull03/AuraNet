@@ -10,9 +10,14 @@ FRACTION_FIT = 1.0
 ROUND_TIMEOUT_SECONDS = 600
 PROXIMAL_MU = 0.1
 
+
+
+# Paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-GENESIS_WEIGHTS_PATH = os.path.join(BASE_DIR, "models", "zerotrust_ae_v1.pth")
-CONFIG_FILE_PATH = "/app/config/config.json"
+DEFAULT_GENESIS_WEIGHTS_PATH = os.path.join(BASE_DIR, "models", "zerotrust_ae_v1.pth")
+
+# Static startup injection: Uses env var if defined, otherwise falls back to default
+GENESIS_WEIGHTS_PATH = os.environ.get("GENESIS_WEIGHTS_PATH") or DEFAULT_GENESIS_WEIGHTS_PATHCONFIG_FILE_PATH = "/app/config/config.json"
 
 def load_config():
     global FL_ROUNDS, MIN_AVAILABLE_CLIENTS, FRACTION_FIT, ROUND_TIMEOUT_SECONDS, PROXIMAL_MU

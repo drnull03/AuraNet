@@ -17,3 +17,15 @@ resources:
   requests:
     memory: "512Mi"
     cpu: "250m"
+
+
+genesisWeightsPath: ""
+
+# Dynamic Application Configuration (Injects as ConfigMap Volume)
+# These values are actively monitored by the Python watchdog for hot-reloading.
+appConfig:
+  fl_rounds: "1000"
+  min_available_clients: "2"
+  fraction_fit: "1.0"
+  round_timeout_seconds: "600"
+  proximal_mu: "0.1"
