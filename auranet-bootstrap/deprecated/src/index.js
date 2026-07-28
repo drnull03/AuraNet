@@ -112,8 +112,6 @@ async function applyCiliumPolicy(source, dest, port) {
  * @async
  * @returns {Promise<void>}
  */
-//this is no longer effective 
-//gonna remove this soon
 async function applyRuntimePolicies() {
     const policiesDir = path.join(__dirname, 'policies');
     
@@ -193,7 +191,7 @@ async function run() {
         }
     }
     
-    //await applyRuntimePolicies();
+    await applyRuntimePolicies();
     console.log(`AuraNet Bootstrap complete. Processed ${appliedCount} network configurations.`);
 }
 

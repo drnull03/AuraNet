@@ -41,8 +41,7 @@ async function wipePolicies() {
 
     //  Wipe  Tracing PoliciesapplyRuntimePolicies
     // because old naive policies were tracing policeis
-    //this is no longer needed too
-    /*try {
+    try {
         const tracingPolicies = await customObjectsApi.listNamespacedCustomObject(
             'cilium.io', 'v1alpha1', 'default', 'tracingpoliciesnamespaced'
         );
@@ -55,7 +54,7 @@ async function wipePolicies() {
     } catch (e) {
         const trueError = e.body ? JSON.stringify(e.body) : (e.cause ? e.cause.message : e.message);
         console.error("[ERROR] wiping tracing policies:", trueError);
-    }*/
+    }
 }
 
 wipePolicies();

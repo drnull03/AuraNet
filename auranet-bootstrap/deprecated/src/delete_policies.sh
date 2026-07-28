@@ -2,7 +2,7 @@
 
 POLICIES_DIR="./policies"
 
-echo " Starting AuraNet Policy Teardown..."
+echo "🗑️  Starting AuraNet Policy Teardown..."
 
 # Check if the directory exists
 if [ ! -d "$POLICIES_DIR" ]; then
@@ -17,6 +17,6 @@ for file in "$POLICIES_DIR"/*.yaml "$POLICIES_DIR"/*.yml; do
         echo " Deleting resources from: $file"
         kubectl delete -f "$file" --ignore-not-found=true
     fi
-dones
+done
 
 echo "✅ All policies from $POLICIES_DIR have been successfully deleted from the cluster."
