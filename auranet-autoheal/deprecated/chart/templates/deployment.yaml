@@ -37,4 +37,6 @@ spec:
       - name: threat-matrix-volume
         configMap:
           name: {{ .Release.Name }}-{{ .Chart.Name }}-threat-matrix
-          
+          items:
+            - key: threat_matrix.conf
+              path: threat_matrix.conf

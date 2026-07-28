@@ -7,7 +7,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { matrixState } = require('./threat-parser');
+const { getThreatMatrix } = require('./threat-parser');
 // The mapping now includes a 'severity' score (1-100)
 
 
@@ -33,7 +33,7 @@ const { matrixState } = require('./threat-parser');
  * @returns {string} Name of the virtual patch YAML file to deploy.
  */
 function determineVirtualPatch(threatSignatures) {
-    const THREAT_MATRIX = matrixState.current;
+    const THREAT_MATRIX = getThreatMatrix();
     
     // Default fallback values
     const fallbackPatch = "unknown_anomaly_patch.yaml";

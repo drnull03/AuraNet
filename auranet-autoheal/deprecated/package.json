@@ -1,0 +1,22 @@
+{
+  "name": "auranet-autoheal",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@kubernetes/client-node": "^1.4.0",
+    "js-yaml": "^4.2.0",
+    "nats": "^2.29.3"
+  },
+  "devDependencies": {
+    "jest": "^30.4.2"
+  }
+}

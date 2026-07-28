@@ -5,10 +5,12 @@
  * Reads the configured threat matrix from disk and converts it into
  * an in-memory lookup table used by the virtual patch rules engine.
  */
+
 const fs = require('fs');
 const path = require('path');
 
 const CONFIG_PATH = process.env.THREAT_MATRIX_PATH || "/etc/auranet/config/threat_matrix.conf";
+
 /**
  * Loads the threat severity matrix from the configured file.
  *
@@ -18,8 +20,6 @@ const CONFIG_PATH = process.env.THREAT_MATRIX_PATH || "/etc/auranet/config/threa
  *
  * @returns {Object.<string, number>} Mapping of threat names to severity scores.
  */
-const matrixState = { current: {} };
-
 function getThreatMatrix() {
     const matrix = {};
     try {
@@ -28,6 +28,7 @@ function getThreatMatrix() {
         
         for (const line of lines) {
             const trimmed = line.trim();
+            // Ignore empty lines and comments
             if (!trimmed || trimmed.startsWith('#')) continue;
             
             const [threat, score] = trimmed.split('=');
@@ -35,31 +36,14 @@ function getThreatMatrix() {
                 matrix[threat.trim()] = parseInt(score.trim(), 10);
             }
         }
-        
-        matrixState.current = matrix;
-        console.log("[Config] Threat Matrix parsed and loaded into state.");
     } catch (err) {
         console.error(`[Config] ⚠️ Failed to load threat matrix from ${CONFIG_PATH}. Using fallback. Error:`, err.message);
-        matrixState.current = { "unknown_anomaly": 30 };
+        matrix["unknown_anomaly"] = 30;
     }
     
-    return matrixState.current;
+    return matrix;
 }
 
-
-getThreatMatrix();
-
 module.exports = {
-    matrixState,      // Export the state for rules.js
-    getThreatMatrix   // Export the trigger for index.js
+    getThreatMatrix
 };
-
-
-
-
-
-
-
-
-
-

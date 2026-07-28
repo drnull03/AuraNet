@@ -1,0 +1,102 @@
+// index.test.js
+const { 
+    applyQuarantine, 
+    applyVirtualPatch, 
+    cycleWorkloadPods, 
+    removeQuarantine 
+} = require("./index");
+
+//mock fs lib
+jest.mock("fs"); 
+const fs = require("fs");
+
+jest.mock("@kubernetes/client-node", () => {
+   
+    const mockCreateNamespacedCustomObject = jest.fn();
+    const mockDeleteNamespacedCustomObject = jest.fn();
+    const mockDeleteCollectionNamespacedPod = jest.fn();
+
+    return {
+        KubeConfig: jest.fn().mockImplementation(() => ({
+            loadFromCluster: jest.fn(),
+            loadFromDefault: jest.fn(),
+            makeApiClient: jest.fn().mockImplementation((apiType) => {
+                // return our fake functions depending on which API is requested
+                if (apiType.name === 'CoreV1Api') {
+                    return { deleteCollectionNamespacedPod: mockDeleteCollectionNamespacedPod };
+                }
+                if (apiType.name === 'CustomObjectsApi') {
+                    return { 
+                        createNamespacedCustomObject: mockCreateNamespacedCustomObject,
+                        deleteNamespacedCustomObject: mockDeleteNamespacedCustomObject
+                    };
+                }
+            })
+        })),
+        CoreV1Api: { name: 'CoreV1Api' },
+        CustomObjectsApi: { name: 'CustomObjectsApi' }
+    };
+});
+
+const k8s = require("@kubernetes/client-node");
+
+describe("AuraNet AutoHeal: Kubernetes Execution Engine", () => {
+    let customApiMock;
+    let coreApiMock;
+
+    beforeEach(() => {
+      
+        jest.clearAllMocks();
+        
+        // ggrab the references to our spy functions
+        const kc = new k8s.KubeConfig();
+        coreApiMock = kc.makeApiClient(k8s.CoreV1Api);
+        customApiMock = kc.makeApiClient(k8s.CustomObjectsApi);
+        
+        // suppress console logs during testing so our terminal stays clean
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    test("1. applyQuarantine should send the correct Default Deny policy to the K8s API", async () => {
+        await applyQuarantine("payment-api");
+
+        
+        expect(customApiMock.createNamespacedCustomObject).toHaveBeenCalledTimes(1);
+        
+       
+        const apiCallArguments = customApiMock.createNamespacedCustomObject.mock.calls[0][0];
+        expect(apiCallArguments.group).toBe("cilium.io");
+        expect(apiCallArguments.body.metadata.name).toBe("quarantine-payment-api");
+        expect(apiCallArguments.body.spec.endpointSelector.matchLabels.app).toBe("payment-api");
+    });
+
+    test("2. cycleWorkloadPods should target the correct label selector for deletion", async () => {
+        await cycleWorkloadPods("customer-api");
+
+        expect(coreApiMock.deleteCollectionNamespacedPod).toHaveBeenCalledTimes(1);
+        
+        const apiCallArguments = coreApiMock.deleteCollectionNamespacedPod.mock.calls[0][0];
+        // verify it specifically targets the compromised workload, not the whole cluster
+        expect(apiCallArguments.labelSelector).toBe("app=customer-api");
+    });
+
+    test("3. removeQuarantine should request deletion of the exact policy name", async () => {
+        await removeQuarantine("database-svc");
+
+        expect(customApiMock.deleteNamespacedCustomObject).toHaveBeenCalledTimes(1);
+        
+        const apiCallArguments = customApiMock.deleteNamespacedCustomObject.mock.calls[0][0];
+        expect(apiCallArguments.name).toBe("quarantine-database-svc");
+    });
+
+    test("4. applyVirtualPatch should skip execution if the patch file is missing", async () => {
+        // mock fs.existsSync to return false
+        fs.existsSync.mockReturnValue(false);
+
+        await applyVirtualPatch("missing-patch.yaml");
+
+        // The K8s API should NEVER be called if the file doesn't exist
+        expect(customApiMock.createNamespacedCustomObject).not.toHaveBeenCalled();
+    });
+});

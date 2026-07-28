@@ -24,12 +24,8 @@ const k8s = require("@kubernetes/client-node");
 const yaml = require("js-yaml");
 const { determineVirtualPatch } = require("./virtual-patches/rules");
 
-
-const { getThreatMatrix } = require("./virtual-patches/threat-parser");
 const NATS_URL = process.env.NATS_URL || "nats://127.0.0.1:4222";
 
-
-//always gonna be default during this project
 const TARGET_NAMESPACE = "default"; 
 const sc = StringCodec();
 
@@ -42,22 +38,6 @@ if (process.env.KUBERNETES_SERVICE_HOST) {
 }
 const k8sCoreApi = kc.makeApiClient(k8s.CoreV1Api);
 const k8sCustomApi = kc.makeApiClient(k8s.CustomObjectsApi);
-
-
-
-const CONFIG_DIR = "/etc/auranet/config/";
-if (fs.existsSync(CONFIG_DIR)) {
-    fs.watch(CONFIG_DIR, (eventType, filename) => {
-        if (filename && filename.includes('..data')) {
-            // 200ms delay ensures Kubernetes finishes writing the symlink
-            setTimeout(() => {
-                console.log(`\n[AutoHeal] K8s ConfigMap update detected. Hot-reloading Threat Matrix...`);
-                getThreatMatrix();
-            }, 200);
-        }
-    });
-}
-
 
 // Helper to safely extract K8s error messages
 /**
@@ -146,13 +126,13 @@ async function applyVirtualPatch(patchFileName) {
                 plural: "ciliumnetworkpolicies",
                 name: patchObj.metadata.name
             });
-            console.log(`[K8s] Cleared stale virtual patch state: ${patchObj.metadata.name}`);
+            console.log(`[K8s] 🧹 Cleared stale virtual patch state: ${patchObj.metadata.name}`);
         } catch (delErr) {
             // Ignore 404s, it just means the state is already clean
         }
 
         // 2. Apply cleanly
-        console.log(`[K8s]Applying virtual patch: ${patchObj.metadata.name}...`);
+        console.log(`[K8s] 🛡️ Applying virtual patch: ${patchObj.metadata.name}...`);
         await k8sCustomApi.createNamespacedCustomObject({
             group: "cilium.io",
             version: "v2",
