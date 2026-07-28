@@ -19,5 +19,12 @@ spec:
           ports:
             - containerPort: 8080
               name: grpc
+          volumeMounts:
+            - name: config-volume
+              mountPath: /app/config  # Mount the entire directory
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ .Release.Name }}-config

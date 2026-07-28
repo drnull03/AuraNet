@@ -76,7 +76,7 @@ def start_federated_server():
     print("\n [Controller] Initializing AuraNet FL Aggregator...")
     
     strategy = AuraNetFedProxStrategy(
-        proximal_mu=0.1,  
+        proximal_mu=config.PROXIMAL_MU,  
         fraction_fit=config.FRACTION_FIT,
         min_fit_clients=config.MIN_AVAILABLE_CLIENTS,
         min_available_clients=config.MIN_AVAILABLE_CLIENTS,

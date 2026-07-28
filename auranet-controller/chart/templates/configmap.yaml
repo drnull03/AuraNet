@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+data:
+  config.json: |
+    {
+      "fl_rounds": {{ .Values.appConfig.fl_rounds }},
+      "min_available_clients": {{ .Values.appConfig.min_available_clients }},
+      "fraction_fit": {{ .Values.appConfig.fraction_fit }},
+      "round_timeout_seconds": {{ .Values.appConfig.round_timeout_seconds }},
+      "proximal_mu": {{ .Values.appConfig.proximal_mu }}
+    }

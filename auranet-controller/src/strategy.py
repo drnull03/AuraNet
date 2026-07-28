@@ -9,7 +9,7 @@ to introduce controlled aggregation intervals between training rounds.
 import time
 import flwr as fl
 from typing import List, Tuple, Union, Optional, Dict
-from flwr.common import FitRes, Parameters, Scalar
+from flwr.common import FitRes, Parameters, Scalar, FitIns
 from flwr.server.client_proxy import ClientProxy
 
 import config
@@ -24,8 +24,30 @@ distribution.
 """
 class AuraNetFedProxStrategy(fl.server.strategy.FedProx):
     def __init__(self, *args, **kwargs):
-        # We inherit all the heavy mathematical lifting from Flower's FedProx strategy
         super().__init__(*args, **kwargs)
+
+    def configure_fit(
+        self, server_round: int, parameters: Parameters, client_manager: fl.server.ClientManager
+    ) -> List[Tuple[ClientProxy, FitIns]]:
+        """
+        Executes at the start of every round. 
+        We pull the latest variables from Python memory (updated by the file watcher)
+        and overwrite the strategy's internal state before it samples clients.
+        """
+        # Inject dynamic values into the strategy instance
+        self.proximal_mu = config.PROXIMAL_MU
+        self.fraction_fit = config.FRACTION_FIT
+        self.min_fit_clients = config.MIN_AVAILABLE_CLIENTS
+        self.min_available_clients = config.MIN_AVAILABLE_CLIENTS
+        
+        print(f"\n[Controller] Starting Round {server_round} Configuration:")
+        print(f"  -> MU: {self.proximal_mu}")
+        print(f"  -> Fraction Fit: {self.fraction_fit}")
+        print(f"  -> Min Clients: {self.min_fit_clients}")
+
+        # Now call the parent class, which will use the newly updated self.fraction_fit 
+        # to determine how many clients to sample for this specific round.
+        return super().configure_fit(server_round, parameters, client_manager)
 
     def aggregate_fit(
         self,
@@ -33,12 +55,9 @@ class AuraNetFedProxStrategy(fl.server.strategy.FedProx):
         results: List[Tuple[ClientProxy, FitRes]],
         failures: List[Union[Tuple[ClientProxy, FitRes], BaseException]],
     ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
-        """
-        Overrides the default aggregation to inject  10-minute throttle.
-        """
-        print(f"\n[Controller]  Aggregating weights for Round {server_round}...")
         
-        #  Run the standard FedProx mathematical aggregation
+        print(f"\n[Controller] Aggregating weights for Round {server_round}...")
+        
         aggregated_parameters, aggregated_metrics = super().aggregate_fit(
             server_round, results, failures
         )
@@ -46,16 +65,15 @@ class AuraNetFedProxStrategy(fl.server.strategy.FedProx):
         if aggregated_parameters is not None:
             print(f"[Controller] Round {server_round} Aggregation Complete.")
             
-            #  THE THROTTLE: Force the server to sleep before broadcasting the next round
-            # We skip the sleep on the final round to allow the server to shut down cleanly
             if server_round < config.FL_ROUNDS:
-                print(f"[Controller]  Throttling network. Sleeping for {config.ROUND_TIMEOUT_SECONDS} seconds to allow edge nodes to train locally...")
+                print(f"[Controller] Throttling network. Sleeping for {config.ROUND_TIMEOUT_SECONDS} seconds...")
+                # Dynamically uses the latest timeout value pulled by the watcher
                 time.sleep(config.ROUND_TIMEOUT_SECONDS)
         else:
-            print(f"[Controller] ⚠️ Round {server_round} Aggregation Failed. Not enough clients.")
+            print(f"[Controller] ⚠️ Round {server_round} Aggregation Failed.")
 
-        #  Return the new master brain. Once this returns, the server begins the next round.
         return aggregated_parameters, aggregated_metrics
+
 
 # [DISABLED FOR 2-NODE DEMO] Krum Byzantine Fault Tolerance Strategy
 

@@ -1,19 +1,42 @@
-"""
-@file config.py
-@brief Global configuration for the AuraNet Federated Learning Controller.
-
-Defines the federated learning parameters, aggregation timing,
-client participation requirements, and model file locations used
-by the AuraNet Controller.
-"""
 import os
+import json
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
-# Federated Learning Global Parameters
-FL_ROUNDS = 1000               # Essentially run forever
-MIN_AVAILABLE_CLIENTS = 2      # Minimum agents needed to start a round
-FRACTION_FIT = 1.0             # Train on 100% of available agents per round
-ROUND_TIMEOUT_SECONDS = 600    # 10 Minutes per round (Throttle)
+# Default parameters
+FL_ROUNDS = 1000
+MIN_AVAILABLE_CLIENTS = 2
+FRACTION_FIT = 1.0
+ROUND_TIMEOUT_SECONDS = 600
+PROXIMAL_MU = 0.1
 
-# Paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GENESIS_WEIGHTS_PATH = os.path.join(BASE_DIR, "models", "zerotrust_ae_v1.pth")
+CONFIG_FILE_PATH = "/app/config/config.json"
+
+def load_config():
+    global FL_ROUNDS, MIN_AVAILABLE_CLIENTS, FRACTION_FIT, ROUND_TIMEOUT_SECONDS, PROXIMAL_MU
+    if os.path.exists(CONFIG_FILE_PATH):
+        with open(CONFIG_FILE_PATH, 'r') as f:
+            data = json.load(f)
+            FL_ROUNDS = data.get("fl_rounds", FL_ROUNDS)
+            MIN_AVAILABLE_CLIENTS = data.get("min_available_clients", MIN_AVAILABLE_CLIENTS)
+            FRACTION_FIT = data.get("fraction_fit", FRACTION_FIT)
+            ROUND_TIMEOUT_SECONDS = data.get("round_timeout_seconds", ROUND_TIMEOUT_SECONDS)
+            PROXIMAL_MU = data.get("proximal_mu", PROXIMAL_MU)
+            print(f"[Config] Reloaded configuration: MU={PROXIMAL_MU}, Timeout={ROUND_TIMEOUT_SECONDS}s")
+
+class K8sConfigWatcher(FileSystemEventHandler):
+    def on_modified(self, event):
+        # Trigger reload if the config directory changes
+        if "/app/config" in event.src_path:
+            load_config()
+
+# Execute initial load on startup
+load_config()
+
+# Start background file watcher
+observer = Observer()
+# Watch the parent directory because Kubernetes uses symlinks
+observer.schedule(K8sConfigWatcher(), path="/app/config", recursive=False)
+observer.start()

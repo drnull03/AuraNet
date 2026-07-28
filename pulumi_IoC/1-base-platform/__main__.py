@@ -86,8 +86,7 @@ cilium_release = k8s.helm.v3.Release(
                         "enabled": True,
                         "install": {
                             "enabled": True, 
-                            
-                            # --- START OF COMMENTED TPM & ATTESTATION CONFIG ---
+                            #commented this out because pcr is causing problem with kind it works without PCR thought                            
                             # "server": {
                             #     "spireConfig": {
                             #         # 1 & 2. Enable TPM node attestation and PCR validation on the server
@@ -131,7 +130,6 @@ cilium_release = k8s.helm.v3.Release(
                             #         }
                             #     }
                             # }
-                            # --- END OF COMMENTED TPM & ATTESTATION CONFIG ---
                         }
                     }
                 }
