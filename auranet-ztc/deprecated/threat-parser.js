@@ -1,14 +1,24 @@
 /**
  * @file threat-parser.js
  * @brief Threat severity matrix loader.
+ *
+ * Loads the configured threat severity mapping used by the AuraNet
+ * Trust Engine to calculate workload trust deductions.
  */
 const fs = require('fs');
 const path = require('path');
 
 const CONFIG_PATH = process.env.THREAT_MATRIX_PATH || "/etc/auranet/config/threat_matrix.conf";
-
-const matrixState = { current: {} };
-
+/**
+ * Loads the threat severity matrix configuration.
+ *
+ * Parses threat signatures and their corresponding severity scores
+ * from the configured matrix file. If loading fails, a fallback
+ * unknown threat severity is applied.
+ *
+ * @returns {Object.<string, number>} Mapping between threat names
+ * and severity scores.
+ */
 function getThreatMatrix() {
     const matrix = {};
     try {
@@ -17,6 +27,7 @@ function getThreatMatrix() {
         
         for (const line of lines) {
             const trimmed = line.trim();
+            // Ignore empty lines and comments
             if (!trimmed || trimmed.startsWith('#')) continue;
             
             const [threat, score] = trimmed.split('=');
@@ -24,20 +35,14 @@ function getThreatMatrix() {
                 matrix[threat.trim()] = parseInt(score.trim(), 10);
             }
         }
-        matrixState.current = matrix;
-        console.log("[Config] Threat Matrix parsed and loaded into state.");
     } catch (err) {
         console.error(`[Config] ⚠️ Failed to load threat matrix from ${CONFIG_PATH}. Using fallback. Error:`, err.message);
-        matrixState.current = { "unknown_anomaly": 30 };
+        matrix["unknown_anomaly"] = 30;
     }
     
-    return matrixState.current;
+    return matrix;
 }
 
-// Execute once on startup to populate the initial state
-getThreatMatrix();
-
 module.exports = {
-    matrixState,      // Export the mutable state for trust-engine.js to read
-    getThreatMatrix   // Export the function so trust-engine.js can trigger a reload
+    getThreatMatrix
 };

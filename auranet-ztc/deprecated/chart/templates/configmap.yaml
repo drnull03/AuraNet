@@ -8,8 +8,3 @@ metadata:
 data:
   threat_matrix.conf: |
 {{ .Values.threatMatrix | indent 4 }}
-  app_config.json: |
-    {
-      "windowTimeMs": {{ .Values.ztcConfig.windowTimeMs }},
-      "trustThreshold": {{ .Values.ztcConfig.trustThreshold }}
-    }

@@ -6,41 +6,13 @@
  * evaluates accumulated security events, and determines when a workload
  * should be quarantined.
  */
-
-const fs = require('fs');
-const path = require('path');
-
-const CONTEXT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes 
+const CONTEXT_WINDOW_MS = 10 * 60 * 1000; // 5 minutes 
 const QUARANTINE_THRESHOLD = 10;         
 const MAX_TRUST = 100;
 
 // THE THREAT MATRIX 
-const { matrixState, getThreatMatrix } = require('./threat-parser');
-const CONFIG_DIR = "/etc/auranet/config/";
-
-function loadAppConfig() {
-    try {
-        const rawData = fs.readFileSync(path.join(CONFIG_DIR, 'app_config.json'), 'utf8');
-        const config = JSON.parse(rawData);
-        CONTEXT_WINDOW_MS = config.windowTimeMs;
-        QUARANTINE_THRESHOLD = config.trustThreshold;
-        console.log(`[Config] Engine parameters updated: Window=${CONTEXT_WINDOW_MS}ms, Threshold=${QUARANTINE_THRESHOLD}`);
-    } catch (err) {
-        console.error("[Config] Failed to hot-reload app_config.json", err.message);
-    }
-}
-
-
-fs.watch(CONFIG_DIR, (eventType, filename) => {
-    if (filename && filename.includes('..data')) {
-        setTimeout(() => {
-            getThreatMatrix(); 
-            loadAppConfig();
-        }, 200);
-    }
-});
-
-loadAppConfig();
+const { getThreatMatrix } = require('./threat-parser');
+const THREAT_MATRIX = getThreatMatrix();
 
 // THE MEMORY 
 const workloadHistory = new Map();
@@ -56,7 +28,7 @@ const healingLocks = new Set();
  */
 function calculateDeduction(data) {
     const threatName = data.threat || "unknown_anomaly";
-    return matrixState.current[threatName] || matrixState.current["unknown_anomaly"] || 30;
+    return THREAT_MATRIX[threatName] || THREAT_MATRIX["unknown_anomaly"] || 30;
 }
 /**
  * Evaluates a batch of security alerts and identifies workloads requiring
@@ -149,6 +121,7 @@ function evaluateBatch(batchedAlerts) {
                     reasons: activeAlerts.map(a => a.threat)
                 });
             } else {
+                // Optional: You can comment this out if it clutters the terminal, 
                 // but it helps visualize the lock working.
                 console.log(`[Trust Engine] ⏳ ${workload} is currently healing. Suppressing duplicate quarantine order.`);
             }

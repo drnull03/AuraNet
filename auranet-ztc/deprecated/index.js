@@ -59,6 +59,7 @@ async function startZTC() {
                     console.log(`\n[ZTC] 🔍 GHOST PACKET INTERCEPTED -> Subject: ${msg.subject}`);
                     console.log(`[ZTC] Threat Type: ${decodedData.threat}`);
                     
+                    // This will print the raw Hubble JSON that triggered the AI
                     if (decodedData.raw_context) {
                         const contextObj = JSON.parse(decodedData.raw_context);
                         const httpData = contextObj.flow?.l7?.http || {};

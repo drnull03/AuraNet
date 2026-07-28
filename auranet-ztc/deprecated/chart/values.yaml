@@ -41,7 +41,3 @@ threatMatrix: |-
 
   # === Fallback ===
   unknown_anomaly=30
-
-ztcConfig:
-  windowTimeMs: 600000       
-  trustThreshold: 10
