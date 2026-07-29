@@ -254,7 +254,7 @@ if __name__ == "__main__":
                                  help="Optional Helm values file to pass with -f")
     install_parser.add_argument("--encryption", action="store_true",
                                  help="Also apply the auranet-encryption manifests (kubectl, not Helm)")
-    install_parser.add_argument("--encryption-path", default="./charts/auranet-encryption",
+    install_parser.add_argument("--encryption-path", default="../auranet-encryption/chart",
                                  help="Path to the local auranet-encryption manifests directory")
 
     # The 'uninstall' command
