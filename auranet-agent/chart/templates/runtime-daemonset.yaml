@@ -16,32 +16,40 @@ spec:
         app: auranet-runtime
         component: forwarder
     spec:
+      serviceAccountName: auranet-runtime-sa
       hostNetwork: true
+      hostPID: true
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: forwarder
         image: "{{ .Values.runtime.image.repository }}:{{ .Values.runtime.image.tag }}"
         imagePullPolicy: {{ .Values.runtime.image.pullPolicy }}
+        securityContext:
+          privileged: true
         env:
-        - name: LOG_PATH
-          value: {{ .Values.runtime.logPath }}
+        - name: MAP_PATH
+          value: {{ .Values.runtime.mapPath }}
         - name: NATS_URL
           value: {{ .Values.runtime.natsUrl }}
-        # Point to the injected .conf file
         - name: THREAT_MAP_PATH
           value: /etc/auranet/runtime/THREAT_MAP.conf
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         volumeMounts:
-        - name: tetragon-logs
-          mountPath: /var/run/cilium/tetragon
-          readOnly: true
+        # Mount host /sys/fs/bpf so python can access /sys/fs/bpf/auranet_events
+        - name: bpf-fs
+          mountPath: /sys/fs/bpf
+          mountPropagation: HostToContainer
         # Mount the config folder
         - name: config-volume
           mountPath: /etc/auranet/runtime
           readOnly: true
       volumes:
-      - name: tetragon-logs
+      - name: bpf-fs
         hostPath:
-          path: /var/run/cilium/tetragon
+          path: /sys/fs/bpf
           type: DirectoryOrCreate
       # Attach the ConfigMap
       - name: config-volume

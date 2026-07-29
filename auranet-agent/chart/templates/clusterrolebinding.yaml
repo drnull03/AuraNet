@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: auranet-runtime-binding
+  labels:
+    app: auranet-runtime
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: auranet-runtime-role
+subjects:
+  - kind: ServiceAccount
+    name: auranet-runtime-sa
+    namespace: auranet-namespace

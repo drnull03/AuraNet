@@ -3,7 +3,7 @@ runtime:
     repository: auranet/runtime
     tag: v1
     pullPolicy: IfNotPresent
-  logPath: /var/run/cilium/tetragon/tetragon.log
+  mapPath: /sys/fs/bpf/auranet_events
   natsUrl: nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222
   threatMapConf: |
     # Shells & Remote Access
@@ -52,8 +52,6 @@ engine:
   flServerAddress: "auranet-controller.auranet-namespace.svc.cluster.local:8080"
   hubbleRelayAddress: "hubble-relay.kube-system.svc.cluster.local:80"
   natsUrl: nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222
-
-
 
   aiConfig:
     inputDim: 13
