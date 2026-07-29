@@ -61,6 +61,19 @@ def print_logo():
     print(LOGO)
 
 
+def restart_workload(workload: str, namespace: str = "default"):
+    """
+    Restarts a Kubernetes deployment using kubectl rollout restart.
+    """
+    print(f"Restarting deployment '{workload}' in namespace '{namespace}'...")
+    cmd = ["kubectl", "rollout", "restart", f"deployment/{workload}", "-n", namespace]
+    _run(cmd)
+    print(f"✅ Successfully triggered restart for deployment '{workload}'.")
+
+
+
+
+
 def inject_trusted_label(label: str, namespace: str = "auranet-namespace"):
     """
     Connects to the K8s API, modifies the AuraNet ConfigMap in memory,
@@ -244,6 +257,12 @@ if __name__ == "__main__":
     uninstall_parser.add_argument("--encryption-release-name", default="auranet-encryption",
                                    help="Helm release name for the encryption deployment to uninstall")
 
+
+    # The 'restart' command
+    restart_parser = subparsers.add_parser("restart", help="Restart a Kubernetes deployment.")
+    restart_parser.add_argument("--workload", required=True, help="The name of the deployment to restart (e.g., frontend-ui)")
+    restart_parser.add_argument("--namespace", default="default", help="The namespace of the deployment (defaults to 'default')")
+
     args = parser.parse_args()
 
     if args.command == "trust":
@@ -290,3 +309,7 @@ if __name__ == "__main__":
 # add config option
 # add stress test option 
 # add restart option 
+
+
+#auranet-cli  install --config naive.conf
+#auranet-cli inject  ./model.pt
