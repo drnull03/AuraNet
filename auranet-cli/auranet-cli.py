@@ -16,6 +16,7 @@ import sys
 from kubernetes import client, config
 import os
 import re
+import tempfile
 
 VERSION='v1.0.0'
 
@@ -61,6 +62,64 @@ LOGO = r"""[1;36m
 
 def print_logo():
     print(LOGO)
+
+
+
+def update_threat_matrix(file_path: str, namespace: str):
+    """
+    Reads a raw threat_matrix.conf file, formats it into a Helm values.yaml structure, 
+    and updates both AutoHeal and ZTC simultaneously to prevent synchronization drift.
+    """
+    if not os.path.exists(file_path):
+        print(f"❌ Error: File '{file_path}' not found.")
+        sys.exit(1)
+
+    with open(file_path, 'r') as f:
+        content = f.read()
+
+    # Format as a Helm multiline string (matching the format in values.yaml)
+    yaml_content = "threatMatrix: |-\n"
+    for line in content.split('\n'):
+        yaml_content += f"  {line}\n"
+        
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
+        tmp.write(yaml_content)
+        tmp_path = tmp.name
+
+    try:
+        print("Pushing synchronized Threat Matrix to AuraNet AutoHeal...")
+        _run(["helm", "upgrade", "auranet-autoheal", "../auranet-autoheal/chart", "-n", namespace, "--reuse-values", "-f", tmp_path])
+        
+        print("\nPushing synchronized Threat Matrix to AuraNet ZTC...")
+        _run(["helm", "upgrade", "auranet-ztc", "../auranet-ztc/chart", "-n", namespace, "--reuse-values", "-f", tmp_path])
+        
+        print("\nThreat Matrix synchronized successfully. Hot-reload triggered on both microservices.")
+    finally:
+        os.remove(tmp_path)
+
+
+def update_ztc_config(window_time: str, threshold: str, namespace: str):
+    """
+    Updates the ZTC sliding window and trust threshold parameters.
+    """
+    cmd = ["helm", "upgrade", "auranet-ztc", "../auranet-ztc/chart", "-n", namespace, "--reuse-values"]
+    
+    updates = 0
+    if window_time:
+        cmd.extend(["--set", f"ztcConfig.windowTimeMs={window_time}"])
+        updates += 1
+    if threshold:
+        cmd.extend(["--set", f"ztcConfig.trustThreshold={threshold}"])
+        updates += 1
+        
+    if updates == 0:
+        print("⚠️  No configuration values provided to update. Use --window-time or --threshold.")
+        sys.exit(0)
+
+    print(f"⚙️  Applying {updates} configuration updates to AuraNet ZTC...")
+    _run(cmd)
+    print("✅ ZTC configuration updated. Hot-reload triggered.")
+
 
 
 
@@ -355,6 +414,19 @@ if __name__ == "__main__":
     bootstrap_parser.add_argument("--chart-path", default="../auranet-bootstrap/chart", help="Path to the local bootstrap Helm chart")
     bootstrap_parser.add_argument("--namespace", default="auranet-namespace", help="The namespace the bootstrap job runs in")
 
+    # The 'threat-matrix' command
+    threat_parser = subparsers.add_parser("threat-matrix", help="Update the Threat Matrix for both AutoHeal and ZTC simultaneously.")
+    threat_parser.add_argument("file", help="Path to the local threat_matrix.conf file")
+    threat_parser.add_argument("--namespace", default="auranet-namespace", help="The namespace the services run in")
+
+    # The 'ztc-config' command
+    ztc_config_parser = subparsers.add_parser("ztc-config", help="Update the ZTC sliding window and quarantine threshold.")
+    ztc_config_parser.add_argument("--window-time", help="New sliding window time in milliseconds (e.g., 600000 for 10 mins)")
+    ztc_config_parser.add_argument("--threshold", help="New trust score threshold for quarantine (e.g., 10)")
+    ztc_config_parser.add_argument("--namespace", default="auranet-namespace", help="The namespace the ZTC runs in")
+
+
+
     args = parser.parse_args()
 
     if args.command == "trust":
@@ -404,6 +476,11 @@ if __name__ == "__main__":
             chart_path=args.chart_path,
             namespace=args.namespace
         )
+
+    elif args.command == "threat-matrix":
+        update_threat_matrix(args.file, args.namespace)
+    elif args.command == "ztc-config":
+        update_ztc_config(args.window_time, args.threshold, args.namespace)
 
     else:
         # Failsafe if run without a subcommand and no --version flag
