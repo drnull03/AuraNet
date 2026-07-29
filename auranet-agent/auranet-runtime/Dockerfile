@@ -1,13 +1,14 @@
-FROM node:18-slim
+FROM python:3.10-slim
 
 WORKDIR /app
 
-# Copy package files and install dependencies
-COPY ./src/package*.json ./
-RUN npm install --production
+# Install libbpf required for pure-python RingBuffer access
+RUN apt-get update && apt-get install -y libbpf0 && rm -rf /var/lib/apt/lists/*
 
-# Copy the forwarder script
-COPY ./src/index.js .
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# We don't expose any ports because this service only tails a local file and pushes outbound to NATS
-CMD ["npm", "start"]
+COPY forwarder.py .
+RUN chmod +x forwarder.py
+
+CMD ["python", "forwarder.py"]
