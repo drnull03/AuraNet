@@ -14,6 +14,8 @@ import json
 import subprocess
 import sys
 from kubernetes import client, config
+import os
+import re
 
 VERSION='v1.0.0'
 
@@ -59,6 +61,53 @@ LOGO = r"""[1;36m
 
 def print_logo():
     print(LOGO)
+
+
+
+def update_bootstrap_rules(file_path: str, release_name: str, chart_path: str, namespace: str):
+    """
+    Reads a local configuration file, validates the rule syntax, 
+    and applies it via a Helm upgrade to trigger the bootstrap Job.
+    """
+    if not os.path.exists(file_path):
+        print(f"❌ Error: File '{file_path}' not found.")
+        sys.exit(1)
+
+    with open(file_path, 'r') as f:
+        content = f.read()
+
+    lines = content.split('\n')
+    # Exact regex match from your index.js parsing logic
+    rule_pattern = re.compile(r"^\d+\.\s*([a-zA-Z0-9-]+)\s*->\s*([a-zA-Z0-9-]+):(\d+)$")
+
+    valid_rules = 0
+    for i, line in enumerate(lines):
+        trimmed = line.strip()
+        if not trimmed:
+            continue
+        
+        if not rule_pattern.match(trimmed):
+            print(f"❌ Validation Error on line {i+1}: '{trimmed}' is invalid.")
+            print("   Expected format: '1.source-app -> destination-app:port'")
+            sys.exit(1)
+            
+        valid_rules += 1
+
+    if valid_rules == 0:
+        print("⚠️  Warning: No valid rules found in the file. Exiting.")
+        sys.exit(0)
+
+    print(f"✅ Validated {valid_rules} rules locally. Applying to cluster via Helm...")
+
+    # Uses subprocess to safely pass the multi-line string directly to Helm
+    cmd = [
+        "helm", "upgrade", release_name, chart_path,
+        "-n", namespace,
+        "--reuse-values",
+        "--set", f"naiveConf={content}"
+    ]
+    _run(cmd)
+    print("✅ Bootstrap rules updated. Kubernetes is recreating the Job.")
 
 
 
@@ -299,6 +348,13 @@ if __name__ == "__main__":
         help="The type of stress test to execute."
     )
 
+    # The 'bootstrap-rules' command
+    bootstrap_parser = subparsers.add_parser("bootstrap-rules", help="Update naive.conf network policies from a local file.")
+    bootstrap_parser.add_argument("file", help="Path to the local .conf file containing the new rules")
+    bootstrap_parser.add_argument("--release-name", default="auranet-bootstrap-chart", help="Helm release name for the bootstrap deployment")
+    bootstrap_parser.add_argument("--chart-path", default="../auranet-bootstrap/chart", help="Path to the local bootstrap Helm chart")
+    bootstrap_parser.add_argument("--namespace", default="auranet-namespace", help="The namespace the bootstrap job runs in")
+
     args = parser.parse_args()
 
     if args.command == "trust":
@@ -341,6 +397,14 @@ if __name__ == "__main__":
     elif args.command == "stress":
         run_stress_test(args.type)
 
+    elif args.command == "bootstrap-rules":
+        update_bootstrap_rules(
+            file_path=args.file,
+            release_name=args.release_name,
+            chart_path=args.chart_path,
+            namespace=args.namespace
+        )
+
     else:
         # Failsafe if run without a subcommand and no --version flag
         parser.print_help()
@@ -349,7 +413,7 @@ if __name__ == "__main__":
 
 
 
-# add config option
+
 
 
 
