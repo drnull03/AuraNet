@@ -63,3 +63,11 @@ engine:
     trustedIdentities:
       - "k8s:app=gitlab-runner"
       - "k8s:app=auranet-controller"
+    
+    
+    nlpTripwire: 2.0
+    nlpBodyTripwire: 2.0
+    zScoreThreshold: 3.0
+    zScoreWindowSize: 1000
+    learningEngine: true
+    thirdBrain: false

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: auranet-runtime
-  namespace: auranet-namespace
+  namespace: {{ .Release.Namespace }}
   labels:
     app: auranet-runtime
     component: forwarder

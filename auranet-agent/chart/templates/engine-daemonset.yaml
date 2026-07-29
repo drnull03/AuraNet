@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: auranet-engine
-  namespace: auranet-namespace
+  namespace: {{ .Release.Namespace }}
   labels:
     app: auranet-engine
     component: ai-agent
