@@ -33,18 +33,41 @@ CONTAINER_ID_REGEX = re.compile(r'([a-f0-9]{64})')
 
 #  Load Threat Map 
 def load_threat_map():
+    global THREAT_MAP
     try:
+        new_map = {}
         with open(THREAT_MAP_PATH, 'r') as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith('#'):
                     if '=' in line:
                         key, val = line.split('=', 1)
-                        THREAT_MAP[key.strip()] = val.strip()
+                        new_map[key.strip()] = val.strip()
+        THREAT_MAP = new_map
         print(f"[Runtime Forwarder] Loaded {len(THREAT_MAP)} threat signatures.")
     except Exception as e:
-        print(f"[Runtime Forwarder] CRITICAL: Failed to load Threat Map from {THREAT_MAP_PATH}: {e}")
-        exit(1)
+        print(f"[Runtime Forwarder] Warning: Failed to load Threat Map: {e}")
+
+
+
+async def watch_threat_map():
+    """Polls the Threat Map configuration file for changes."""
+    last_mtime = 0
+    while True:
+        try:
+            # Resolve the real path to handle Kubernetes symlink updates
+            real_path = os.path.realpath(THREAT_MAP_PATH)
+            current_mtime = os.path.getmtime(real_path)
+            
+            if last_mtime != 0 and current_mtime != last_mtime:
+                print(f"[Runtime Forwarder] ConfigMap update detected at {THREAT_MAP_PATH}. Reloading...")
+                load_threat_map()
+                
+            last_mtime = current_mtime
+        except OSError:
+            pass # File might be temporarily unavailable during atomic swap
+            
+        await asyncio.sleep(5) # Check every 5 seconds
 
 # Real Kubernetes API Metadata Sync 
 def refresh_k8s_pod_cache():
@@ -211,6 +234,9 @@ def process_event(data, nc, loop):
 async def main():
     load_threat_map()
     refresh_k8s_pod_cache()
+
+    loop = asyncio.get_running_loop()
+    loop.create_task(watch_threat_map())
 
     nc = NATS()
     print(f"[Runtime Forwarder] Connecting to NATS at {NATS_URL}...")
