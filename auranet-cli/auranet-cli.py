@@ -63,7 +63,25 @@ LOGO = r"""[1;36m
 def print_logo():
     print(LOGO)
 
+def update_controller_config(updates: dict, release_name: str, chart_path: str, namespace: str):
+    """
+    Dynamically updates AuraNet Controller FL parameters using Helm overrides.
+    """
+    cmd = ["helm", "upgrade", release_name, chart_path, "-n", namespace, "--reuse-values"]
+    
+    count = 0
+    for key, val in updates.items():
+        if val is not None:
+            cmd.extend(["--set", f"appConfig.{key}={val}"])
+            count += 1
+            
+    if count == 0:
+        print("⚠️  No configuration values provided. Pass at least one flag (e.g., --proximal-mu).")
+        sys.exit(0)
 
+    print(f"⚙️  Applying {count} configuration updates to AuraNet Controller...")
+    _run(cmd)
+    print("✅ Controller configuration updated. Watchdog hot-reload triggered.")
 
 def update_runtime_threats(file_path: str, release_name: str, chart_path: str, namespace: str):
     """
@@ -482,7 +500,7 @@ if __name__ == "__main__":
     runtime_parser = subparsers.add_parser("runtime-threats", help="Update the Runtime eBPF Threat Map from a local file.")
     runtime_parser.add_argument("file", help="Path to the local THREAT_MAP.conf file")
     runtime_parser.add_argument("--release-name", default="auranet-agent", help="Helm release name for the agent deployment")
-    runtime_parser.add_argument("--chart-path", default="../auranet-agent", help="Path to the local auranet-agent Helm chart")
+    runtime_parser.add_argument("--chart-path", default="../auranet-agent/chart", help="Path to the local auranet-agent Helm chart")
     runtime_parser.add_argument("--namespace", default="auranet-namespace", help="The namespace the agent runs in")
 
     # The 'engine-config' command
@@ -501,8 +519,21 @@ if __name__ == "__main__":
     engine_parser.add_argument("--third-brain", dest="thirdBrain", help="Toggle third brain (true or false)")
     
     engine_parser.add_argument("--release-name", default="auranet-agent", help="Helm release name for the agent deployment")
-    engine_parser.add_argument("--chart-path", default="../auranet-agent", help="Path to the local auranet-agent Helm chart")
+    engine_parser.add_argument("--chart-path", default="../auranet-agent/chart", help="Path to the local auranet-agent Helm chart")
     engine_parser.add_argument("--namespace", default="auranet-namespace", help="The namespace the agent runs in")
+
+
+    # The 'controller-config' command
+    controller_parser = subparsers.add_parser("controller-config", help="Update the AuraNet Controller FL parameters.")
+    controller_parser.add_argument("--fl-rounds", dest="fl_rounds", help="Total number of federated learning rounds (e.g., 1000)")
+    controller_parser.add_argument("--min-clients", dest="min_available_clients", help="Minimum clients required to start a round (e.g., 2)")
+    controller_parser.add_argument("--fraction-fit", dest="fraction_fit", help="Fraction of clients sampled per round (e.g., 1.0)")
+    controller_parser.add_argument("--round-timeout", dest="round_timeout_seconds", help="Aggregation delay between rounds in seconds (e.g., 600)")
+    controller_parser.add_argument("--proximal-mu", dest="proximal_mu", help="Proximal penalty mu value for FedProx (e.g., 0.1)")
+    
+    controller_parser.add_argument("--release-name", default="auranet-controller", help="Helm release name for the controller deployment")
+    controller_parser.add_argument("--chart-path", default="../auranet-controller/chart", help="Path to the local auranet-controller Helm chart")
+    controller_parser.add_argument("--namespace", default="auranet-namespace", help="The namespace the controller runs in")
 
     args = parser.parse_args()
 
@@ -578,6 +609,20 @@ if __name__ == "__main__":
         updates = {key: getattr(args, key) for key in config_keys if getattr(args, key) is not None}
         
         update_engine_config(
+            updates=updates,
+            release_name=args.release_name,
+            chart_path=args.chart_path,
+            namespace=args.namespace
+        )
+    elif args.command == "controller-config":
+        config_keys = [
+            "fl_rounds", "min_available_clients", "fraction_fit", 
+            "round_timeout_seconds", "proximal_mu"
+        ]
+        
+        updates = {key: getattr(args, key) for key in config_keys if getattr(args, key) is not None}
+        
+        update_controller_config(
             updates=updates,
             release_name=args.release_name,
             chart_path=args.chart_path,
