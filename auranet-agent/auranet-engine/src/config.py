@@ -67,7 +67,7 @@ class DynamicConfig:
             except Exception as e:
                 pass # Ignore transient read errors during atomic Kubelet updates
 
-    # --- Clean In-Memory Properties (Zero Disk I/O) ---
+    # Clean In-Memory Properties (Zero Disk I/O) 
     @property
     def INPUT_DIM(self):
         return self._cache.get("inputDim", 13)

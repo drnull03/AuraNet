@@ -25,7 +25,7 @@ federated learning model.
 @param global_state Shared global model state.
 @returns None
 """
-async def run_local_training(model, benign_buffer, buffer_lock, global_state):
+async def run_local_training(model, benign_buffer, buffer_lock, global_state,model_lock):
     """
     Worker B: Wakes up every 2 minutes, locks the buffer, drains the data,
     and runs local FedProx training to adapt to new baseline traffic.
@@ -70,28 +70,29 @@ async def run_local_training(model, benign_buffer, buffer_lock, global_state):
         
         # The Local Epoch Loop
         for epoch in range(config.ai.LOCAL_EPOCHS):
-            optimizer.zero_grad()
+            with model_lock:
+                optimizer.zero_grad()
             
-            # Forward pass
-            reconstructed = model(x_train)
+                # Forward pass
+                reconstructed = model(x_train)
             
-            # Standard autoencoder loss
-            loss = criterion(reconstructed, x_train)
+                # Standard autoencoder loss
+                loss = criterion(reconstructed, x_train)
             
-            # FEDPROX PROXIMAL PENALTY
-            # If we have received global weights from the Controller, apply the mathematical tether
-            if master_weights is not None:
-                proximal_term = 0.0
-                for local_param, global_param in zip(model.parameters(), master_weights):
-                    # Calculate the Euclidean distance between local and global weights
-                    proximal_term += ((local_param - global_param).norm(2)) ** 2
+                # FEDPROX PROXIMAL PENALTY
+                # If we have received global weights from the Controller, apply the mathematical tether
+                if master_weights is not None:
+                    proximal_term = 0.0
+                    for local_param, global_param in zip(model.parameters(), master_weights):
+                        # Calculate the Euclidean distance between local and global weights
+                        proximal_term += ((local_param - global_param).norm(2)) ** 2
                 
-                # Add the penalty to the standard loss
-                loss += (proximal_mu / 2) * proximal_term
+                    # Add the penalty to the standard loss
+                    loss += (proximal_mu / 2) * proximal_term
 
-            # Backpropagation
-            loss.backward()
-            optimizer.step()
+                # Backpropagation
+                loss.backward()
+                optimizer.step()
 
         # Switch back to evaluation mode for Worker A
         model.eval()

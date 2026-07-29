@@ -42,7 +42,7 @@ Creates an isolated asyncio event loop and launches:
 @param global_state Shared federated learning state.
 @returns None
 """
-def run_background_workers(brain_a, brain_b, brain_c, benign_buffer, buffer_lock, global_state):
+def run_background_workers(brain_a, brain_b, brain_c, benign_buffer, buffer_lock, global_state,model_lock):
     """Creates an isolated asyncio event loop for background workers."""
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     print("[Engine] Spinning up Async Background Thread...")
     bg_thread = threading.Thread(
         target=run_background_workers,
-        args=(brain_a, brain_b, brain_c, benign_buffer, buffer_lock, global_state),
+        args=(brain_a, brain_b, brain_c, benign_buffer, buffer_lock, global_state,model_lock),
         daemon=True 
     )
     bg_thread.start()
