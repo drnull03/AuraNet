@@ -9,17 +9,16 @@ AI detection thresholds, learning parameters, and Zero Trust policies.
 import os
 import json
 
-#static config
+# Static config
 NODE_NAME = os.getenv("NODE_NAME", "unknown-node")
 HUBBLE_RELAY_ADDRESS = os.getenv("HUBBLE_RELAY_ADDRESS", "hubble-relay.kube-system.svc.cluster.local:80")
 NATS_URL = os.getenv("NATS_URL", "nats://auranet-nats-broker.auranet-messaging.svc.cluster.local:4222")
 FL_SERVER_ADDRESS = os.getenv("FL_SERVER_ADDRESS", "auranet-controller.auranet-namespace.svc.cluster.local:8080")
 NATS_SUBJECT_PREFIX = "auranet.events.ai."
 
-
 NLP_WEIGHTS_PATH = os.getenv("NLP_WEIGHTS_PATH", "models/nlp_ae_v1.pth")
-NLP_BODY_WEIGHTS_PATH = os.getenv("NLP_BODY_WEIGHTS_PATH","models/nlp_ae_v1_body.pth")
-#config map stuff
+NLP_BODY_WEIGHTS_PATH = os.getenv("NLP_BODY_WEIGHTS_PATH", "models/nlp_ae_v1_body.pth")
+
 CONFIG_FILE_PATH = "/etc/auranet/config/ai-config.json"
 """
 @brief Runtime configuration manager for AuraNet Engine.
@@ -48,94 +47,81 @@ class DynamicConfig:
             "learningEngine": True,
             "thirdBrain": False
         }
-        self._reload_if_changed()
-    """
-@brief Reloads configuration when the ConfigMap file changes.
+        # Initial load on boot
+        self.reload_if_changed()
 
-Checks the modification timestamp of the configuration file and updates
-the internal cache when Kubernetes propagates a new configuration.
-
-@returns None
-"""
-    def _reload_if_changed(self):
-        """Silently reloads the JSON file if Kubernetes has updated the ConfigMap."""
+    def reload_if_changed(self):
+        """Called periodically by a background task to safely reload ConfigMap updates."""
         if os.path.exists(CONFIG_FILE_PATH):
-            mtime = os.path.getmtime(CONFIG_FILE_PATH)
-            if mtime > self.last_modified:
-                try:
-                    with open(CONFIG_FILE_PATH, 'r') as f:
+            try:
+                # Resolve the real symlink path to handle Kubernetes ConfigMap swaps
+                real_path = os.path.realpath(CONFIG_FILE_PATH)
+                mtime = os.path.getmtime(real_path)
+                
+                if mtime > self.last_modified:
+                    with open(real_path, 'r') as f:
                         new_config = json.load(f)
                         self._cache.update(new_config)
                     self.last_modified = mtime
                     print("[Engine] 🔄 Security Policy Hot-Reloaded from ConfigMap!")
-                except Exception as e:
-                    print(f"[Engine] ⚠️ Failed to parse ConfigMap JSON: {e}")
+            except Exception as e:
+                pass # Ignore transient read errors during atomic Kubelet updates
 
-    
-    
+    # --- Clean In-Memory Properties (Zero Disk I/O) ---
     @property
     def INPUT_DIM(self):
-        self._reload_if_changed()
         return self._cache.get("inputDim", 13)
 
     @property
     def TRIPWIRE_THRESHOLD(self):
-        self._reload_if_changed()
         return self._cache.get("tripwireThreshold", 0.05)
 
     @property
     def LOCAL_TRAIN_INTERVAL_SEC(self):
-        self._reload_if_changed()
         return self._cache.get("localTrainIntervalSec", 120)
 
     @property
     def MAX_BUFFER_SIZE(self):
-        self._reload_if_changed()
         return self._cache.get("maxBufferSize", 5000)
 
     @property
     def LOCAL_EPOCHS(self):
-        self._reload_if_changed()
         return self._cache.get("localEpochs", 5)
 
     @property
     def LEARNING_RATE(self):
-        self._reload_if_changed()
         return self._cache.get("learningRate", 0.001)
 
     @property
     def TRUSTED_IDENTITIES(self):
-        self._reload_if_changed()
         return set(self._cache.get("trustedIdentities", []))
 
     @property
     def LEARNING_ENGINE(self):
-        self._reload_if_changed()
         return self._cache.get("learningEngine", True)
 
     @property
     def NLP_TRIPWIRE(self):
-        self._reload_if_changed()
         return self._cache.get("nlpTripwire", 2.0)
+
     @property
     def Z_SCORE_THRESHOLD(self):
-        self._reload_if_changed()
         return self._cache.get("zScoreThreshold", 3.0)
 
     @property
     def Z_SCORE_WINDOW_SIZE(self):
-        self._reload_if_changed()
         return self._cache.get("zScoreWindowSize", 1000)
         
     @property                                                
     def NLP_BODY_TRIPWIRE(self):                             
-        self._reload_if_changed()                            
         return self._cache.get("nlpBodyTripwire", 2.0)      
         
     @property                                               
     def THIRD_BRAIN(self):                                  
-        self._reload_if_changed()                           
         return self._cache.get("thirdBrain", False)
 
-# Instantiate the dynamic config object
+# Instantiate global dynamic config object
 ai = DynamicConfig()
+
+
+

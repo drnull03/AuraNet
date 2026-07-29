@@ -9,6 +9,8 @@ node to the AuraNet Federated Learning controller.
 import asyncio
 import threading
 import time
+import os
+import torch
 
 import config
 from model import ZeroTrustAutoencoder
@@ -16,6 +18,14 @@ from nlp_model import UrlNlpAutoencoder
 from inference_worker import run_inference_pipeline
 from training_worker import run_local_training
 from fl_client import start_fl_client
+
+
+
+async def watch_config_task():
+    """Polls the ConfigMap file on disk every 5 seconds off the main traffic path."""
+    while True:
+        await asyncio.sleep(5)
+        config.ai.reload_if_changed()
 
 """
 @brief Starts asynchronous background AI workers.
@@ -38,7 +48,10 @@ def run_background_workers(brain_a, brain_b, brain_c, benign_buffer, buffer_lock
     asyncio.set_event_loop(loop)
     
     # Schedule Worker A (Inference) with triple brains
-    tasks = [loop.create_task(run_inference_pipeline(brain_a, brain_b, brain_c, benign_buffer, buffer_lock))]
+    tasks = [
+        loop.create_task(run_inference_pipeline(brain_a, brain_b, brain_c, benign_buffer, buffer_lock)),
+        loop.create_task(watch_config_task())
+        ]
     
     # Worker B (Training) only federates Brain A (Tabular). Brain B and C is static because they already learned grammer rule and don't need any adaptation.
     if config.ai.LEARNING_ENGINE:

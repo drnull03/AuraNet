@@ -18,16 +18,16 @@ class UrlNlpAutoencoder(nn.Module):
         super(UrlNlpAutoencoder, self).__init__()
         self.seq_length = seq_length
         
-        # 1. EMBEDDING
+        # EMBEDDING
         self.embedding = nn.Embedding(num_embeddings=vocab_size, embedding_dim=embedding_dim, padding_idx=0)
         
-        # 2. ENCODER
+        #  ENCODER
         self.encoder_lstm = nn.LSTM(input_size=embedding_dim, hidden_size=hidden_dim, batch_first=True)
         
-        # 3. DECODER
+        #  DECODER
         self.decoder_lstm = nn.LSTM(input_size=hidden_dim, hidden_size=hidden_dim, batch_first=True)
         
-        # 4. OUTPUT MAPPER
+        # OUTPUT MAPPER
         self.fc_out = nn.Linear(hidden_dim, vocab_size)
 """
 @brief Performs sequence reconstruction.

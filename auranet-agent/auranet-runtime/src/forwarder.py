@@ -67,7 +67,7 @@ async def watch_threat_map():
         except OSError:
             pass # File might be temporarily unavailable during atomic swap
             
-        await asyncio.sleep(5) # Check every 5 seconds
+        await asyncio.sleep(5) 
 
 # Real Kubernetes API Metadata Sync 
 def refresh_k8s_pod_cache():

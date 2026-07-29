@@ -37,13 +37,13 @@ async def run_local_training(model, benign_buffer, buffer_lock, global_state):
     # The 'mu' parameter for FedProx. Controls how strictly the local model 
     # is tethered to the global master weights.
     
-
+    # this is recieved from the server later on so it is okay to leave static for now
     proximal_mu = 0.1 
 
     print(f"[Worker B] Local FedProx Trainer initialized. Cadence: {config.ai.LOCAL_TRAIN_INTERVAL_SEC}s\n")
 
     while True:
-        # Throttle: Go to sleep for 2 minutes
+        # Throttle: Go to sleep for 2 minutes (default can be changed)
         await asyncio.sleep(config.ai.LOCAL_TRAIN_INTERVAL_SEC)
         
         # Safely extract and clear the buffer
