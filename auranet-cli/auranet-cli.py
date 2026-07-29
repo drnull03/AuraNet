@@ -61,6 +61,32 @@ def print_logo():
     print(LOGO)
 
 
+
+def run_stress_test(test_type: str):
+    """
+    Executes a stress test script from the ../stress_tests directory.
+    """
+    # Map the CLI argument to your specific file names
+    file_map = {
+        "light": "light_load.js",
+        "spike": "spike_load.js",
+        "soak": "soak_test.js",
+        "wave": "wave_test.js",
+        "breakpoint": "breakpoint_test.js"
+    }
+    
+    file_path = f"../stress_tests/{file_map[test_type]}"
+    
+    print(f"🚀 Initiating '{test_type}' stress test...")
+    # Assuming k6 is your runner. Change to ["node", file_path] if using standard Node.js
+    cmd = ["k6", "run", file_path]
+    _run(cmd)
+    print(f"✅ Stress test '{test_type}' completed successfully.")
+
+
+
+
+
 def restart_workload(workload: str, namespace: str = "default"):
     """
     Restarts a Kubernetes deployment using kubectl rollout restart.
@@ -263,6 +289,16 @@ if __name__ == "__main__":
     restart_parser.add_argument("--workload", required=True, help="The name of the deployment to restart (e.g., frontend-ui)")
     restart_parser.add_argument("--namespace", default="default", help="The namespace of the deployment (defaults to 'default')")
 
+
+    # The 'stress' command
+    stress_parser = subparsers.add_parser("stress", help="Run system stress tests against the cluster.")
+    stress_parser.add_argument(
+        "--type", 
+        required=True, 
+        choices=["light", "spike", "soak", "wave", "breakpoint"], 
+        help="The type of stress test to execute."
+    )
+
     args = parser.parse_args()
 
     if args.command == "trust":
@@ -298,6 +334,13 @@ if __name__ == "__main__":
                 release_name=args.release_name,
                 namespace=args.namespace
             )
+    elif args.command == "restart":
+        restart_workload(args.workload, args.namespace)
+
+
+    elif args.command == "stress":
+        run_stress_test(args.type)
+
     else:
         # Failsafe if run without a subcommand and no --version flag
         parser.print_help()
@@ -307,8 +350,7 @@ if __name__ == "__main__":
 
 
 # add config option
-# add stress test option 
-# add restart option 
+
 
 
 #auranet-cli  install --config naive.conf
