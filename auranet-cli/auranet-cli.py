@@ -65,6 +65,59 @@ def print_logo():
 
 
 
+def update_runtime_threats(file_path: str, release_name: str, chart_path: str, namespace: str):
+    """
+    Reads a raw THREAT_MAP.conf file, formats it into a Helm values structure, 
+    and updates the AuraNet Runtime eBPF agent.
+    """
+    if not os.path.exists(file_path):
+        print(f"❌ Error: File '{file_path}' not found.")
+        sys.exit(1)
+
+    with open(file_path, 'r') as f:
+        content = f.read()
+
+    # Format as a Helm multiline string under the 'runtime' dictionary key
+    yaml_content = "runtime:\n  threatMapConf: |-\n"
+    for line in content.split('\n'):
+        yaml_content += f"    {line}\n"
+        
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
+        tmp.write(yaml_content)
+        tmp_path = tmp.name
+
+    try:
+        print("🚀 Pushing updated Threat Map to AuraNet Runtime...")
+        _run(["helm", "upgrade", release_name, chart_path, "-n", namespace, "--reuse-values", "-f", tmp_path])
+        print("✅ Runtime Threat Map updated successfully. Hot-reload triggered.")
+    finally:
+        os.remove(tmp_path)
+
+
+def update_engine_config(updates: dict, release_name: str, chart_path: str, namespace: str):
+    """
+    Dynamically updates AuraNet Engine AI parameters using a dictionary of overrides.
+    """
+    cmd = ["helm", "upgrade", release_name, chart_path, "-n", namespace, "--reuse-values"]
+    
+    count = 0
+    for key, val in updates.items():
+        if val is not None:
+            cmd.extend(["--set", f"engine.aiConfig.{key}={val}"])
+            count += 1
+            
+    if count == 0:
+        print(" No configuration values provided. Pass at least one flag (e.g., --learning-rate).")
+        sys.exit(0)
+
+    print(f" Applying {count} AI configuration updates to AuraNet Engine...")
+    _run(cmd)
+    print("✅ Engine configuration updated. AI hot-reload triggered.")
+
+
+
+
+
 def update_threat_matrix(file_path: str, namespace: str):
     """
     Reads a raw threat_matrix.conf file, formats it into a Helm values.yaml structure, 
@@ -425,7 +478,31 @@ if __name__ == "__main__":
     ztc_config_parser.add_argument("--threshold", help="New trust score threshold for quarantine (e.g., 10)")
     ztc_config_parser.add_argument("--namespace", default="auranet-namespace", help="The namespace the ZTC runs in")
 
+    # The 'runtime-threats' command
+    runtime_parser = subparsers.add_parser("runtime-threats", help="Update the Runtime eBPF Threat Map from a local file.")
+    runtime_parser.add_argument("file", help="Path to the local THREAT_MAP.conf file")
+    runtime_parser.add_argument("--release-name", default="auranet-agent", help="Helm release name for the agent deployment")
+    runtime_parser.add_argument("--chart-path", default="../auranet-agent", help="Path to the local auranet-agent Helm chart")
+    runtime_parser.add_argument("--namespace", default="auranet-namespace", help="The namespace the agent runs in")
 
+    # The 'engine-config' command
+    # The 'engine-config' command
+    engine_parser = subparsers.add_parser("engine-config", help="Update the AuraNet Engine AI parameters.")
+    engine_parser.add_argument("--input-dim", dest="inputDim", help="New input dimension (e.g., 13)")
+    engine_parser.add_argument("--tripwire", dest="tripwireThreshold", help="New base tripwire threshold (e.g., 0.08)")
+    engine_parser.add_argument("--train-interval", dest="localTrainIntervalSec", help="Local training interval in seconds (e.g., 120)")
+    engine_parser.add_argument("--max-buffer", dest="maxBufferSize", help="Max benign traffic buffer size (e.g., 5000)")
+    engine_parser.add_argument("--epochs", dest="localEpochs", help="Local training epochs (e.g., 5)")
+    engine_parser.add_argument("--learning-rate", dest="learningRate", help="New FedProx learning rate (e.g., 0.005)")
+    engine_parser.add_argument("--nlp-tripwire", dest="nlpTripwire", help="New NLP URL threshold (e.g., 2.0)")
+    engine_parser.add_argument("--nlp-body-tripwire", dest="nlpBodyTripwire", help="New NLP Body threshold (e.g., 2.0)")
+    engine_parser.add_argument("--z-score", dest="zScoreThreshold", help="New dynamic Z-Score threshold (e.g., 3.0)")
+    engine_parser.add_argument("--z-score-window", dest="zScoreWindowSize", help="Window size for Z-score calculation (e.g., 1000)")
+    engine_parser.add_argument("--third-brain", dest="thirdBrain", help="Toggle third brain (true or false)")
+    
+    engine_parser.add_argument("--release-name", default="auranet-agent", help="Helm release name for the agent deployment")
+    engine_parser.add_argument("--chart-path", default="../auranet-agent", help="Path to the local auranet-agent Helm chart")
+    engine_parser.add_argument("--namespace", default="auranet-namespace", help="The namespace the agent runs in")
 
     args = parser.parse_args()
 
@@ -482,6 +559,31 @@ if __name__ == "__main__":
     elif args.command == "ztc-config":
         update_ztc_config(args.window_time, args.threshold, args.namespace)
 
+    elif args.command == "runtime-threats":
+        update_runtime_threats(
+            file_path=args.file,
+            release_name=args.release_name,
+            chart_path=args.chart_path,
+            namespace=args.namespace
+        )
+    elif args.command == "engine-config":
+        # Define the exact YAML keys we want to check
+        config_keys = [
+            "inputDim", "tripwireThreshold", "localTrainIntervalSec", "maxBufferSize", 
+            "localEpochs", "learningRate", "nlpTripwire", "nlpBodyTripwire", 
+            "zScoreThreshold", "zScoreWindowSize", "thirdBrain"
+        ]
+        
+        # Build a dictionary of only the arguments the user provided
+        updates = {key: getattr(args, key) for key in config_keys if getattr(args, key) is not None}
+        
+        update_engine_config(
+            updates=updates,
+            release_name=args.release_name,
+            chart_path=args.chart_path,
+            namespace=args.namespace
+        )
+
     else:
         # Failsafe if run without a subcommand and no --version flag
         parser.print_help()
@@ -494,5 +596,5 @@ if __name__ == "__main__":
 
 
 
-#auranet-cli  install --config naive.conf
+
 #auranet-cli inject  ./model.pt
