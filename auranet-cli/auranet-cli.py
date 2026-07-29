@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 @file auranet-cli.py
 @brief AuraNet Command Line Interface.
@@ -7,24 +8,16 @@ including installing and uninstalling core components, managing trusted
 eBPF identities, and updating Zero Trust configuration through the
 Kubernetes API.
 """
-#!/usr/bin/env python3
+
 import argparse
 import json
 import subprocess
 import sys
 from kubernetes import client, config
 
+VERSION='v1.0.0'
 
-"""
-Injects a trusted eBPF identity into the AuraNet trust matrix.
 
-Updates the AuraNet ConfigMap and triggers propagation of the new
-trusted identity configuration to edge agents.
-
-@param label Kubernetes/eBPF identity label to trust.
-@param namespace Kubernetes namespace containing AuraNet resources.
-@returns None
-"""
 def inject_trusted_label(label: str, namespace: str = "auranet-namespace"):
     """
     Connects to the K8s API, modifies the AuraNet ConfigMap in memory,
@@ -61,16 +54,6 @@ def inject_trusted_label(label: str, namespace: str = "auranet-namespace"):
         sys.exit(1)
 
 
-"""
-Removes a trusted eBPF identity from the AuraNet trust matrix.
-
-Revokes previously granted trust permissions by updating the
-AuraNet configuration stored in Kubernetes.
-
-@param label Kubernetes/eBPF identity label to revoke.
-@param namespace Kubernetes namespace containing AuraNet resources.
-@returns None
-"""
 def remove_trusted_label(label: str, namespace: str = "auranet-namespace"):
     """
     Removes an existing eBPF label from the ConfigMap trust matrix to revoke immunity.
@@ -90,13 +73,12 @@ def remove_trusted_label(label: str, namespace: str = "auranet-namespace"):
             print(f"The eBPF label '{label}' is not currently in the trust matrix. Exiting.")
             sys.exit(0)
 
-        # Remove the immunity label
         ai_config["trustedIdentities"].remove(label)
 
         cm.data['ai-config.json'] = json.dumps(ai_config, indent=2)
         v1.patch_namespaced_config_map(name=config_map_name, namespace=namespace, body=cm)
 
-        print(f" Successfully revoked trusted identity: {label}")
+        print(f"✅ Successfully revoked trusted identity: {label}")
         print(f"Kubernetes is propagating the update. The AI will now evaluate this workload.")
 
     except Exception as e:
@@ -104,16 +86,6 @@ def remove_trusted_label(label: str, namespace: str = "auranet-namespace"):
         sys.exit(1)
 
 
-
-"""
-Executes a system command and streams its output.
-
-Used internally by the CLI to invoke external tools such as
-kubectl and helm.
-
-@param cmd Command arguments as a list of strings.
-@returns None
-"""
 def _run(cmd: list[str]):
     """Run a subprocess command, streaming output, and exit on failure."""
     print(f"$ {' '.join(cmd)}")
@@ -122,66 +94,34 @@ def _run(cmd: list[str]):
         print(f"❌ Command failed with exit code {result.returncode}: {' '.join(cmd)}")
         sys.exit(result.returncode)
 
-"""
-Applies AuraNet encryption Kubernetes manifests.
 
-Deploys the encryption component using kubectl because it is managed
-as raw Kubernetes manifests rather than a Helm chart.
-
-@param chart_path Path to the Kubernetes manifest directory.
-@param namespace Target Kubernetes namespace.
-@returns None
-"""
-def apply_encryption_chart(chart_path: str, namespace: str):
+def install_encryption(release_name: str, chart_path: str, namespace: str, create_namespace: bool):
     """
-    Applies the auranet-encryption chart directly via kubectl, since it is a
-    plain set of Kubernetes manifests and is NOT packaged as a Helm chart.
+    Installs the auranet-encryption Helm deployment.
     """
-    print(f"Applying auranet-encryption manifests from '{chart_path}' (kubectl, not Helm)...")
-    cmd = ["kubectl", "apply", "-f", chart_path, "-n", namespace]
+    print(f"Installing '{release_name}' Helm release from '{chart_path}'...")
+    cmd = ["helm", "install", release_name, chart_path, "-n", namespace]
+    if create_namespace:
+        cmd.append("--create-namespace")
+    
     _run(cmd)
-    print("✅ auranet-encryption manifests applied.")
+    print("✅ auranet-encryption Helm release installed.")
 
-"""
-Removes AuraNet encryption Kubernetes manifests.
 
-Deletes previously deployed encryption resources from the cluster.
-
-@param chart_path Path to the Kubernetes manifest directory.
-@param namespace Target Kubernetes namespace.
-@returns None
-"""
-def delete_encryption_chart(chart_path: str, namespace: str):
+def uninstall_encryption(release_name: str, namespace: str):
     """
-    Removes the auranet-encryption manifests via kubectl delete.
+    Uninstalls the auranet-encryption Helm deployment.
     """
-    print(f"Deleting auranet-encryption manifests from '{chart_path}' (kubectl, not Helm)...")
-    cmd = ["kubectl", "delete", "-f", chart_path, "-n", namespace, "--ignore-not-found"]
+    print(f"Uninstalling '{release_name}' Helm release from namespace '{namespace}'...")
+    cmd = ["helm", "uninstall", release_name, "-n", namespace]
     _run(cmd)
-    print("✅ auranet-encryption manifests removed.")
+    print("✅ auranet-encryption Helm release uninstalled.")
 
 
-"""
-Installs the AuraNet core Helm deployment.
-
-Creates the Helm release, optionally creates the namespace,
-applies custom values, and optionally deploys encryption resources.
-
-@param release_name Helm release name.
-@param chart_path Local Helm chart path.
-@param namespace Target Kubernetes namespace.
-@param create_namespace Whether to create the namespace automatically.
-@param values_file Optional Helm values override file.
-@param encryption Whether to deploy encryption manifests.
-@param encryption_path Path to encryption manifests.
-@returns None
-"""
 def install_core(release_name: str, chart_path: str, namespace: str,
-                  create_namespace: bool, values_file: str | None,
-                  encryption: bool, encryption_path: str):
+                  create_namespace: bool, values_file: str | None):
     """
-    Installs the auranet-core chart (a local, unpackaged Helm chart directory)
-    using `helm install`.
+    Installs the auranet-core Helm chart.
     """
     print(f"Installing Helm release '{release_name}' from local chart '{chart_path}'...")
 
@@ -194,21 +134,8 @@ def install_core(release_name: str, chart_path: str, namespace: str,
     _run(cmd)
     print(f"✅ auranet-core installed as Helm release '{release_name}' in namespace '{namespace}'.")
 
-    if encryption:
-        apply_encryption_chart(encryption_path, namespace)
 
-"""
-Uninstalls the AuraNet core Helm deployment.
-
-Removes the Helm release and optionally removes encryption resources.
-
-@param release_name Helm release name.
-@param namespace Kubernetes namespace containing the release.
-@param encryption Whether to remove encryption manifests.
-@param encryption_path Path to encryption manifests.
-@returns None
-"""
-def uninstall_core(release_name: str, namespace: str, encryption: bool, encryption_path: str):
+def uninstall_core(release_name: str, namespace: str):
     """
     Uninstalls the auranet-core Helm release.
     """
@@ -217,17 +144,20 @@ def uninstall_core(release_name: str, namespace: str, encryption: bool, encrypti
     _run(cmd)
     print(f"✅ auranet-core Helm release '{release_name}' uninstalled.")
 
-    if encryption:
-        delete_encryption_chart(encryption_path, namespace)
-
-
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="auranet-cli",
         description="AuraNet Command Line Interface",
     )
+    
+    # Adding the version flag with Bold Cyan ANSI color codes
+    parser.add_argument(
+        "-v", "--version", 
+        action="version", 
+        version=f"\033[1;36mAuraNet CLI {VERSION}\033[0m"
+    )
+
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # The 'trust' command
@@ -241,11 +171,11 @@ if __name__ == "__main__":
     untrust_parser.add_argument("--namespace", default="auranet-namespace", help="The namespace AuraNet is deployed in")
 
     # The 'install' command
-    install_parser = subparsers.add_parser("install", help="Install the auranet-core chart via Helm (local chart).")
+    install_parser = subparsers.add_parser("install", help="Install auranet components via Helm.")
     install_parser.add_argument("--chart-path", default="../auranet-core/chart",
                                  help="Path to the local auranet-core Helm chart directory")
     install_parser.add_argument("--release-name", default="auranet-core",
-                                 help="Helm release name to use")
+                                 help="Helm release name to use for the core deployment")
     install_parser.add_argument("--namespace", default="auranet-namespace",
                                  help="The namespace to install AuraNet into")
     install_parser.add_argument("--create-namespace", action="store_true",
@@ -253,20 +183,22 @@ if __name__ == "__main__":
     install_parser.add_argument("--values", dest="values_file", default=None,
                                  help="Optional Helm values file to pass with -f")
     install_parser.add_argument("--encryption", action="store_true",
-                                 help="Also apply the auranet-encryption manifests (kubectl, not Helm)")
-    install_parser.add_argument("--encryption-path", default="../auranet-encryption/chart",
-                                 help="Path to the local auranet-encryption manifests directory")
+                                 help="Install ONLY the encryption chart, skipping the core chart")
+    install_parser.add_argument("--encryption-path", default="../PQC/auranet-encryption/",
+                                 help="Path to the local auranet-encryption Helm chart directory")
+    install_parser.add_argument("--encryption-release-name", default="auranet-encryption",
+                                 help="Helm release name for the encryption deployment")
 
     # The 'uninstall' command
-    uninstall_parser = subparsers.add_parser("uninstall", help="Uninstall the auranet-core Helm release.")
+    uninstall_parser = subparsers.add_parser("uninstall", help="Uninstall auranet components via Helm.")
     uninstall_parser.add_argument("--release-name", default="auranet-core",
-                                   help="Helm release name to uninstall")
+                                   help="Helm release name for the core deployment to uninstall")
     uninstall_parser.add_argument("--namespace", default="auranet-namespace",
                                    help="The namespace AuraNet is deployed in")
     uninstall_parser.add_argument("--encryption", action="store_true",
-                                   help="Also remove the auranet-encryption manifests (kubectl, not Helm)")
-    uninstall_parser.add_argument("--encryption-path", default="../auranet-encryption/charts",
-                                   help="Path to the local auranet-encryption manifests directory")
+                                   help="Uninstall ONLY the encryption chart, skipping the core chart")
+    uninstall_parser.add_argument("--encryption-release-name", default="auranet-encryption",
+                                   help="Helm release name for the encryption deployment to uninstall")
 
     args = parser.parse_args()
 
@@ -275,30 +207,43 @@ if __name__ == "__main__":
     elif args.command == "untrust":
         remove_trusted_label(args.label, args.namespace)
     elif args.command == "install":
-        install_core(
-            release_name=args.release_name,
-            chart_path=args.chart_path,
-            namespace=args.namespace,
-            create_namespace=args.create_namespace,
-            values_file=args.values_file,
-            encryption=args.encryption,
-            encryption_path=args.encryption_path,
-        )
+        # Decoupled installation logic
+        if args.encryption:
+            install_encryption(
+                release_name=args.encryption_release_name,
+                chart_path=args.encryption_path,
+                namespace=args.namespace,
+                create_namespace=args.create_namespace
+            )
+        else:
+            install_core(
+                release_name=args.release_name,
+                chart_path=args.chart_path,
+                namespace=args.namespace,
+                create_namespace=args.create_namespace,
+                values_file=args.values_file
+            )
     elif args.command == "uninstall":
-        uninstall_core(
-            release_name=args.release_name,
-            namespace=args.namespace,
-            encryption=args.encryption,
-            encryption_path=args.encryption_path,
-        )
+        # Decoupled uninstallation logic
+        if args.encryption:
+            uninstall_encryption(
+                release_name=args.encryption_release_name,
+                namespace=args.namespace
+            )
+        else:
+            uninstall_core(
+                release_name=args.release_name,
+                namespace=args.namespace
+            )
     else:
+        # Failsafe if run without a subcommand and no --version flag
         parser.print_help()
 
 
 
 
 
-# add version option
 # add config option
 # add stress test option 
 # add restart option 
+# print ascci logo at the start
