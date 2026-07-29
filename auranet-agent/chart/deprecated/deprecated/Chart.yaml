@@ -1,0 +1,6 @@
+apiVersion: v2
+name: auranet-agent
+description: The node-level security agent for AuraNet, including Runtime eBPF forwarders and AI engines.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
