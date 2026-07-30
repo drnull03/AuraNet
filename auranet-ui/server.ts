@@ -69,6 +69,55 @@ const execPromise = util.promisify(exec);
 app.use(express.json());
 
 
+
+let cachedNaiveEdges: Array<{source: string, target: string}> = [];
+const configPath = process.env.CONFIG_PATH || path.join(process.cwd(), 'naive.conf');
+const configDir = path.dirname(configPath);
+
+function loadNaiveConfig() {
+  try {
+    if (fs.existsSync(configPath)) {
+      // Resolve real path to handle K8s atomic symlink swaps
+      const realPath = fs.realpathSync(configPath);
+      const fileContent = fs.readFileSync(realPath, 'utf-8');
+      const lines = fileContent.split('\n');
+      const newEdges: Array<{source: string, target: string}> = [];
+      
+      lines.forEach((line) => {
+        const cleanLine = line.trim();
+        if (!cleanLine || cleanLine.startsWith('#')) return;
+
+        const parts = cleanLine.split('->').map(s => s.trim());
+        if (parts.length === 2) {
+          const sourceId = parts[0].replace(/^\d+\.\s*/, '');
+          const targetId = parts[1].split(':')[0];
+          newEdges.push({ source: sourceId, target: targetId });
+        }
+      });
+      cachedNaiveEdges = newEdges;
+      console.log(`[Server] 🔄 Topology hot-reloaded from ConfigMap! Loaded ${cachedNaiveEdges.length} edges.`);
+    }
+  } catch (err) {
+    // Ignore transient read errors during the split-second Kubelet atomic swap
+  }
+}
+
+// Watch the directory for K8s ConfigMap updates
+if (fs.existsSync(configDir)) {
+  fs.watch(configDir, (eventType, filename) => {
+    if (filename && filename.includes('..data')) {
+      // 200ms delay ensures Kubernetes finishes writing the symlink
+      setTimeout(() => {
+        loadNaiveConfig();
+      }, 200);
+    }
+  });
+}
+
+// Initial load on boot
+loadNaiveConfig();
+
+
 const sseClients = new Set<express.Response>();
 /**
  * @brief Creates a Server-Sent Events connection for live telemetry.
@@ -238,7 +287,7 @@ app.delete('/api/pod/:id', async (req, res) => {
  */
 app.get('/api/topology', async (req, res) => {
   try {
-    // 1. PROBE AURANET HEALTH
+    // PROBE AURANET HEALTH
     let isAuraNetHealthy = false;
     let auranetNodes: any[] = [];
     try {
@@ -263,7 +312,7 @@ app.get('/api/topology', async (req, res) => {
       console.warn("Could not reach auranet-namespace");
     }
 
-    // 2. FETCH REAL WORKLOADS (from default namespace)
+    // FETCH REAL WORKLOADS (from default namespace)
     const { stdout: podOut } = await execPromise('kubectl get pods -n default -o json');
     const pods = JSON.parse(podOut).items;
     
@@ -289,29 +338,14 @@ app.get('/api/topology', async (req, res) => {
       }
     });
 
-    // 3. APPLY EDGES FROM NAIVE.CONF
-    const configPath = process.env.CONFIG_PATH || path.join(process.cwd(), 'naive.conf');
-    if (fs.existsSync(configPath)) {
-      const fileContent = fs.readFileSync(configPath, 'utf-8');
-      const lines = fileContent.split('\n');
-      
-      lines.forEach((line) => {
-        const cleanLine = line.trim();
-        if (!cleanLine || cleanLine.startsWith('#')) return;
-
-        const parts = cleanLine.split('->').map(s => s.trim());
-        if (parts.length === 2) {
-          const sourceId = parts[0].replace(/^\d+\.\s*/, '');
-          const targetId = parts[1].split(':')[0];
-
-          if (nodeMap.has(sourceId)) {
-            nodeMap.get(sourceId).connections.push(targetId);
-          }
-        }
-      });
+   // APPLY EDGES FROM IN-MEMORY CACHE
+   cachedNaiveEdges.forEach((edge) => {
+    if (nodeMap.has(edge.source)) {
+      nodeMap.get(edge.source).connections.push(edge.target);
     }
+  });
 
-    // 4. FETCH REAL KUBERNETES NODES
+    // FETCH REAL KUBERNETES NODES
     let k8sNodes: any[] = [];
     try {
       const { stdout: nodeOut } = await execPromise('kubectl get nodes -o json', { maxBuffer: 1024 * 1024 * 10 });
