@@ -194,10 +194,10 @@ def update_ztc_config(window_time: str, threshold: str, namespace: str):
 
 
 
-def update_bootstrap_rules(file_path: str, release_name: str, chart_path: str, namespace: str):
+def update_bootstrap_rules(file_path: str, namespace: str):
     """
     Reads a local configuration file, validates the rule syntax, 
-    and applies it via a Helm upgrade to trigger the bootstrap Job.
+    and applies it via Helm to both the bootstrap job and the UI topology.
     """
     if not os.path.exists(file_path):
         print(f"❌ Error: File '{file_path}' not found.")
@@ -213,7 +213,8 @@ def update_bootstrap_rules(file_path: str, release_name: str, chart_path: str, n
     valid_rules = 0
     for i, line in enumerate(lines):
         trimmed = line.strip()
-        if not trimmed:
+        # Skip empty lines and comments
+        if not trimmed or trimmed.startswith('#'):
             continue
         
         if not rule_pattern.match(trimmed):
@@ -227,19 +228,37 @@ def update_bootstrap_rules(file_path: str, release_name: str, chart_path: str, n
         print("⚠️  Warning: No valid rules found in the file. Exiting.")
         sys.exit(0)
 
-    print(f"✅ Validated {valid_rules} rules locally. Applying to cluster via Helm...")
+    print(f"✅ Validated {valid_rules} rules locally. Synchronizing cluster...")
 
-    # Uses subprocess to safely pass the multi-line string directly to Helm
-    cmd = [
-        "helm", "upgrade", release_name, chart_path,
-        "-n", namespace,
-        "--reuse-values",
-        "--set", f"naiveConf={content}"
-    ]
-    _run(cmd)
-    print("✅ Bootstrap rules updated. Kubernetes is recreating the Job.")
+    # Create temporary YAML for Bootstrap (uses naiveConf)
+    boot_yaml = "naiveConf: |-\n"
+    for line in lines:
+        boot_yaml += f"  {line}\n"
+        
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp_boot:
+        tmp_boot.write(boot_yaml)
+        boot_path = tmp_boot.name
 
+    # Create temporary YAML for UI (uses topologyConfig)
+    ui_yaml = "topologyConfig: |-\n"
+    for line in lines:
+        ui_yaml += f"  {line}\n"
+        
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp_ui:
+        tmp_ui.write(ui_yaml)
+        ui_path = tmp_ui.name
 
+    try:
+        print(" Pushing rules to AuraNet Bootstrap...")
+        _run(["helm", "upgrade", "auranet-bootstrap-chart", "../auranet-bootstrap/chart", "-n", namespace, "--reuse-values", "-f", boot_path])
+        
+        print("\n Pushing rules to AuraNet UI...")
+        _run(["helm", "upgrade", "auranet-ui", "../auranet-ui/chart", "-n", namespace, "--reuse-values", "-f", ui_path])
+        
+        print("\n✅ Topology synchronized successfully across Bootstrap and UI.")
+    finally:
+        os.remove(boot_path)
+        os.remove(ui_path)
 
 def run_stress_test(test_type: str):
     """
@@ -479,11 +498,10 @@ if __name__ == "__main__":
     )
 
     # The 'bootstrap-rules' command
-    bootstrap_parser = subparsers.add_parser("bootstrap-rules", help="Update naive.conf network policies from a local file.")
+    # The 'bootstrap-rules' command
+    bootstrap_parser = subparsers.add_parser("bootstrap-rules", help="Update naive.conf network policies for both Bootstrap and UI.")
     bootstrap_parser.add_argument("file", help="Path to the local .conf file containing the new rules")
-    bootstrap_parser.add_argument("--release-name", default="auranet-bootstrap-chart", help="Helm release name for the bootstrap deployment")
-    bootstrap_parser.add_argument("--chart-path", default="../auranet-bootstrap/chart", help="Path to the local bootstrap Helm chart")
-    bootstrap_parser.add_argument("--namespace", default="auranet-namespace", help="The namespace the bootstrap job runs in")
+    bootstrap_parser.add_argument("--namespace", default="auranet-namespace", help="The namespace the services run in")
 
     # The 'threat-matrix' command
     threat_parser = subparsers.add_parser("threat-matrix", help="Update the Threat Matrix for both AutoHeal and ZTC simultaneously.")
@@ -580,8 +598,6 @@ if __name__ == "__main__":
     elif args.command == "bootstrap-rules":
         update_bootstrap_rules(
             file_path=args.file,
-            release_name=args.release_name,
-            chart_path=args.chart_path,
             namespace=args.namespace
         )
 
