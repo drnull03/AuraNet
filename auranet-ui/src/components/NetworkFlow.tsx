@@ -622,12 +622,36 @@ export default function NetworkFlow({
                   <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
                     <button
                       onClick={async () => {
-                        // Optimistically set status to offline to instantly sever connections and turn it red
+                        // 1. Get or prompt for the Admin Token
+                        let token = localStorage.getItem('auranet_admin_token');
+                        if (!token) {
+                          token = prompt('Enter Admin Token to authorize destructive cluster actions:');
+                          if (!token) return; // User canceled the prompt
+                          localStorage.setItem('auranet_admin_token', token);
+                        }
+
+                        // 2. Optimistically set status to offline to instantly sever connections
                         setSystemNodes(prev => prev.map(n => n.id === selectedNode.id ? { ...n, status: 'offline' } : n));
+                        
                         try {
-                          await fetch(`/api/pod/${selectedNode.id}`, { method: 'DELETE' });
+                          const res = await fetch(`/api/pod/${selectedNode.id}`, { 
+                            method: 'DELETE',
+                            headers: { 'x-api-key': token }
+                          });
+                          
+                          if (res.status === 401) {
+                            // Token was wrong. Wipe it and revert the UI change.
+                            localStorage.removeItem('auranet_admin_token');
+                            alert('Unauthorized: Invalid Admin Token.');
+                            setSystemNodes(prev => prev.map(n => n.id === selectedNode.id ? { ...n, status: 'active' } : n));
+                            return;
+                          }
+                          
+                          if (!res.ok) throw new Error('Failed to delete pod');
+                          
                         } catch (err) {
                           console.error("Failed to delete pod:", err);
+                          setSystemNodes(prev => prev.map(n => n.id === selectedNode.id ? { ...n, status: 'active' } : n));
                         }
                       }}
                       className="px-3 py-1.5 text-[10px] font-mono font-bold bg-red-50 hover:bg-red-100 border border-red-200 rounded text-red-600 cursor-pointer transition-colors"

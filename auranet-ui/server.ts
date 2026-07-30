@@ -227,6 +227,21 @@ async function startNatsListener() {
 // Initialize the background listener
 startNatsListener();
 
+
+// Authentication Middleware 
+const requireAdminToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const providedToken = req.headers['x-api-key'];
+  const expectedToken = process.env.UI_ADMIN_TOKEN || 'auranet-default-secret';
+  
+  if (!providedToken || providedToken !== expectedToken) {
+    res.status(401).json({ error: 'Unauthorized: Invalid Admin Token' });
+    return;
+  }
+  
+  next();
+};
+
+
 /**
  * @brief Deletes a Kubernetes workload pod.
  *
@@ -243,7 +258,7 @@ startNatsListener();
  *
  * @return JSON deletion status.
  */
-app.delete('/api/pod/:id', async (req, res) => {
+app.delete('/api/pod/:id',requireAdminToken ,async (req, res) => {
   const target = req.params.id;
   try {
     const podsRes = await k8sCoreApi.listNamespacedPod('default');
