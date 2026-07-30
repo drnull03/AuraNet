@@ -62,6 +62,17 @@ import { exec } from "child_process";
 import { connect, StringCodec } from "nats";
 import os from "os";
 
+
+import * as k8s from '@kubernetes/client-node';
+
+const kc = new k8s.KubeConfig();
+if (process.env.KUBERNETES_SERVICE_HOST) {
+    kc.loadFromCluster();
+} else {
+    kc.loadFromDefault();
+}
+const k8sCoreApi = kc.makeApiClient(k8s.CoreV1Api);
+
 const app = express();
 const PORT = 3000;
 const execPromise = util.promisify(exec);
@@ -235,18 +246,18 @@ startNatsListener();
 app.delete('/api/pod/:id', async (req, res) => {
   const target = req.params.id;
   try {
-    const { stdout: podOut } = await execPromise('kubectl get pods -n default -o json');
-    const pods = JSON.parse(podOut).items;
+    const podsRes = await k8sCoreApi.listNamespacedPod('default');
+    const pods = podsRes.body.items;
     
     // Find the exact pod name that matches our UI base name
     const podToDelete = pods.find((pod: any) => {
-      const baseName = pod.metadata.labels?.app || pod.metadata.name.split('-').slice(0, -2).join('-');
+      const baseName = pod.metadata?.labels?.app || pod.metadata?.name?.split('-').slice(0, -2).join('-');
       return baseName === target;
     });
 
-    if (podToDelete) {
+    if (podToDelete && podToDelete.metadata?.name) {
       // Execute the delete without awaiting so the UI gets a fast response
-      execPromise(`kubectl delete pod ${podToDelete.metadata.name} -n default`).catch(e => console.error(e));
+      k8sCoreApi.deleteNamespacedPod(podToDelete.metadata.name, 'default').catch(e => console.error(e));
       res.json({ success: true, message: `Pod ${podToDelete.metadata.name} deletion initiated.` });
     } else {
       res.status(404).json({ error: "Pod not found in cluster" });
@@ -286,101 +297,100 @@ app.delete('/api/pod/:id', async (req, res) => {
  * @return JSON topology representation.
  */
 app.get('/api/topology', async (req, res) => {
+  let isAuraNetHealthy = false;
+  let auranetNodes: any[] = [];
+  let k8sNodes: any[] = [];
+  const nodeMap = new Map<string, any>();
+
+  // 1. PROBE AURANET HEALTH
   try {
-    // PROBE AURANET HEALTH
-    let isAuraNetHealthy = false;
-    let auranetNodes: any[] = [];
-    try {
-      const { stdout: auraOut } = await execPromise('kubectl get pods -n auranet-namespace -o json');
-      const auraPods = JSON.parse(auraOut).items;
-      // It is healthy if the namespace has pods and at least one is Running
-      isAuraNetHealthy = auraPods.length > 0 && auraPods.some((p: any) => p.status.phase === 'Running');
-      
-      auranetNodes = auraPods.map((pod: any) => {
-        const name = pod.metadata.name;
-        return {
-          id: pod.metadata.uid || name,
-          name: name,
-          status: pod.status.phase === 'Running' ? 'active' : 'offline',
-          ip: pod.status.podIP || 'Pending',
-          role: name.includes('controller') ? 'controller' : 'engine',
-          cpu: Math.floor(Math.random() * 10) + 5,
-          memory: Math.floor(Math.random() * 20) + 15
-        };
-      });
-    } catch (e) {
-      console.warn("Could not reach auranet-namespace");
-    }
-
-    // FETCH REAL WORKLOADS (from default namespace)
-    const { stdout: podOut } = await execPromise('kubectl get pods -n default -o json');
-    const pods = JSON.parse(podOut).items;
+    const auraRes = await k8sCoreApi.listNamespacedPod('auranet-namespace');
+    const auraPods = auraRes.body.items || [];
     
-    const nodeMap = new Map<string, any>();
+    isAuraNetHealthy = auraPods.length > 0 && auraPods.some((p: any) => p.status?.phase === 'Running');
+    
+    auranetNodes = auraPods.map((pod: any) => {
+      const name = pod.metadata?.name || 'unknown';
+      return {
+        id: pod.metadata?.uid || name,
+        name: name,
+        status: pod.status?.phase === 'Running' ? 'active' : 'offline',
+        ip: pod.status?.podIP || 'Pending',
+        role: name.includes('controller') ? 'controller' : 'engine',
+        cpu: Math.floor(Math.random() * 10) + 5,
+        memory: Math.floor(Math.random() * 20) + 15
+      };
+    });
+  } catch (e) {
+    console.warn("[Topology] Could not reach auranet-namespace", e);
+  }
 
+  // 2. FETCH REAL WORKLOADS (from default namespace)
+  try {
+    const podsRes = await k8sCoreApi.listNamespacedPod('default');
+    const pods = podsRes.body.items || [];
+    
     // Map actual K8s pods to UI nodes
     pods.forEach((pod: any) => {
-      const baseName = pod.metadata.labels?.app || pod.metadata.name.split('-').slice(0, -2).join('-');
+      const baseName = pod.metadata?.labels?.app || pod.metadata?.name?.split('-').slice(0, -2).join('-');
       
-      if (!nodeMap.has(baseName)) {
+      if (baseName && !nodeMap.has(baseName)) {
         nodeMap.set(baseName, {
           id: baseName,
           label: baseName,
           type: baseName.includes('gateway') ? 'gateway' : baseName.includes('db') ? 'compute' : 'sensor',
-          status: pod.status.phase === 'Running' ? 'active' : 'offline',
+          status: pod.status?.phase === 'Running' ? 'active' : 'offline',
           latency: 12, 
           region: 'Local Cluster',
-          ip: pod.status.podIP || 'Pending',
+          ip: pod.status?.podIP || 'Pending',
           cpu: 35,
           memory: 45,
           connections: []
         });
       }
     });
+  } catch (e) {
+    console.error("[Topology] Failed to fetch default workloads:", e);
+  }
 
-   // APPLY EDGES FROM IN-MEMORY CACHE
-   cachedNaiveEdges.forEach((edge) => {
+  // 3. APPLY EDGES FROM IN-MEMORY CACHE
+  cachedNaiveEdges.forEach((edge) => {
     if (nodeMap.has(edge.source)) {
       nodeMap.get(edge.source).connections.push(edge.target);
     }
   });
 
-    // FETCH REAL KUBERNETES NODES
-    let k8sNodes: any[] = [];
-    try {
-      const { stdout: nodeOut } = await execPromise('kubectl get nodes -o json', { maxBuffer: 1024 * 1024 * 10 });
-      const nodesData = JSON.parse(nodeOut);
-      k8sNodes = nodesData.items.map((n: any) => {
-        const readyCondition = n.status?.conditions?.find((c: any) => c.type === 'Ready');
-        const isReady = readyCondition?.status === 'True';
-        const internalIp = n.status?.addresses?.find((a: any) => a.type === 'InternalIP')?.address || 'Unknown';
+  // 4. FETCH REAL KUBERNETES NODES
+  try {
+    const nodesRes = await k8sCoreApi.listNode();
+    const nodesData = nodesRes.body.items || [];
+    
+    k8sNodes = nodesData.map((n: any) => {
+      const readyCondition = n.status?.conditions?.find((c: any) => c.type === 'Ready');
+      const isReady = readyCondition?.status === 'True';
+      const internalIp = n.status?.addresses?.find((a: any) => a.type === 'InternalIP')?.address || 'Unknown';
 
-        return {
-          id: n.metadata.uid || n.metadata.name,
-          name: n.metadata.name,
-          status: isReady ? 'active' : 'offline',
-          ip: internalIp,
-          cpu: Math.floor(Math.random() * 20) + 15,
-          memory: Math.floor(Math.random() * 30) + 30
-        };
-      });
-    } catch (e) {
-      console.warn("Could not fetch k8s nodes:", e);
-    }
-
-    res.json({ 
-      systemNodes: Array.from(nodeMap.values()),
-      k8sNodes,
-      auranetNodes,
-      auranetHealth: isAuraNetHealthy 
+      return {
+        id: n.metadata?.uid || n.metadata?.name,
+        name: n.metadata?.name,
+        status: isReady ? 'active' : 'offline',
+        ip: internalIp,
+        cpu: Math.floor(Math.random() * 20) + 15,
+        memory: Math.floor(Math.random() * 30) + 30
+      };
     });
-
-  } catch (error) {
-    console.error("Cluster topology fetch failed:", error);
-    res.status(500).json({ error: "Failed to read cluster state" });
+  } catch (e) {
+    console.warn("[Topology] Could not fetch k8s nodes:", e);
   }
-});
 
+  // 5. SEND THE RESPONSE
+  res.json({ 
+    systemNodes: Array.from(nodeMap.values()),
+    k8sNodes,
+    auranetNodes,
+    auranetHealth: isAuraNetHealthy 
+  });
+});
 
 
 
