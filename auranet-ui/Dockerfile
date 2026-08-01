@@ -1,6 +1,4 @@
-# ==========================================
 # Stage 1: Build the Application
-# ==========================================
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -16,9 +14,7 @@ COPY . .
 # and the Node.js backend to /dist/server.cjs
 RUN npm run build
 
-# ==========================================
 # Stage 2: Production Runtime Environment
-# ==========================================
 FROM node:20-alpine
 
 WORKDIR /app
