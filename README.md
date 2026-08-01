@@ -59,7 +59,7 @@ Start here — this is the most important section if you want to actually unders
 | SRS | ~~`./docs/SRS`~~ | **Deprecated** — do not use. The Software Requirements Specification now lives inside the Main Report. |
 | Extra screenshots ("fun tours") | `./docs/more_images` | Linux symlinks to additional screenshots taken throughout development. |
 | Obsidian notes | `./ObsidianNotes` | Personal notes written mostly *before* implementation began — useful for design intent and early thinking. |
-| Report images | `./docs` | Images extracted directly from the Main Report. |
+| Report images | `./docs/Images` | Images extracted directly from the Main Report. |
 
 ---
 
@@ -248,7 +248,7 @@ Feel free to fork the repo, submit issues, or open pull requests. See the `CONTR
 
 This project follows the same Code of Conduct as **Cilium**. See `CODE_OF_CONDUCT` for details.
 
-## ⚖️ License
+## License
 
 <p>
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"/>

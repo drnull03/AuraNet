@@ -317,7 +317,7 @@ app.get('/api/topology', async (req, res) => {
   let k8sNodes: any[] = [];
   const nodeMap = new Map<string, any>();
 
-  // 1. PROBE AURANET HEALTH
+  //  PROBE AURANET HEALTH
   try {
     const auraRes = await k8sCoreApi.listNamespacedPod('auranet-namespace');
     const auraPods = auraRes.body.items || [];
@@ -340,7 +340,7 @@ app.get('/api/topology', async (req, res) => {
     console.warn("[Topology] Could not reach auranet-namespace", e);
   }
 
-  // 2. FETCH REAL WORKLOADS (from default namespace)
+  // FETCH REAL WORKLOADS (from default namespace)
   try {
     const podsRes = await k8sCoreApi.listNamespacedPod('default');
     const pods = podsRes.body.items || [];
