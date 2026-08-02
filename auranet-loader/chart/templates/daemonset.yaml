@@ -1,32 +1,76 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: auranet-loader
-  namespace: auranet-namespace
+  name: {{ include "auranet-loader.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "auranet-loader.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      app: auranet-loader
+      {{- include "auranet-loader.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app: auranet-loader
+        {{- include "auranet-loader.selectorLabels" . | nindent 8 }}
     spec:
-      hostPID: true
+      serviceAccountName: {{ include "auranet-loader.serviceAccountName" . }}
+      hostPID: {{ .Values.hostPID }}
+      hostNetwork: {{ .Values.hostNetwork }}
+      
       tolerations:
-        - operator: Exists
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      
       containers:
         - name: loader
-          image: auranet-loader:latest
+          image: "{{ .Values.loader.image.repository }}:{{ .Values.loader.image.tag }}"
+          imagePullPolicy: {{ .Values.loader.image.pullPolicy }}
+          
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+            
           securityContext:
-            privileged: true
+            # This pulls 'privileged: true' from your values.yaml
+            privileged: {{ .Values.securityContext.privileged }}
+            
           volumeMounts:
-            # Crucial: Bidirectional mount allows pinning to persist on the host
+            # Crucial for eBPF map pinning
             - name: bpf-fs
               mountPath: /sys/fs/bpf
               mountPropagation: Bidirectional
+            # Required for eBPF compilation/loading
+            - name: lib-modules
+              mountPath: {{ .Values.kernelHeaders.libModules.mountPath }}
+              readOnly: true
+            - name: usr-src
+              mountPath: {{ .Values.kernelHeaders.usrSrc.mountPath }}
+              readOnly: true
+            {{- if .Values.btf.enabled }}
+            # Required for CO-RE (Compile Once - Run Everywhere)
+            - name: btf
+              mountPath: {{ .Values.btf.mountPath }}
+              readOnly: true
+            {{- end }}
+            
       volumes:
         - name: bpf-fs
           hostPath:
             path: /sys/fs/bpf
             type: DirectoryOrCreate
+        - name: lib-modules
+          hostPath:
+            path: {{ .Values.kernelHeaders.libModules.hostPath }}
+            type: Directory
+        - name: usr-src
+          hostPath:
+            path: {{ .Values.kernelHeaders.usrSrc.hostPath }}
+            type: Directory
+        {{- if .Values.btf.enabled }}
+        - name: btf
+          hostPath:
+            path: {{ .Values.btf.hostPath }}
+            type: FileOrCreate
+        {{- end }}
