@@ -19,7 +19,10 @@ k8s_provider = k8s.Provider(
 app_namespace = k8s.core.v1.Namespace(
     "auranet-app-namespace",
     metadata=k8s.meta.v1.ObjectMetaArgs(
-        name="auranet-namespace"
+        name="auranet-namespace",
+        labels={
+            "access-nats": "true" # Label used by NetworkPolicy
+        }
     ),
     opts=pulumi.ResourceOptions(provider=k8s_provider)
 )
@@ -33,17 +36,59 @@ nats_namespace = k8s.core.v1.Namespace(
     opts=pulumi.ResourceOptions(provider=k8s_provider)
 )
 
+
+nats_network_policy = k8s.networking.v1.NetworkPolicy(
+    "nats-network-policy",
+    metadata=k8s.meta.v1.ObjectMetaArgs(
+        name="nats-allow-app-namespace-only",
+        namespace=nats_namespace.metadata.name,
+    ),
+    spec=k8s.networking.v1.NetworkPolicySpecArgs(
+        # Empty pod_selector applies this policy to ALL pods in the auranet-messaging namespace
+        pod_selector=k8s.meta.v1.LabelSelectorArgs(), 
+        policy_types=["Ingress"],
+        ingress=[
+            k8s.networking.v1.NetworkPolicyIngressRuleArgs(
+                from_=[
+                    # Allow traffic from the auranet-namespace
+                    k8s.networking.v1.NetworkPolicyPeerArgs(
+                        namespace_selector=k8s.meta.v1.LabelSelectorArgs(
+                            match_labels={"access-nats": "true"}
+                        )
+                    ),
+                    # Allow traffic from other NATS pods in the same namespace (required for JetStream/clustering)
+                    k8s.networking.v1.NetworkPolicyPeerArgs(
+                        pod_selector=k8s.meta.v1.LabelSelectorArgs() 
+                    )
+                ],
+                # Explicitly open only the ports NATS uses
+                ports=[
+                    k8s.networking.v1.NetworkPolicyPortArgs(port=4222), # Client connections
+                    k8s.networking.v1.NetworkPolicyPortArgs(port=6222), # Routing / Clustering
+                    k8s.networking.v1.NetworkPolicyPortArgs(port=8222), # Monitoring
+                ]
+            )
+        ]
+    ),
+    opts=pulumi.ResourceOptions(
+        provider=k8s_provider, 
+        depends_on=[nats_namespace, app_namespace]
+    )
+)
+
+
+
 nats_release = k8s.helm.v3.Release(
     "auranet-nats-broker", # Pulumi logical name
     k8s.helm.v3.ReleaseArgs(
-        name="auranet-nats-broker", # 1. FORCE EXACT HELM RELEASE NAME
+        name="auranet-nats-broker", # FORCE EXACT HELM RELEASE NAME
         chart="nats",
         repository_opts=k8s.helm.v3.RepositoryOptsArgs(
             repo="https://nats-io.github.io/k8s/helm/charts/"
         ),
         namespace=nats_namespace.metadata.name,
         values={
-            "fullnameOverride": "auranet-nats-broker", # 2. FORCE EXACT K8S SERVICE NAME
+            "fullnameOverride": "auranet-nats-broker", # FORCE EXACT K8S SERVICE NAME
             "config": {             
                 "jetstream": {
                     "enabled": True
@@ -67,7 +112,7 @@ auranet_core_release = k8s.helm.v3.Release(
     ),
     opts=pulumi.ResourceOptions(
         provider=k8s_provider,
-        depends_on=[app_namespace, nats_release] 
+        depends_on=[app_namespace, nats_release, nats_network_policy] 
     )
 )
 
