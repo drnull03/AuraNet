@@ -265,6 +265,7 @@ async function startAutoHeal() {
         console.log("[AutoHeal] 🎧 Listening for ZTC Quarantine Orders...\n");
         const sub = nc.subscribe("auranet.commands.autoheal.>");
 
+        // In-memory tracker for applied patch file names
         const appliedPatches = new Set();
 
         for await (const msg of sub) {
@@ -274,30 +275,33 @@ async function startAutoHeal() {
             const targetPatch = determineVirtualPatch(command.threat_signatures);
 
             if (appliedPatches.has(targetPatch)) {
-                console.log(`\n[AutoHeal]  Patch file '${targetPatch}' is already active for ${workload}. Skipping redundant AutoHeal sequence.`);
+                console.log(`\n[AutoHeal] 🛡️ Patch file '${targetPatch}' is already active for ${workload}. Skipping redundant AutoHeal sequence.`);
                 
-                // Acknowledge to ZTC so it clears its internal locks, but do nothing else
-                nc.publish(`auranet.remediated.${workload}`, sc.encode(JSON.stringify({ status: "cleared" })));
+                nc.publish(`auranet.remediated.${workload}`, sc.encode(JSON.stringify({ 
+                    status: "skipped", 
+                    reason: "patch_already_active" 
+                })));
                 continue; 
             }
 
             console.log(`\n[AutoHeal] INITIATING PIPELINE FOR: ${workload}`);
             
             await applyQuarantine(workload);
-            
             await applyVirtualPatch(targetPatch);
             
+            // Record the patch file name in memory now that it is applied
             appliedPatches.add(targetPatch);
             
             await cycleWorkloadPods(workload);
             
-            console.log(`[AutoHeal] Waiting 5 seconds for propagation...`);
+            console.log(`[AutoHeal] ⏳ Waiting 5 seconds for propagation...`);
             await new Promise(resolve => setTimeout(resolve, 5000));
             
             await removeQuarantine(workload);
             
-            console.log(`[AutoHeal]  Pipeline complete. Threat neutralized for ${workload}.\n`);
+            console.log(`[AutoHeal] ✅ Pipeline complete. Threat neutralized for ${workload}.\n`);
 
+            // Standard full remediation sends "cleared"
             nc.publish(`auranet.remediated.${workload}`, sc.encode(JSON.stringify({ status: "cleared" })));
         }
     } catch (err) {

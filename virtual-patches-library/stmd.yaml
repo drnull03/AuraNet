@@ -1,0 +1,24 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  # CHANGED: This name matches the permissive baseline exactly
+  name: bootstrap-allow-api-gateway-to-account-service
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app: account-service
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app: api-gateway
+    toPorts:
+    - ports:
+      - port: "5000"
+        protocol: TCP
+      rules:
+        http:
+        - method: "GET"
+          path: "^/health$"
+        - method: "GET"
+          path: "^/api/accounts[?]id=[0-9]+$"
