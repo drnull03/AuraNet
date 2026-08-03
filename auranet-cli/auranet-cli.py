@@ -194,7 +194,7 @@ def update_ztc_config(window_time: str, threshold: str, namespace: str):
 
 
 
-def update_bootstrap_rules(file_path: str, namespace: str):
+def update_bootstrap_rules(file_path: str, namespace: str, local_ui_path: str = None):
     """
     Reads a local configuration file, validates the rule syntax, 
     and applies it via Helm to both the bootstrap job and the UI topology.
@@ -250,12 +250,19 @@ def update_bootstrap_rules(file_path: str, namespace: str):
 
     try:
         print(" Pushing rules to AuraNet Bootstrap...")
-        _run(["helm", "upgrade", "auranet-bootstrap-chart", "../auranet-bootstrap/chart", "-n", namespace, "--reuse-values", "-f", boot_path])
+        _run(["helm", "upgrade", "auranet-bootstrap", "../auranet-bootstrap/chart", "-n", namespace, "--reuse-values", "-f", boot_path])
         
-        print("\n Pushing rules to AuraNet UI...")
-        _run(["helm", "upgrade", "auranet-ui", "../auranet-ui/chart", "-n", namespace, "--reuse-values", "-f", ui_path])
-        
-        print("\n✅ Topology synchronized successfully across Bootstrap and UI.")
+        if local_ui_path:
+            print(f"\n Pushing rules locally to {local_ui_path}...")
+            # Simply overwrite the local UI file directly
+            with open(local_ui_path, 'w') as f_out:
+                with open(file_path, 'r') as f_in:
+                    f_out.write(f_in.read())
+            print("\n✅ Topology synchronized successfully across Bootstrap (K8s) and Local UI.")
+        else:
+            print("\n Pushing rules to AuraNet UI...")
+            _run(["helm", "upgrade", "auranet-ui", "../auranet-ui/chart", "-n", namespace, "--reuse-values", "-f", ui_path])
+            print("\n✅ Topology synchronized successfully across Bootstrap and K8s UI.")
     finally:
         os.remove(boot_path)
         os.remove(ui_path)
@@ -502,6 +509,7 @@ if __name__ == "__main__":
     bootstrap_parser = subparsers.add_parser("bootstrap-rules", help="Update naive.conf network policies for both Bootstrap and UI.")
     bootstrap_parser.add_argument("file", help="Path to the local .conf file containing the new rules")
     bootstrap_parser.add_argument("--namespace", default="auranet-namespace", help="The namespace the services run in")
+    bootstrap_parser.add_argument("--local-ui", default="../auranet-ui/naive.conf", help="Path to the local UI naive.conf file (skips K8s UI deployment)")
 
     # The 'threat-matrix' command
     threat_parser = subparsers.add_parser("threat-matrix", help="Update the Threat Matrix for both AutoHeal and ZTC simultaneously.")
@@ -598,7 +606,8 @@ if __name__ == "__main__":
     elif args.command == "bootstrap-rules":
         update_bootstrap_rules(
             file_path=args.file,
-            namespace=args.namespace
+            namespace=args.namespace,
+            local_ui_path=args.local_ui
         )
 
     elif args.command == "threat-matrix":

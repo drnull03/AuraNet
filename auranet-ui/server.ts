@@ -114,10 +114,12 @@ function loadNaiveConfig() {
 }
 
 // Watch the directory for K8s ConfigMap updates
+
+const baseFileName = path.basename(configPath);
 if (fs.existsSync(configDir)) {
   fs.watch(configDir, (eventType, filename) => {
-    if (filename && filename.includes('..data')) {
-      // 200ms delay ensures Kubernetes finishes writing the symlink
+    if (filename && (filename.includes('..data') || filename === baseFileName)) {
+      // 200ms delay ensures the file write or symlink completes
       setTimeout(() => {
         loadNaiveConfig();
       }, 200);
