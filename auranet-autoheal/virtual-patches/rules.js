@@ -1,44 +1,37 @@
-/**
- * @file rules.js
- * @brief Virtual patch selection engine.
- *
- * Determines the most appropriate virtual patch to deploy based on
- * detected threat signatures and the configured threat severity matrix.
- */
 const fs = require('fs');
 const path = require('path');
 const { matrixState } = require('./threat-parser');
-// The mapping now includes a 'severity' score (1-100)
 
-
-//now we are only picking the highest severity to apply a patch too 
-
-//we are gonna add more of these 
-//when using the LLM approach 
-//or cloud flare method we use the full context of the array
-
-
-
-
-
+/**
+ * Dynamically checks if a threat signature belongs to the Runtime branch
+ * based on its prefix. Network/AI threats always start with 'l7_', 
+ * 'symbolic_', or 'network_'.
+ * 
+ * @param {string[]} threatSignatures Array of detected threat signatures.
+ * @returns {boolean} True if a runtime threat is detected.
+ */
+function isRuntimeThreat(threatSignatures) {
+    if (!threatSignatures || threatSignatures.length === 0) return false;
+    
+    return threatSignatures.some(threat => {
+        const isNetwork = threat.startsWith('l7_') || 
+                          threat.startsWith('symbolic_') || 
+                          threat.startsWith('network_') ||
+                          threat === 'unknown_anomaly'; // Default fallback is network
+        return !isNetwork;
+    });
+}
 
 /**
  * Determines the virtual patch to apply for a detected attack.
- *
- * The current implementation selects the threat with the highest
- * configured severity and returns the corresponding patch file.
- * If no matching patch exists, a fallback patch is returned.
  *
  * @param {string[]} threatSignatures Array of detected threat signatures.
  * @returns {string} Name of the virtual patch YAML file to deploy.
  */
 function determineVirtualPatch(threatSignatures) {
     const THREAT_MATRIX = matrixState.current;
-    
-    // Default fallback values
     const fallbackPatch = "unknown_anomaly_patch.yaml";
     
-    //  Fallback if no specific signatures are provided
     if (!threatSignatures || threatSignatures.length === 0) {
         return fallbackPatch;
     }
@@ -46,7 +39,6 @@ function determineVirtualPatch(threatSignatures) {
     let highestSeverity = -1;
     let selectedThreat = "unknown_anomaly";
 
-    //  Loop through threats to find the highest severity
     for (const threat of threatSignatures) {
         const severity = THREAT_MATRIX[threat] || THREAT_MATRIX["unknown_anomaly"];
         
@@ -56,7 +48,6 @@ function determineVirtualPatch(threatSignatures) {
         }
     }
 
-    //  Construct filename and verify existence
     const patchFileName = `${selectedThreat}_patch.yaml`;
     const patchPath = path.join(__dirname, patchFileName);
 
@@ -70,5 +61,6 @@ function determineVirtualPatch(threatSignatures) {
 }
 
 module.exports = {
-    determineVirtualPatch
+    determineVirtualPatch,
+    isRuntimeThreat
 };

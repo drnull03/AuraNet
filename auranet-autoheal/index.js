@@ -22,7 +22,7 @@ const path = require("path");
 const { connect, StringCodec } = require("nats");
 const k8s = require("@kubernetes/client-node");
 const yaml = require("js-yaml");
-const { determineVirtualPatch } = require("./virtual-patches/rules");
+const { determineVirtualPatch, isRuntimeThreat } = require("./virtual-patches/rules");
 
 
 const { getThreatMatrix } = require("./virtual-patches/threat-parser");
@@ -88,11 +88,10 @@ async function applyQuarantine(workloadName) {
         metadata: { name: policyName, namespace: TARGET_NAMESPACE },
         spec: {
             endpointSelector: { matchLabels: { app: workloadName } },
-            ingress: [{}], // Default Deny
-            egress: [{}]   // Default Deny
+            ingressDeny: [{}], 
+            egressDeny: [{}]   
         }
     };
-
     try {
         console.log(`[K8s] 🚨 Applying emergency network quarantine to [${workloadName}]...`);
         await k8sCustomApi.createNamespacedCustomObject({
@@ -256,26 +255,52 @@ async function removeQuarantine(workloadName) {
  * @async
  * @returns {Promise<void>}
  */
+
 async function startAutoHeal() {
     try {
         console.log(`[AutoHeal] Connecting to NATS at ${NATS_URL}...`);
         const nc = await connect({ servers: NATS_URL });
         console.log("[AutoHeal] Connected to NATS broker successfully!");
 
-        console.log("[AutoHeal] 🎧 Listening for ZTC Quarantine Orders...\n");
+        console.log("[AutoHeal] Listening for ZTC Quarantine Orders...\n");
         const sub = nc.subscribe("auranet.commands.autoheal.>");
 
-        // In-memory tracker for applied patch file names
+        // In-memory tracker for applied patch file names (Branch A)
         const appliedPatches = new Set();
 
         for await (const msg of sub) {
             const command = JSON.parse(sc.decode(msg.data));
             const workload = command.target_workload;
+            const threatSignatures = command.threat_signatures || [];
             
-            const targetPatch = determineVirtualPatch(command.threat_signatures);
+          
+        
+            if (isRuntimeThreat(threatSignatures)) {
+                console.log(`\n[AutoHeal]  RUNTIME HOST THREAT DETECTED FOR: ${workload}`);
+                console.log(`[AutoHeal]  Cinematic delay active (6s) to allow terminal output on-screen...`);
+                
+                // 6-second delay so cat /etc/shadow outputs on terminal before getting kicked out
+                await new Promise(resolve => setTimeout(resolve, 6000));
+
+                console.log(`[AutoHeal]  INITIATING RUNTIME EVACUATION PIPELINE FOR: ${workload}`);
+                
+                await applyQuarantine(workload);
+                
+                
+                await cycleWorkloadPods(workload);
+                
+                console.log(`[AutoHeal]  Permanent Isolation Enforced. Skipping removeQuarantine for ${workload}.\n`);
+                
+                nc.publish(`auranet.remediated.${workload}`, sc.encode(JSON.stringify({ status: "permanent_quarantine" })));
+                continue;
+            }
+            
+            
+            
+            const targetPatch = determineVirtualPatch(threatSignatures);
 
             if (appliedPatches.has(targetPatch)) {
-                console.log(`\n[AutoHeal] 🛡️ Patch file '${targetPatch}' is already active for ${workload}. Skipping redundant AutoHeal sequence.`);
+                console.log(`\n[AutoHeal]  Patch file '${targetPatch}' is already active for ${workload}. Skipping redundant AutoHeal sequence.`);
                 
                 nc.publish(`auranet.remediated.${workload}`, sc.encode(JSON.stringify({ 
                     status: "skipped", 
@@ -284,24 +309,21 @@ async function startAutoHeal() {
                 continue; 
             }
 
-            console.log(`\n[AutoHeal] INITIATING PIPELINE FOR: ${workload}`);
+            console.log(`\n[AutoHeal]  INITIATING L7 NETWORK PATCH PIPELINE FOR: ${workload}`);
             
             await applyQuarantine(workload);
             await applyVirtualPatch(targetPatch);
             
-            // Record the patch file name in memory now that it is applied
             appliedPatches.add(targetPatch);
             
             await cycleWorkloadPods(workload);
             
-            console.log(`[AutoHeal] ⏳ Waiting 5 seconds for propagation...`);
+            console.log(`[AutoHeal]  Waiting 5 seconds for propagation...`);
             await new Promise(resolve => setTimeout(resolve, 5000));
             
             await removeQuarantine(workload);
             
-            console.log(`[AutoHeal] ✅ Pipeline complete. Threat neutralized for ${workload}.\n`);
-
-            // Standard full remediation sends "cleared"
+            console.log(`[AutoHeal] ✅ L7 Remediation complete. Threat neutralized for ${workload}.\n`);
             nc.publish(`auranet.remediated.${workload}`, sc.encode(JSON.stringify({ status: "cleared" })));
         }
     } catch (err) {

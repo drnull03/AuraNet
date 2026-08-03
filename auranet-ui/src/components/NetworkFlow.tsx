@@ -156,66 +156,80 @@ export default function NetworkFlow({
             timestamp: new Date()
           });
         }
-        // 2. AutoHeal Remediated -> Turn Green (Recovered)
-        // 2. AutoHeal Remediated -> Turn Green (Recovered) OR Silently Block
-        else if (subject.startsWith('auranet.remediated.')) {
-          // NEW: Intercept the skipped status
-          if (data.status === "skipped") {
-            displayStr = `[${timeStr}] 🛡️ THREAT BLOCKED: Strict virtual patch already active on ${workload.toUpperCase()}. Malicious packet dropped silently.`;
-            eventType = 'healed';
-            
-            // Instantly cancel the red quarantine state without playing the green recovery animation
+        
+       // 2. AutoHeal Remediated -> Turn Green (Recovered) OR Silently Block OR Permanent Quarantine
+       else if (subject.startsWith('auranet.remediated.')) {
+          
+        if (data.status === "skipped") {
+          displayStr = `[${timeStr}] 🛡️ THREAT BLOCKED: Strict virtual patch already active on ${workload.toUpperCase()}. Malicious packet dropped silently.`;
+          eventType = 'healed';
+          
+          setQuarantinedWorkloads(prev => {
+            const next = new Set(prev);
+            next.delete(workload);
+            return next;
+          });
+          
+          setSystemNodes(prev => prev.map(n => 
+            n.id.includes(workload) || n.label.includes(workload) 
+              ? { ...n, status: 'active' } 
+              : n
+          ));
+
+        } else if (data.status === "permanent_quarantine") {
+          // NEW: Handle Permanent Isolation
+          displayStr = `[${timeStr}]  RUNTIME EVACUATION: ${workload.toUpperCase()} pods cycled and permanently isolated from network.`;
+          eventType = 'quarantine';
+          
+          onNewAlert?.({
+            id: evId,
+            title: `Permanent Isolation: ${workload.toUpperCase()}`,
+            message: `Host-level threat neutralized. Workload remains network-quarantined.`,
+            type: 'critical',
+            timestamp: new Date()
+          });
+
+          // We INTENTIONALLY do not remove the workload from the quarantinedWorkloads set.
+          // This ensures the polling loop keeps the node 'offline' (Red) with severed connections.
+
+        } else {
+          // ORIGINAL LOGIC: Full L7 Network Remediation
+          displayStr = `[${timeStr}] ✅ AUTOHEAL COMPLETE: ${workload.toUpperCase()} pods cycled and restored to trusted state.`;
+          eventType = 'healed';
+          
+          onNewAlert?.({
+            id: evId,
+            title: `Restored: ${workload.toUpperCase()}`,
+            message: `AutoHeal pipeline eradicated the threat. Standard operations resumed.`,
+            type: 'success',
+            timestamp: new Date()
+          });
+
+          const delayToGreen = Math.floor(Math.random() * 1000) + 2000;
+          setTimeout(() => {
             setQuarantinedWorkloads(prev => {
               const next = new Set(prev);
               next.delete(workload);
               return next;
             });
-            
-            setSystemNodes(prev => prev.map(n => 
-              n.id.includes(workload) || n.label.includes(workload) 
-                ? { ...n, status: 'active' } 
-                : n
-            ));
-
-          } else {
-            // ORIGINAL LOGIC: Full 4-step remediation occurred
-            displayStr = `[${timeStr}] ✅ AUTOHEAL COMPLETE: ${workload.toUpperCase()} pods cycled and restored to trusted state.`;
-            eventType = 'healed';
-            
-            onNewAlert?.({
-              id: evId,
-              title: `Restored: ${workload.toUpperCase()}`,
-              message: `AutoHeal pipeline eradicated the threat. Standard operations resumed.`,
-              type: 'success',
-              timestamp: new Date()
+            setRecoveringWorkloads(prev => {
+              const next = new Set(prev);
+              next.add(workload);
+              return next;
             });
+            setSystemNodes(prev => prev.map(n => n.id.includes(workload) || n.label.includes(workload) ? { ...n, status: 'recovered' } : n));
 
-            // Wait randomly 2-3 seconds before shifting to Green (recovered)
-            const delayToGreen = Math.floor(Math.random() * 1000) + 2000;
             setTimeout(() => {
-              setQuarantinedWorkloads(prev => {
+              setRecoveringWorkloads(prev => {
                 const next = new Set(prev);
                 next.delete(workload);
                 return next;
               });
-              setRecoveringWorkloads(prev => {
-                const next = new Set(prev);
-                next.add(workload);
-                return next;
-              });
-              setSystemNodes(prev => prev.map(n => n.id.includes(workload) || n.label.includes(workload) ? { ...n, status: 'recovered' } : n));
-
-              setTimeout(() => {
-                setRecoveringWorkloads(prev => {
-                  const next = new Set(prev);
-                  next.delete(workload);
-                  return next;
-                });
-                setSystemNodes(prev => prev.map(n => n.id.includes(workload) || n.label.includes(workload) ? { ...n, status: 'active' } : n));
-              }, 6000);
-            }, delayToGreen);
-          }
+              setSystemNodes(prev => prev.map(n => n.id.includes(workload) || n.label.includes(workload) ? { ...n, status: 'active' } : n));
+            }, 6000);
+          }, delayToGreen);
         }
+      }
         //  Telemetry Forwarding (Engine or Runtime event fired)
         else if (subject.startsWith('auranet.events.')) {
           const threat = data.threat || 'Behavioral Anomaly';
