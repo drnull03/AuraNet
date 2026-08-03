@@ -240,7 +240,6 @@ helm install auranet . \
 
 ##  Contributing
 
-We welcome contributions from developers interested in decentralized communications, smart contracts, cryptography, and Web3 UI/UX.
 
 Feel free to fork the repo, submit issues, or open pull requests. See the `CONTRIBUTORS` file for a list of everyone who helped build this project.
 
