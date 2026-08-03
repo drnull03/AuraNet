@@ -224,6 +224,13 @@ async function removeQuarantine(workloadName) {
 }
 
 
+
+
+
+
+
+
+
 /**
  * Starts the AuraNet AutoHeal service.
  *
@@ -243,6 +250,12 @@ async function removeQuarantine(workloadName) {
  * @async
  * @returns {Promise<void>}
  */
+/**
+ * Starts the AuraNet AutoHeal service.
+ *
+ * @async
+ * @returns {Promise<void>}
+ */
 async function startAutoHeal() {
     try {
         console.log(`[AutoHeal] Connecting to NATS at ${NATS_URL}...`);
@@ -252,25 +265,38 @@ async function startAutoHeal() {
         console.log("[AutoHeal] 🎧 Listening for ZTC Quarantine Orders...\n");
         const sub = nc.subscribe("auranet.commands.autoheal.>");
 
+        const appliedPatches = new Set();
+
         for await (const msg of sub) {
             const command = JSON.parse(sc.decode(msg.data));
             const workload = command.target_workload;
             
+            const targetPatch = determineVirtualPatch(command.threat_signatures);
+
+            if (appliedPatches.has(targetPatch)) {
+                console.log(`\n[AutoHeal]  Patch file '${targetPatch}' is already active for ${workload}. Skipping redundant AutoHeal sequence.`);
+                
+                // Acknowledge to ZTC so it clears its internal locks, but do nothing else
+                nc.publish(`auranet.remediated.${workload}`, sc.encode(JSON.stringify({ status: "cleared" })));
+                continue; 
+            }
+
             console.log(`\n[AutoHeal] INITIATING PIPELINE FOR: ${workload}`);
             
             await applyQuarantine(workload);
             
-            const targetPatch = determineVirtualPatch(command.threat_signatures);
             await applyVirtualPatch(targetPatch);
+            
+            appliedPatches.add(targetPatch);
             
             await cycleWorkloadPods(workload);
             
-            console.log(`[AutoHeal] ⏳ Waiting 5 seconds for propagation...`);
+            console.log(`[AutoHeal] Waiting 5 seconds for propagation...`);
             await new Promise(resolve => setTimeout(resolve, 5000));
             
             await removeQuarantine(workload);
             
-            console.log(`[AutoHeal] ✅ Pipeline complete. Threat neutralized for ${workload}.\n`);
+            console.log(`[AutoHeal]  Pipeline complete. Threat neutralized for ${workload}.\n`);
 
             nc.publish(`auranet.remediated.${workload}`, sc.encode(JSON.stringify({ status: "cleared" })));
         }

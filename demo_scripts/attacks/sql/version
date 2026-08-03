@@ -1,0 +1,1 @@
+999 UNION SELECT 999, version(), 'N/A', 0.0, 'Database Info'
