@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vulnerable-app
+  namespace: default
+  labels:
+    app: vulnerable-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vulnerable-app
+  template:
+    metadata:
+      labels:
+        app: vulnerable-app
+    spec:
+      containers:
+      - name: web
+        image: python:3.10-alpine
+        command: ["sh", "-c"]
+        args:
+        - |
+          pip install flask
+          cat << 'EOF' > app.py
+          from flask import Flask, request, render_template_string
+          import os
+
+          app = Flask(__name__)
+
+          # Pre-create benign sample files
+          os.makedirs("/app/docs", exist_ok=True)
+          with open("/app/docs/welcome.txt", "w") as f: f.write("Welcome to the Secure Enterprise Document Viewer portal!")
+          with open("/app/docs/report.txt", "w") as f: f.write("Q3 Financial Overview: Revenue up 14% YoY.")
+
+          HTML_TEMPLATE = """
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>DocViewer Enterprise</title>
+              <style>
+                  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 40px; }
+                  .container { max-width: 800px; margin: auto; background: #1e293b; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+                  h1 { color: #38bdf8; border-bottom: 2px solid #334155; padding-bottom: 10px; }
+                  .nav { margin-bottom: 20px; }
+                  .nav a { color: #818cf8; text-decoration: none; margin-right: 15px; font-weight: bold; }
+                  .content-box { background: #0f172a; padding: 20px; border-radius: 8px; border: 1px solid #334155; white-space: pre-wrap; font-family: monospace; color: #e2e8f0; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>📄 Enterprise Document Portal</h1>
+                  <div class="nav">
+                      <a href="/?file=welcome.txt">Welcome Doc</a>
+                      <a href="/?file=report.txt">Q3 Report</a>
+                  </div>
+                  <h3>Viewing Document: <i>{{ filename }}</i></h3>
+                  <div class="content-box">{{ content }}</div>
+              </div>
+          </body>
+          </html>
+          """
+
+          @app.route("/")
+          def index():
+              filename = request.args.get("file", "welcome.txt")
+              filepath = os.path.join("/app/docs", filename)
+              try:
+                  with open(filepath, "r") as f:
+                      content = f.read()
+              except Exception as e:
+                  content = f"Error reading file: {str(e)}"
+              return render_template_string(HTML_TEMPLATE, filename=filename, content=content)
+
+          if __name__ == "__main__":
+              app.run(host="0.0.0.0", port=3000)
+          EOF
+          python app.py
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vulnerable-app
+  namespace: default
+spec:
+  selector:
+    app: vulnerable-app
+  ports:
+  - port: 3000
+    targetPort: 3000

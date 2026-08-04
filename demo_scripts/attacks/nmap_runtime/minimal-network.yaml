@@ -1,0 +1,67 @@
+---
+# POD A: The Gateway (Where you will drop your shell)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: public-gateway
+  namespace: default
+  labels:
+    app: public-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: public-gateway
+  template:
+    metadata:
+      labels:
+        app: public-gateway
+    spec:
+      containers:
+      - name: gateway
+        image: wbitt/network-multitool
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+
+---
+# POD B: The Target Vault
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secure-vault
+  namespace: default
+  labels:
+    app: secure-vault
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: secure-vault
+  template:
+    metadata:
+      labels:
+        app: secure-vault
+    spec:
+      containers:
+      - name: vault
+        image: wbitt/network-multitool
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+---
+# The Service routing traffic to the Vault
+apiVersion: v1
+kind: Service
+metadata:
+  name: secure-vault
+  namespace: default
+spec:
+  selector:
+    app: secure-vault
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
