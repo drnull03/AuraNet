@@ -11,7 +11,6 @@
  * 3. Restart compromised workload pods.
  * 4. Remove quarantine after remediation.
  *
- * @author AuraNet
  * @version 1.0.0
  */
 
@@ -88,8 +87,14 @@ async function applyQuarantine(workloadName) {
         metadata: { name: policyName, namespace: TARGET_NAMESPACE },
         spec: {
             endpointSelector: { matchLabels: { app: workloadName } },
-            ingressDeny: [{}], 
-            egressDeny: [{}]   
+            ingressDeny: [
+                { fromEntities: ["all"] },
+                { fromEndpoints: [{}] }
+            ],
+            egressDeny: [
+                { toEntities: ["all"] },
+                { toEndpoints: [{}] }
+            ]
         }
     };
     try {
@@ -279,8 +284,8 @@ async function startAutoHeal() {
                 console.log(`\n[AutoHeal]  RUNTIME HOST THREAT DETECTED FOR: ${workload}`);
                 console.log(`[AutoHeal]  Cinematic delay active (6s) to allow terminal output on-screen...`);
                 
-                // 6-second delay so cat /etc/shadow outputs on terminal before getting kicked out
-                await new Promise(resolve => setTimeout(resolve, 6000));
+                // this is for demo purposes pnly 
+                await new Promise(resolve => setTimeout(resolve, 1200));
 
                 console.log(`[AutoHeal]  INITIATING RUNTIME EVACUATION PIPELINE FOR: ${workload}`);
                 
