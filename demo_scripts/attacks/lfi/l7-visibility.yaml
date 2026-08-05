@@ -1,0 +1,17 @@
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: "l7-visibility-vulnerable-app"
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app: vulnerable-app
+  ingress:
+  - toPorts:
+    - ports:
+      - port: "3000"
+        protocol: TCP
+      rules:
+        http:
+        - method: ".*" # A wildcard rule that forces Cilium to parse all HTTP methods

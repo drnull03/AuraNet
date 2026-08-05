@@ -1,0 +1,19 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: vpatch-vulnerable-app
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app: vulnerable-app
+  ingress:
+  - toPorts:
+    - ports:
+      - port: "3000"
+        protocol: TCP
+      rules:
+        http:
+        # 🔒 STRICT REGEX: The '$' anchor forces exact evaluation of the whole string
+        - method: "GET"
+          path: "^/(\\?file=[a-zA-Z0-9_\\-\\.]+)?$"

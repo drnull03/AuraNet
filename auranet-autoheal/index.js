@@ -141,7 +141,7 @@ async function applyVirtualPatch(patchFileName) {
 
         const patchObj = yaml.load(fs.readFileSync(patchPath, "utf8"));
         
-        // 1. Force wipe the old policy state to prevent 409 Conflicts
+        //  Force wipe the old policy state to prevent 409 Conflicts
         try {
             await k8sCustomApi.deleteNamespacedCustomObject({
                 group: "cilium.io",
@@ -155,7 +155,7 @@ async function applyVirtualPatch(patchFileName) {
             // Ignore 404s, it just means the state is already clean
         }
 
-        // 2. Apply cleanly
+        //  Apply cleanly
         console.log(`[K8s]Applying virtual patch: ${patchObj.metadata.name}...`);
         await k8sCustomApi.createNamespacedCustomObject({
             group: "cilium.io",
@@ -303,6 +303,17 @@ async function startAutoHeal() {
             
             
             const targetPatch = determineVirtualPatch(threatSignatures);
+            
+            if (targetPatch === "unknown_anomaly_patch.yaml") {
+                console.log(`\n[AutoHeal] ⚠️ No specific virtual patch found for threat. Enforcing permanent quarantine for: ${workload}`);
+                
+                await applyQuarantine(workload);
+                await cycleWorkloadPods(workload);
+                
+                console.log(`[AutoHeal] Permanent Isolation Enforced (No Patch Available). Skipping removeQuarantine for ${workload}.\n`);
+                nc.publish(`auranet.remediated.${workload}`, sc.encode(JSON.stringify({ status: "permanent_quarantine" })));
+                continue;
+            }
 
             if (appliedPatches.has(targetPatch)) {
                 console.log(`\n[AutoHeal]  Patch file '${targetPatch}' is already active for ${workload}. Skipping redundant AutoHeal sequence.`);

@@ -13,9 +13,10 @@ threatMatrix: |-
   symbolic_banned_method=60
   l7_payload_anomaly=90
   l7_body_anomaly=90
-  network_behavior_anomaly=40
+  network_behavior_anomaly=90
 
-  # === Runtime Threats (Mapped from Tetragon eBPF Agent) ===
+
+
   # Shells & Remote Access
   nc_execution=70
   reverse_shell_detected=100

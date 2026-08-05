@@ -15,8 +15,8 @@ naiveConf: |
   #4. account-service -> finance-db:5432
   #5. loan-service -> finance-db:5432
   # public-gateway (Attacker/Entry) -> secure-vault (Target)
-  1. public-gateway -> secure-vault:80
-
+  #1. public-gateway -> secure-vault:80
+  #demo-gateway -> vulnerable-app:3000
 # this moved to the engine itself and can be ignored 
 settingsConf: |
   AI_Learning=true
