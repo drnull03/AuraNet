@@ -7,10 +7,14 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "jest"
   },
   "dependencies": {
     "@kubernetes/client-node": "^0.20.0",
     "js-yaml": "^4.2.0"
+  },
+  "devDependencies": {
+    "jest": "^30.4.2"
   }
 }
