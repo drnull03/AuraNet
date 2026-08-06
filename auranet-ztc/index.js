@@ -56,15 +56,9 @@ async function startZTC() {
             for await (const msg of sub) {
                 try {
                     const decodedData = JSON.parse(sc.decode(msg.data));
-                    console.log(`\n[ZTC] 🔍 GHOST PACKET INTERCEPTED -> Subject: ${msg.subject}`);
-                    console.log(`[ZTC] Threat Type: ${decodedData.threat}`);
-                    
-                    if (decodedData.raw_context) {
-                        const contextObj = JSON.parse(decodedData.raw_context);
-                        const httpData = contextObj.flow?.l7?.http || {};
-                        console.log(`[ZTC] Target URL: ${httpData.url}`);
-                        console.log(`[ZTC] Node Source: ${contextObj.node_name}`);
-                    }
+                    console.log(`\n[ZTC] 🔍 ANONYMOUS ALERT INTERCEPTED -> Subject: ${msg.subject}`);
+                    console.log(`[ZTC] Threat Classification: ${decodedData.threat}`);
+                    console.log(`[ZTC] Confidence / Probability: ${decodedData.probability || 'N/A'}`);
                     console.log(`---------------------------------------------------`);
                     
                     alertBuffer.push({ subject: msg.subject, data: decodedData });
@@ -93,7 +87,7 @@ async function startZTC() {
             
             // Fire execution commands to the AutoHeal microservice
             if (condemnedWorkloads.length > 0) {
-                console.log(`\n[ZTC] 🚨 INITIATING QUARANTINE FOR ${condemnedWorkloads.length} WORKLOAD(S)...`);
+                console.log(`\n[ZTC]  INITIATING QUARANTINE FOR ${condemnedWorkloads.length} WORKLOAD(S)...`);
                 
                 for (const target of condemnedWorkloads) {
                     const commandPayload = {

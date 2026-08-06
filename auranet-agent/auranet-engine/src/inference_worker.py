@@ -82,7 +82,7 @@ async def run_inference_pipeline(brain_a, brain_b, brain_c, benign_buffer, buffe
         
         if symbolic_decision not in ["Safe", "Unknown"]:
             # Hard threat discovered. Short-circuit immediately.
-            alert_payload = {"threat": symbolic_decision, "probability": -1, "raw_context": json.dumps(raw_event)}
+            alert_payload = {"threat": symbolic_decision, "probability": -1}
             print(f"[Worker A] 🛑 SYMBOLIC THREAT: {symbolic_decision.upper()} -> Firing to {subject}")
             await nc.publish(subject, json.dumps(alert_payload).encode())
             continue # <--- EARLY EXIT
@@ -118,7 +118,7 @@ async def run_inference_pipeline(brain_a, brain_b, brain_c, benign_buffer, buffe
 
         if is_anomaly_a:
             probability = min((z_score / (config.ai.Z_SCORE_THRESHOLD * 2)), 0.99) if len(rolling_mse_window) >= MIN_WARMUP_SAMPLES else 0.99
-            alert_payload = {"threat": "network_behavior_anomaly", "probability": probability, "raw_context": json.dumps(raw_event)}
+            alert_payload = {"threat": "network_behavior_anomaly", "probability": probability}
             print(f"[Worker A] 🚨 BEHAVIORAL THREAT! Z-Score: {z_score:.2f} (MSE: {mse_loss:.4f}) -> Firing to {subject}")
             await nc.publish(subject, json.dumps(alert_payload).encode())
             continue 
@@ -140,7 +140,7 @@ async def run_inference_pipeline(brain_a, brain_b, brain_c, benign_buffer, buffe
                     
                     if nlp_loss > config.ai.NLP_TRIPWIRE:
                         probability = min((nlp_loss / (config.ai.NLP_TRIPWIRE * 2)), 0.99)
-                        alert_payload = {"threat": "l7_payload_anomaly", "probability": probability, "raw_context": json.dumps(raw_event)}
+                        alert_payload = {"threat": "l7_payload_anomaly", "probability": probability}
                         print(f"[Worker A] 🚨 NLP PAYLOAD THREAT! CE Loss: {nlp_loss:.4f} -> Firing to {subject}")
                         await nc.publish(subject, json.dumps(alert_payload).encode())
                         continue 
@@ -163,7 +163,7 @@ async def run_inference_pipeline(brain_a, brain_b, brain_c, benign_buffer, buffe
                     
                     if nlp_body_loss > config.ai.NLP_BODY_TRIPWIRE:
                         probability = min((nlp_body_loss / (config.ai.NLP_BODY_TRIPWIRE * 2)), 0.99)                                
-                        alert_payload = {"threat": "l7_body_anomaly", "probability": probability, "raw_context": json.dumps(raw_event)} 
+                        alert_payload = {"threat": "l7_body_anomaly", "probability": probability} 
                         print(f"[Worker A] 🚨 NLP BODY THREAT! CE Loss: {nlp_body_loss:.4f} -> Firing to {subject}")                
                         await nc.publish(subject, json.dumps(alert_payload).encode())
                         continue 
