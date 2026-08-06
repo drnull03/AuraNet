@@ -11,13 +11,14 @@ import subprocess
 import numpy as np
 
 import config
-"""
-@brief Processes real-time Hubble network events.
 
-Transforms raw Cilium/Hubble flow data into numerical features
-for AI-based anomaly detection.
-"""
 class HubbleStreamProcessor:
+    """
+    @brief Processes real-time Hubble network events.
+
+    Transforms raw Cilium/Hubble flow data into numerical features
+    for AI-based anomaly detection.
+    """
     def __init__(self):
         # Normalization constants 
         self.MAX_PATH_DEPTH = 10.0
@@ -45,19 +46,16 @@ class HubbleStreamProcessor:
         if ip_str.startswith("10.") or ip_str.startswith("192.168.") or ip_str.startswith("172."):
             return 0.0
         return 1.0
-"""
-@brief Converts a Hubble event into AI features.
 
-Filters unsupported traffic and extracts the 13-dimensional
-network behavior feature vector.
-
-@param event Raw Hubble JSON event.
-@return NumPy feature array or None if ignored.
-"""
     def process_event(self, event):
         """
-        Filters and converts a single real-time packet into the 13-dim generic tensor.
-        Returns None if the packet should be ignored based on our training rules.
+        @brief Converts a Hubble event into AI features.
+
+        Filters unsupported traffic and extracts the 13-dimensional
+        network behavior feature vector.
+        
+        @param event Raw Hubble JSON event.
+        @return NumPy feature array or None if ignored.
         """
         #  SOFTWARE-LEVEL NODE FILTERING 
         event_node = event.get("node_name", "")
@@ -162,17 +160,15 @@ network behavior feature vector.
         features[12] = 1.0 if status_code >= 400 else 0.0
 
         return features
-"""
-@brief Streams processed network traffic.
 
-Launches Hubble observation and continuously yields valid
-network events with their extracted feature vectors.
-
-@return Generator yielding raw events and feature arrays.
-"""
     def stream_traffic(self):
         """
-        Continuously yields (raw_json, feature_array) for valid packets.
+        @brief Streams processed network traffic.
+
+        Launches Hubble observation and continuously yields valid
+        network events with their extracted feature vectors.
+
+        @return Generator yielding raw events and feature arrays.
         """
         print(f"[Streamer] Connecting to Relay at {config.HUBBLE_RELAY_ADDRESS}...")
         process = subprocess.Popen(
