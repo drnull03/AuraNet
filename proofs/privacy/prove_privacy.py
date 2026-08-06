@@ -1,7 +1,3 @@
-/**
- * @file prove_fr12_privacy.js
- * @brief Network Sniffer to prove FR-12 (Data Minimization / Privacy by Design)
- */
 const { connect, StringCodec } = require("nats");
 
 const NATS_URL = "nats://127.0.0.1:4222"; 
