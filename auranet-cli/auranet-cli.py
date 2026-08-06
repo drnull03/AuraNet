@@ -460,7 +460,7 @@ if __name__ == "__main__":
 
     # The 'install' command
     install_parser = subparsers.add_parser("install", help="Install auranet components via Helm.")
-    install_parser.add_argument("--chart-path", default="../auranet-core/chart",
+    install_parser.add_argument("--chart-path", default="../auranet-core/",
                                  help="Path to the local auranet-core Helm chart directory")
     install_parser.add_argument("--release-name", default="auranet-core",
                                  help="Helm release name to use for the core deployment")
