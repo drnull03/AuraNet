@@ -5,7 +5,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from nlp_dataset import NlpDataset
-from nlp_model import UrlNlpAutoencoder
+from nlp_model import BodyNlpAutoencoder
 
 def train_nlp_pipeline():
     print("[NLP] Booting Brain B (LSTM Payload Engine)...")
@@ -22,7 +22,7 @@ def train_nlp_pipeline():
     dataset = NlpDataset(tensor_data)
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
     
-    model = UrlNlpAutoencoder(vocab_size=128, seq_length=150)
+    model = BodyNlpAutoencoder(vocab_size=128, seq_length=150)
     
     # We use CrossEntropy for classification. ignore_index=0 tells the model 
     # not to punish itself for messing up the padding zeroes.
@@ -30,7 +30,7 @@ def train_nlp_pipeline():
     optimizer = optim.Adam(model.parameters(), lr=0.005)
 
     epochs = 100
-    print(f"\n🚀 Training LSTM Autoencoder for {epochs} epochs...\n")
+    print(f"\nTraining LSTM Autoencoder for {epochs} epochs...\n")
     
     for epoch in range(epochs):
         total_loss = 0

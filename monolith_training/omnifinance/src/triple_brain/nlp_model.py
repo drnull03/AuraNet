@@ -4,9 +4,9 @@ import torch.nn as nn
 
 # the same as the url one 
 # the exact same
-class UrlNlpAutoencoder(nn.Module):
+class BodyNlpAutoencoder(nn.Module):
     def __init__(self, vocab_size=128, embedding_dim=16, hidden_dim=32, seq_length=150):
-        super(UrlNlpAutoencoder, self).__init__()
+        super(BodyNlpAutoencoder, self).__init__()
         self.seq_length = seq_length
         
         # 1. EMBEDDING

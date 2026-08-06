@@ -12,7 +12,7 @@ class NlpDataProcessor:
         self.tensor_data = None
 
     def load_and_tokenize(self):
-        print(f"📖 Reading raw URLs from {self.json_path}...")
+        print(f"📖 Reading raw bodies from {self.json_path}...")
         
         with open(self.json_path, 'r') as f:
             for line in f:
@@ -33,16 +33,16 @@ class NlpDataProcessor:
                 if body:
                     self.bodies.append(body)
 
-        print(f"✅ Extracted {len(self.urls)} HTTP URLs.")
+        print(f"Extracted {len(self.bodies)} HTTP bodiess.")
         self._build_tensor()
 
     def _build_tensor(self):
         """Converts strings to ASCII integers and pads them to max_seq_length."""
         tokenized_list = []
         
-        for url in self.urls:
+        for body in self.bodies:
             # Convert each character to its ASCII integer (cap at 127)
-            encoded = [min(ord(c), 127) for c in url]
+            encoded = [min(ord(c), 127) for c in body]
             
             # Truncate if it exceeds max length
             encoded = encoded[:self.max_seq_length]
@@ -54,7 +54,7 @@ class NlpDataProcessor:
             tokenized_list.append(final_sequence)
             
         self.tensor_data = torch.LongTensor(tokenized_list)
-        print(f"🧠 NLP Tensor built: {self.tensor_data.shape}")
+        print(f"NLP Tensor built: {self.tensor_data.shape}")
 
 class NlpDataset(Dataset):
     def __init__(self, tensor_data):
@@ -76,14 +76,14 @@ if __name__ == "__main__":
     out_dir = os.path.join(current_dir, "../../data/processed/nlp/body")
     os.makedirs(out_dir, exist_ok=True)
 
-    # Process Training URLs
+    # Process Training body
     if os.path.exists(json_train):
         processor = NlpDataProcessor(json_train)
         processor.load_and_tokenize()
         torch.save(processor.tensor_data, os.path.join(out_dir, "nlp_train_tensor.pt"))
         print(f"💾 Saved Train Tensor to {out_dir}/nlp_train_tensor.pt")
 
-    # Process Testing URLs
+    # Process Testing body
     if os.path.exists(json_test):
         processor = NlpDataProcessor(json_test)
         processor.load_and_tokenize()
