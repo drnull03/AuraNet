@@ -195,7 +195,7 @@ async def publish_threat(nc, pid, threat_signature, context):
     }
 
     subject = f"auranet.events.runtime.{workload}"
-    print(f"🚨 [THREAT DETECTED] Pod: {pod_name} ({workload}) -> {threat_signature}")
+    print(f"[THREAT DETECTED] Pod: {pod_name} ({workload}) -> {threat_signature}")
     print(f"   Publishing to Subject: {subject}")
 
     await nc.publish(subject, json.dumps(payload).encode())
