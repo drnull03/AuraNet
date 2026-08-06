@@ -4,7 +4,7 @@ from kubernetes import client
 
 
 @pytest.fixture(scope="function")
-def mtls_test_env(k8s_api):
+def mauth_test_env(k8s_api):
     """Spins up a Database, an Authorized AI Engine, and a Rogue Attacker."""
     namespace = "default"
     target_name = "auranet-db"
@@ -80,9 +80,9 @@ def mtls_test_env(k8s_api):
 
 
 
-def test_spiffe_mutual_authentication(k8s_crd_api, mtls_test_env, pod_exec):
-    """Deploys a CiliumNetworkPolicy requiring SPIFFE mTLS and verifies eBPF enforcement."""
-    env = mtls_test_env
+def test_spiffe_mutual_authentication(k8s_crd_api, mauth_test_env, pod_exec):
+    """Deploys a CiliumNetworkPolicy requiring SPIFFE  and verifies eBPF enforcement."""
+    env = mauth_test_env
     policy_name = "secure-db-access"
 
     # The exact eBPF policy you built in the terminal
@@ -116,7 +116,7 @@ def test_spiffe_mutual_authentication(k8s_crd_api, mtls_test_env, pod_exec):
         
         # Ensure the kernel dropped the packet (exit code 28 / timeout)
         assert "timed out" in rogue_output.lower() or "timeout" in rogue_output.lower(), \
-            f"Zero Trust failure! Rogue attacker bypassed mTLS. Output: {rogue_output}"
+            f"Zero Trust failure! Rogue attacker bypassed . Output: {rogue_output}"
 
         #  Execute the Authorized Request (Positive Test)
         auth_cmd = f"curl -s -o /dev/null -w '%{{http_code}}' -m 5 http://{env['target_ip']}"
