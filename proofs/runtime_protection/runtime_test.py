@@ -46,7 +46,7 @@ def run_simulated_suite():
     time.sleep(1.2)
     print(f"{GREEN}Waiting for deployment 'sr-sec-5-test-pod' to be ready...{RESET}")
     time.sleep(1.5)
-    print(f"{BOLD}📡 Connected to NATS. Starting validation suite for SR-SEC-5...{RESET}\n")
+    print(f"{BOLD} Connected to NATS. Starting validation suite for SR-SEC-5...{RESET}\n")
     time.sleep(0.8)
 
     results = []
