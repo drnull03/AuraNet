@@ -27,6 +27,37 @@ app_namespace = k8s.core.v1.Namespace(
     opts=pulumi.ResourceOptions(provider=k8s_provider)
 )
 
+
+# Create an isolation policy for auranet-namespace to block 'default' (and others)
+app_network_policy = k8s.networking.v1.NetworkPolicy(
+    "auranet-app-isolation-policy",
+    metadata=k8s.meta.v1.ObjectMetaArgs(
+        name="isolate-auranet-namespace",
+        namespace=app_namespace.metadata.name,
+    ),
+    spec=k8s.networking.v1.NetworkPolicySpecArgs(
+        # Empty pod_selector applies this policy to ALL pods in the auranet-namespace
+        pod_selector=k8s.meta.v1.LabelSelectorArgs(),
+        policy_types=["Ingress"],
+        ingress=[
+            k8s.networking.v1.NetworkPolicyIngressRuleArgs(
+                from_=[
+                    # Explicitly allow traffic ONLY from within the auranet-namespace itself.
+                    # Because there is no namespace_selector, it defaults to the local namespace.
+                    # This drops all traffic from 'default' and any other external namespaces.
+                    k8s.networking.v1.NetworkPolicyPeerArgs(
+                        pod_selector=k8s.meta.v1.LabelSelectorArgs()
+                    )
+                ]
+            )
+        ]
+    ),
+    opts=pulumi.ResourceOptions(
+        provider=k8s_provider,
+        depends_on=[app_namespace]
+    )
+)
+
 # Create a dedicated namespace for NATS to isolate system messaging
 nats_namespace = k8s.core.v1.Namespace(
     "nats-namespace",
@@ -112,7 +143,7 @@ auranet_core_release = k8s.helm.v3.Release(
     ),
     opts=pulumi.ResourceOptions(
         provider=k8s_provider,
-        depends_on=[app_namespace, nats_release, nats_network_policy] 
+        depends_on=[app_namespace,app_network_policy ,nats_release, nats_network_policy,] 
     )
 )
 

@@ -138,36 +138,36 @@ cilium_release = k8s.helm.v3.Release(
     ),
     opts=pulumi.ResourceOptions(provider=k8s_provider, depends_on=[kubeconfig])
 )
-
-
-# this is can be removed safely and is left for testing purposes
-tetragon_release = k8s.helm.v3.Release(
-    "tetragon-security-observability",
-    k8s.helm.v3.ReleaseArgs(
-        chart="tetragon",
-       
-        repository_opts=k8s.helm.v3.RepositoryOptsArgs(
-            repo="https://helm.cilium.io/"
-        ),
-        namespace="kube-system",
-        
-       
-        
-        values={
-            "tetragon": {
-                "exportFilename": "tetragon.log",
-                "exportDirectory": "/var/log/tetragon/"
-            }
-        },
-    ),
-    opts=pulumi.ResourceOptions(
-        provider=k8s_provider, 
-        depends_on=[cilium_release]
-    )
-)
-
-
-#  Automate the 10-Minute Certificate Rotation Patch
+#
+#
+## this is can be removed safely and is left for testing purposes
+#tetragon_release = k8s.helm.v3.Release(
+#    "tetragon-security-observability",
+#    k8s.helm.v3.ReleaseArgs(
+#        chart="tetragon",
+#       
+#        repository_opts=k8s.helm.v3.RepositoryOptsArgs(
+#            repo="https://helm.cilium.io/"
+#        ),
+#        namespace="kube-system",
+#        
+#       
+#        
+#        values={
+#            "tetragon": {
+#                "exportFilename": "tetragon.log",
+#                "exportDirectory": "/var/log/tetragon/"
+#            }
+#        },
+#    ),
+#    opts=pulumi.ResourceOptions(
+#        provider=k8s_provider, 
+#        depends_on=[cilium_release]
+#    )
+#)
+#
+#
+##  Automate the 10-Minute Certificate Rotation Patch
 patch_spire_ttl = command.local.Command(
     "patch-spire-ttl",
     create="""
