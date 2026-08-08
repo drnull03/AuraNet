@@ -10,14 +10,13 @@ FRACTION_FIT = 1.0
 ROUND_TIMEOUT_SECONDS = 600
 PROXIMAL_MU = 0.1
 
-
-
 # Paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_GENESIS_WEIGHTS_PATH = os.path.join(BASE_DIR, "models", "zerotrust_ae_v1.pth")
 
 # Static startup injection: Uses env var if defined, otherwise falls back to default
-GENESIS_WEIGHTS_PATH = os.environ.get("GENESIS_WEIGHTS_PATH") or DEFAULT_GENESIS_WEIGHTS_PATHCONFIG_FILE_PATH = "/app/config/config.json"
+GENESIS_WEIGHTS_PATH = os.environ.get("GENESIS_WEIGHTS_PATH") or DEFAULT_GENESIS_WEIGHTS_PATH
+CONFIG_FILE_PATH = "/app/config/config.json"
 
 def load_config():
     global FL_ROUNDS, MIN_AVAILABLE_CLIENTS, FRACTION_FIT, ROUND_TIMEOUT_SECONDS, PROXIMAL_MU
@@ -40,8 +39,14 @@ class K8sConfigWatcher(FileSystemEventHandler):
 # Execute initial load on startup
 load_config()
 
-# Start background file watcher
-observer = Observer()
-# Watch the parent directory because Kubernetes uses symlinks
-observer.schedule(K8sConfigWatcher(), path="/app/config", recursive=False)
-observer.start()
+# Start background file watcher ONLY if the directory exists (e.g., inside the container)
+watch_dir = "/app/config"
+
+if os.path.exists(watch_dir):
+    observer = Observer()
+    # Watch the parent directory because Kubernetes uses symlinks
+    observer.schedule(K8sConfigWatcher(), path=watch_dir, recursive=False)
+    observer.start()
+    print(f"[Config] Watchdog active. Monitoring {watch_dir} for hot-reloads.")
+else:
+    print(f"[Config] Watchdog disabled: '{watch_dir}' not found (Local Dev/Test Mode).")
