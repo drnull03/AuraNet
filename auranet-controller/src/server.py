@@ -11,7 +11,8 @@ import torch
 import flwr as fl
 import config
 
-from strategy import AuraNetFedProxStrategy
+#from strategy import AuraNetFedProxStrategy
+from strategy import AuraNetFedProxKrumStrategy
 import torch.nn as nn
 """
 @brief Initial global autoencoder model used for federated learning.
@@ -72,6 +73,7 @@ connected AuraNet edge agents.
 
 @return None
 """
+"""
 def start_federated_server():
     print("\n [Controller] Initializing AuraNet FL Aggregator...")
     
@@ -91,6 +93,26 @@ def start_federated_server():
         config=fl.server.ServerConfig(num_rounds=config.FL_ROUNDS),
         strategy=strategy,
     )
+"""
+
+def start_federated_server():
+    print("\n [Controller] Initializing AuraNet FL Aggregator...")
+    
+    strategy = AuraNetFedProxKrumStrategy(
+        num_malicious_clients=1,   # Number of expected compromised nodes
+        num_clients_to_keep=1,     # Number of benign updates to aggregate
+        initial_parameters=get_genesis_parameters()
+    )
+
+    print(f"[Controller] Starting gRPC Server on port 8080...")
+    print(f"[Controller] Aggregation Throttle: 1 Round per {config.ROUND_TIMEOUT_SECONDS} seconds.\n")
+    
+    fl.server.start_server(
+        server_address="0.0.0.0:8080",
+        config=fl.server.ServerConfig(num_rounds=config.FL_ROUNDS),
+        strategy=strategy,
+    )
+
 
 if __name__ == "__main__":
     start_federated_server()

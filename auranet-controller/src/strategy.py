@@ -124,3 +124,36 @@ class AuraNetFedProxStrategy(fl.server.strategy.FedProx):
             print(f"[Aggregator]  Round {server_round} FedProx aggregation successful. All nodes merged safely.")
             
         return aggregated_parameters, aggregated_metrics"""
+
+
+
+class AuraNetFedProxKrumStrategy(fl.server.strategy.Krum):
+    """
+    Hybrid FL Strategy combining FedProx and Krum.
+    
+    Instructs edge nodes to use FedProx regularization during local training 
+    to handle heterogeneous data, while using Krum on the server side to 
+    reject poisoned updates during aggregation.
+    """
+    def __init__(self, num_malicious_clients=0, num_clients_to_keep=0, *args, **kwargs):
+        super().__init__(
+            num_malicious_clients=num_malicious_clients,
+            num_clients_to_keep=num_clients_to_keep,
+            *args, **kwargs
+        )
+
+    def configure_fit(
+        self, server_round: int, parameters: Parameters, client_manager: fl.server.ClientManager
+    ) -> List[Tuple[ClientProxy, FitIns]]:
+        
+        # Get the baseline client sampling configurations from the parent class
+        config_list = super().configure_fit(server_round, parameters, client_manager)
+        
+        #  Inject the dynamic PROXIMAL_MU value into every client's instruction payload
+        print(f"\n[Controller] Round {server_round} Configuration:")
+        print(f"  -> Injecting FedProx MU: {config.PROXIMAL_MU}")
+        
+        for _, fit_ins in config_list:
+            fit_ins.config["proximal_mu"] = config.PROXIMAL_MU
+            
+        return config_list
