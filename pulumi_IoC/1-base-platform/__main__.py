@@ -3,7 +3,7 @@ import pulumi_command as command
 import pulumi_kubernetes as k8s
 
 CLUSTER_NAME = "my-cluster"
-CONFIG_PATH = "./cluster/3Nodes.yaml" # this should be injectable and changeable 
+CONFIG_PATH = "./cluster/3Nodes.yaml" 
 
 print(f"🐝 Pulumi is configuring the AuraNet cluster and eBPF datapath...")
 
