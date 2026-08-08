@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuraNet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #f8fafc; /* Very light, clean background */
+            color: #1a202c;
+        }
+        .presentation-view body {
+             overflow: hidden;
+        }
+        .slide {
+            display: none;
+            padding: 4rem;
+            background-color: #ffffff;
+            opacity: 0;
+            transition: opacity 0.6s ease-in-out;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #34d399 #ecfdf5; /* Emerald scrollbar */
+        }
+        .presentation-view .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .slide.active {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 1;
+            z-index: 10;
+        }
+        .slide-content {
+            max-width: 1100px;
+            width: 100%;
+        }
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #047857; /* emerald-700 */
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        h2 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #064e3b; /* emerald-900 */
+            border-bottom: 3px solid #34d399; /* emerald-400 */
+            padding-bottom: 0.5rem;
+            margin-bottom: 2rem;
+        }
+        ul {
+            list-style-type: disc;
+            margin-right: 2rem;
+            font-size: 1.25rem;
+            line-height: 2;
+        }
+        li {
+            margin-bottom: 1rem;
+        }
+        .nav-controls {
+            position: fixed;
+            bottom: 2rem;
+            width: 100%;
+            left: 0;
+            z-index: 20;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+            box-sizing: border-box;
+        }
+        .nav-button {
+            background-color: #059669; /* emerald-600 */
+            color: white;
+            border: none;
+            border-radius: 9999px;
+            width: 4rem;
+            height: 4rem;
+            font-size: 2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+        .nav-button:hover {
+            background-color: #047857; /* emerald-700 */
+        }
+        #slide-counter {
+            background-color: rgba(4, 120, 87, 0.8); /* emerald-700 with opacity */
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 1rem;
+            font-size: 1rem;
+        }
+        
+        /* Print Styles */
+        @media print {
+            body { overflow: visible !important; }
+            .nav-controls { display: none !important; }
+            .slide {
+                display: flex !important;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                position: relative !important;
+                width: 100% !important;
+                height: 100vh !important;
+                opacity: 1 !important;
+                box-shadow: none !important;
+                border: none !important;
+                page-break-after: always;
+                padding: 2rem;
+            }
+            .slide:last-child { page-break-after: auto; }
+        }
+    </style>
+</head>
+<body class="presentation-view">
+
+
+<section class="slide active flex flex-col justify-center items-center w-full h-full relative">
+    <!-- University Logo (Absolute positioning keeps it top-left) -->
+    <img src="images/hiast.png" alt="HIAST Logo" class="absolute top-8 left-8 w-32 h-auto">
+
+    <!-- Centered Content Wrapper -->
+    <div class="text-center w-full max-w-5xl mx-auto flex flex-col items-center">
+        
+        <!-- Project Title -->
+        <h1 class="text-7xl font-bold text-emerald-700 mb-6" dir="ltr">AuraNet</h1>
+        
+        <!-- Project Subtitle/Description -->
+        <p class="text-3xl text-gray-700 leading-relaxed max-w-4xl text-center mb-16">
+            بنية تحتية ذاتية الإصلاح قائمة على مبدأ «الثقة المعدومة» باستخدام تقنيات eBPF والتعلم الفيدرالي.
+        </p>
+        
+        <!-- Details (No Box, Perfectly Centered Flow) -->
+        <div class="flex flex-col items-center space-y-6 text-2xl text-gray-800">
+            
+            <p>
+                <span class="text-gray-500 ml-2">تقديم:</span> 
+                <strong>الطالب ضياء حنّا</strong>
+            </p>
+            
+            <p class="text-center">
+                <span class="text-gray-500 block mb-2">إشراف:</span> 
+                <strong>د. حسين خيّو</strong> 
+                <span class="mx-4 text-emerald-400">|</span> 
+                <strong>ما. مفيد دوزكنجي</strong>
+            </p>
+            
+            <div class="pt-8">
+                <p class="text-xl font-bold text-emerald-800">المعهد العالي للعلوم التطبيقية والتكنولوجيا (HIAST)</p>
+                <p class="text-xl text-emerald-700 font-bold mt-2">19/8/2026</p>
+            </div>
+            
+        </div>
+    </div>
+</section>
+
+<!-- Slide 2: Project Logo Showcase -->
+<section class="slide bg-gradient-to-br from-white via-emerald-50 to-white flex flex-col justify-center items-center w-full h-full">
+    <div class="slide-content flex flex-col items-center justify-center w-full">
+        
+        <!-- Project Logo (Circular) -->
+        <img src="images/logo.png" alt="AuraNet Logo" class="w-64 h-64 object-contain bg-white rounded-full shadow-2xl mb-8 border-4 border-emerald-100 p-4">
+
+        <h2 class="text-6xl font-bold text-emerald-800 border-none mb-2" dir="ltr">AuraNet</h2>
+        
+    </div>
+</section>
+
+    <!-- Slide 3: Image/Diagram Handler (Flexible Grid) -->
+    <section class="slide">
+        <div class="slide-content h-full flex flex-col">
+            <h2 class="text-4xl text-emerald-800">[عنوان المخطط أو الواجهة]</h2>
+            
+            <!-- Flexible Grid: Change md:grid-cols-2 to md:grid-cols-1 if you only have one large image -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6 flex-grow">
+                
+                <!-- Image Container 1 -->
+                <div class="flex flex-col h-full bg-white border-2 border-emerald-100 rounded-xl shadow-lg p-4 transition-transform hover:scale-[1.02]">
+                    <div class="bg-gray-100 flex-grow rounded-lg border border-gray-200 flex items-center justify-center min-h-[300px]">
+                        <!-- Replace with <img src="..." class="w-full h-full object-contain"> -->
+                        <span class="text-gray-400 font-bold text-xl">مساحة الصورة 1</span>
+                    </div>
+                    <p class="text-center mt-4 text-gray-700 font-medium">الشكل 1: [وصف الصورة أو المخطط هنا]</p>
+                </div>
+
+                <!-- Image Container 2 -->
+                <div class="flex flex-col h-full bg-white border-2 border-emerald-100 rounded-xl shadow-lg p-4 transition-transform hover:scale-[1.02]">
+                    <div class="bg-gray-100 flex-grow rounded-lg border border-gray-200 flex items-center justify-center min-h-[300px]">
+                         <!-- Replace with <img src="..." class="w-full h-full object-contain"> -->
+                        <span class="text-gray-400 font-bold text-xl">مساحة الصورة 2</span>
+                    </div>
+                    <p class="text-center mt-4 text-gray-700 font-medium">الشكل 2: [وصف الصورة أو المخطط هنا]</p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Navigation Controls -->
+    <div class="nav-controls">
+        <button id="next" class="nav-button">→</button>
+        <div class="flex items-center space-x-4" dir="ltr">
+             <div id="slide-counter"></div>
+             <div id="print-hint" class="text-xs text-gray-400 hidden md:block">(Ctrl+P للطباعة)</div>
+        </div>
+        <button id="prev" class="nav-button">←</button>
+    </div>
+
+    <!-- Navigation Logic (Identical to previous presentation) -->
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const prevButton = document.getElementById('prev');
+        const nextButton = document.getElementById('next');
+        const slideCounter = document.getElementById('slide-counter');
+        let currentSlide = 0;
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.classList.remove('active');
+                if (i === index) {
+                    slide.classList.add('active');
+                }
+            });
+            currentSlide = index;
+            updateCounter();
+        }
+
+        function nextSlide() {
+            let next = currentSlide + 1;
+            if (next >= slides.length) {
+                next = 0;
+            }
+            showSlide(next);
+        }
+
+        function prevSlide() {
+            let prev = currentSlide - 1;
+            if (prev < 0) {
+                prev = slides.length - 1;
+            }
+            showSlide(prev);
+        }
+
+        function updateCounter() {
+            slideCounter.textContent = `${currentSlide + 1} / ${slides.length}`;
+        }
+        
+        nextButton.addEventListener('click', nextSlide);
+        prevButton.addEventListener('click', prevSlide);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevSlide();
+            } else if ((e.ctrlKey || e.metaKey) && e.key === 'm') {
+                e.preventDefault();
+                window.print();
+            }
+        });
+
+        showSlide(0);
+    </script>
+</body>
+</html>
